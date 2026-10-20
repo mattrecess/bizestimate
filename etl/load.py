@@ -7,6 +7,7 @@ Re-running replaces that state's businesses (and their loans) atomically.
 import argparse
 import csv
 import os
+from urllib.parse import unquote, urlparse
 
 import psycopg
 
@@ -33,12 +34,31 @@ def rows(path, cols):
             yield [r.get(c) or None for c in cols]
 
 
+def database_url():
+    """Read DATABASE_URL, trim copy-paste debris, and print its shape (never the password)."""
+    url = os.environ["DATABASE_URL"].strip().strip('"').strip("'").strip()
+    try:
+        u = urlparse(url)
+        pw = unquote(u.password or "")
+        flags = [name for name, bad in [
+            ("brackets", "[" in pw or "]" in pw),
+            ("placeholder text", "YOUR-PASSWORD" in pw.upper()),
+            ("whitespace", any(c.isspace() for c in pw)),
+            ("non-alphanumeric chars", not pw.isalnum()),
+        ] if bad]
+        print(f"DB: user={u.username} host={u.hostname} port={u.port} db={u.path.lstrip('/')} "
+              f"password_length={len(pw)} issues={flags or 'none'}", flush=True)
+    except ValueError as e:
+        print(f"DATABASE_URL is not a valid URL: {e}", flush=True)
+    return url
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--state", default="OK")
     state = ap.parse_args().state.upper()
 
-    with psycopg.connect(os.environ["DATABASE_URL"]) as conn, conn.cursor() as cur:
+    with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
         with open(os.path.join(ROOT, "db", "schema.sql")) as f:
             cur.execute(f.read())
 
