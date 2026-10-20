@@ -1,0 +1,23 @@
+// 2-digit NAICS sectors (some sectors span several codes).
+export const SECTORS: { label: string; prefixes: string[] }[] = [
+  { label: "Accommodation & Food Services", prefixes: ["72"] },
+  { label: "Administrative & Waste Services", prefixes: ["56"] },
+  { label: "Agriculture, Forestry, Fishing", prefixes: ["11"] },
+  { label: "Arts, Entertainment & Recreation", prefixes: ["71"] },
+  { label: "Construction", prefixes: ["23"] },
+  { label: "Educational Services", prefixes: ["61"] },
+  { label: "Finance & Insurance", prefixes: ["52"] },
+  { label: "Health Care & Social Assistance", prefixes: ["62"] },
+  { label: "Information", prefixes: ["51"] },
+  { label: "Management of Companies", prefixes: ["55"] },
+  { label: "Manufacturing", prefixes: ["31", "32", "33"] },
+  { label: "Mining, Oil & Gas Extraction", prefixes: ["21"] },
+  { label: "Other Services", prefixes: ["81"] },
+  { label: "Professional, Scientific & Technical Services", prefixes: ["54"] },
+  { label: "Public Administration", prefixes: ["92"] },
+  { label: "Real Estate & Rental", prefixes: ["53"] },
+  { label: "Retail Trade", prefixes: ["44", "45"] },
+  { label: "Transportation & Warehousing", prefixes: ["48", "49"] },
+  { label: "Utilities", prefixes: ["22"] },
+  { label: "Wholesale Trade", prefixes: ["42"] },
+];

@@ -1,0 +1,7 @@
+LoanNumber,DateApproved,ProcessingMethod,BorrowerName,BorrowerAddress,BorrowerCity,BorrowerState,BorrowerZip,LoanStatus,InitialApprovalAmount,CurrentApprovalAmount,ServicingLenderName,ProjectCountyName,ProjectState,JobsReported,NAICSCode,PAYROLL_PROCEED,BusinessType,OriginatingLender,NonProfit,ForgivenessAmount
+9000000001,04/15/2020,PPP,FIXTURE PLUMBING LLC,1 TEST ST,OKLAHOMA CITY,OK,73102-1234,Paid in Full,125000,125000,Fixture Bank,OKLAHOMA,OK,12,238220,125000,Limited  Liability Company(LLC),Fixture Bank,,126000
+9000000002,02/10/2021,PPS,"FIXTURE PLUMBING, LLC",1 TEST ST,OKLAHOMA CITY,OK,73102,Paid in Full,120000,120000,Fixture Bank,OKLAHOMA,OK,11,238220,120000,Limited  Liability Company(LLC),Fixture Bank,,121000
+9000000003,03/01/2021,PPS,FIXTURE DINER INC,2 TEST AVE,TULSA,OK,74103,Paid in Full,87500,87500,Fixture Bank,TULSA,OK,15,722511,87500,Corporation,Fixture Bank,,88000
+9000000004,05/01/2020,PPP,FIXTURE JANE DOE,3 TEST LN,NORMAN,OK,73069,Paid in Full,20833,20833,Fixture CU,CLEVELAND,OK,1,541990,20833,Sole Proprietorship,Fixture CU,,20900
+9000000005,05/01/2020,PPP,FIXTURE TEXAS CO,4 TEST RD,DALLAS,TX,75201,Paid in Full,50000,50000,Fixture Bank,DALLAS,TX,5,236115,50000,Corporation,Fixture Bank,,50100
+9000000006,04/20/2020,PPP,FIXTURE CLINIC,5 TEST BLVD,EDMOND,OK,73034,Paid in Full,450000,450000,Fixture Bank,OKLAHOMA,OK,30,621111,450000,Non-Profit Organization,Fixture Bank,Y,452000

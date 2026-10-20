@@ -1,0 +1,24 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import "maplibre-gl/dist/maplibre-gl.css";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "BizEstimate — Oklahoma business values",
+  description: "Estimated revenue and EBITDA for Oklahoma businesses, from public PPP loan data.",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <header className="top">
+          <Link href="/" className="brand">BizEstimate</Link>
+          <span style={{ color: "var(--muted)" }}>Oklahoma</span>
+          <nav><Link href="/methodology">How estimates work</Link></nav>
+        </header>
+        {children}
+      </body>
+    </html>
+  );
+}

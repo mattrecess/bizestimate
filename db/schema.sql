@@ -1,0 +1,78 @@
+-- BizEstimate schema (plain Postgres; works as-is on Supabase).
+
+create table if not exists industry_benchmarks (
+  naics_prefix        text primary key,          -- 2- to 6-digit NAICS prefix
+  label               text not null,
+  payroll_to_revenue  numeric not null,          -- annual payroll / receipts
+  revenue_per_employee numeric,                  -- receipts / employees ($)
+  ebitda_margin       numeric not null,          -- EBITDA / revenue
+  source              text not null
+);
+
+create table if not exists businesses (
+  id                  bigserial primary key,
+  biz_key             text unique not null,      -- normalized name + zip5, used for dedupe
+  name                text not null,
+  address             text,
+  city                text,
+  state               text,
+  zip                 text,
+  county              text,
+  naics               text,
+  industry            text,                      -- label of the benchmark that matched
+  business_type       text,
+  is_individual       boolean not null default false,  -- sole prop / self-employed: hide street address
+  is_nonprofit        boolean not null default false,
+  jobs_reported       integer,
+  lat                 double precision,
+  lon                 double precision,
+  geo_precision       text,                      -- 'address' | 'zip' | null
+  -- estimates (dollars, based on the payroll the PPP loan was sized from, ~2019)
+  est_payroll         numeric,
+  est_revenue_low     numeric,
+  est_revenue_mid     numeric,
+  est_revenue_high    numeric,
+  est_ebitda_low      numeric,
+  est_ebitda_mid      numeric,
+  est_ebitda_high     numeric,
+  est_revenue_by_employees numeric,              -- cross-check: jobs x sector revenue/employee
+  est_method          text,                      -- 'payroll' | 'owner_earnings'
+  est_confidence      text,                      -- 'medium' | 'low'
+  total_ppp_amount    numeric,
+  search              tsvector generated always as (
+    to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(city,'') || ' ' || coalesce(industry,''))
+  ) stored
+);
+
+create index if not exists businesses_search_idx on businesses using gin (search);
+create index if not exists businesses_latlon_idx on businesses (lat, lon);
+create index if not exists businesses_rev_idx on businesses (est_revenue_mid desc);
+create index if not exists businesses_naics_idx on businesses (naics text_pattern_ops);
+create index if not exists businesses_city_idx on businesses (state, city);
+
+create table if not exists ppp_loans (
+  loan_number         text primary key,
+  business_id         bigint not null references businesses(id) on delete cascade,
+  draw                text,                      -- 'first' | 'second'
+  date_approved       date,
+  amount              numeric,
+  payroll_proceed     numeric,
+  forgiveness_amount  numeric,
+  loan_status         text,
+  lender              text,
+  jobs_reported       integer
+);
+create index if not exists ppp_loans_business_idx on ppp_loans (business_id);
+
+-- Owners can claim a listing and submit real numbers (moderated later).
+create table if not exists claims (
+  id                  bigserial primary key,
+  business_id         bigint not null references businesses(id) on delete cascade,
+  contact_name        text not null,
+  contact_email       text not null,
+  message             text,
+  reported_revenue    numeric,
+  reported_ebitda     numeric,
+  request_removal     boolean not null default false,
+  created_at          timestamptz not null default now()
+);

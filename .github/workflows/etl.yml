@@ -1,0 +1,25 @@
+name: Load PPP data
+on:
+  workflow_dispatch:
+    inputs:
+      state:
+        description: Two-letter state code
+        default: OK
+      street_level:
+        description: Street-level geocoding (slower)
+        type: boolean
+        default: true
+jobs:
+  etl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - run: ./etl/run.sh "${{ inputs.state }}" ${{ inputs.street_level && '--addresses' || '' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
