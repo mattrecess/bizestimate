@@ -59,3 +59,4 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; }
   .map { height: 45vh; }
   .list { border-left: 0; }
 }
+.map-toggle { position: absolute; top: 10px; left: 10px; z-index: 2; font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.3); background: #fff; color: #16202c; border-color: #fff; }
