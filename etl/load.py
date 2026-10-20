@@ -7,6 +7,7 @@ Re-running replaces that state's businesses (and their loans) atomically.
 import argparse
 import csv
 import os
+import re
 from urllib.parse import unquote, urlparse
 
 import psycopg
@@ -37,6 +38,11 @@ def rows(path, cols):
 def database_url():
     """Read DATABASE_URL, trim copy-paste debris, and print its shape (never the password)."""
     url = os.environ["DATABASE_URL"].strip().strip('"').strip("'").strip()
+    # Supabase shows the password slot as [YOUR-PASSWORD]; the brackets are often left in.
+    m = re.match(r"^(\w+://[^:/@]+:)\[(.*)\](@.*)$", url)
+    if m:
+        print("Note: removed [ ] around the password in DATABASE_URL", flush=True)
+        url = m.group(1) + m.group(2) + m.group(3)
     try:
         u = urlparse(url)
         pw = unquote(u.password or "")

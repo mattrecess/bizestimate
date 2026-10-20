@@ -1,6 +1,10 @@
 import postgres from "postgres";
 
-const url = process.env.DATABASE_URL ?? "";
+// Trim stray quotes/whitespace and the [ ] Supabase shows around the password placeholder.
+const url = (process.env.DATABASE_URL ?? "")
+  .trim()
+  .replace(/^["']|["']$/g, "")
+  .replace(/^(\w+:\/\/[^:/@]+:)\[(.*)\](@.*)$/, "$1$2$3");
 const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
 
 // One pool per server instance; `prepare: false` keeps Supabase's transaction pooler happy.
