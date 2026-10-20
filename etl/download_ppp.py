@@ -12,24 +12,35 @@ import glob
 import io
 import json
 import os
+import re
 import sys
-import urllib.request
+
+from netutil import urlopen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
 CKAN = "https://data.sba.gov/api/3/action/package_show?id=ppp-foia"
+DATASET_PAGE = "https://data.sba.gov/dataset/ppp-foia"
 
 csv.field_size_limit(10_000_000)
 
 
 def resource_urls():
-    with urllib.request.urlopen(CKAN, timeout=60) as r:
-        pkg = json.load(r)["result"]
-    urls = [res["url"] for res in pkg["resources"]
-            if res["url"].lower().endswith(".csv") and "public" in res["url"].lower()]
+    urls = []
+    try:
+        with urlopen(CKAN, timeout=60) as r:
+            pkg = json.load(r)["result"]
+        urls = [res["url"] for res in pkg["resources"]]
+    except Exception as e:  # noqa: BLE001
+        print(f"CKAN API failed ({e}); falling back to the dataset page", flush=True)
+        with urlopen(DATASET_PAGE, timeout=60) as r:
+            html = r.read().decode("utf-8", errors="replace")
+        urls = re.findall(r'href="(https?://[^"]+?\.csv)"', html)
+    urls = sorted({u for u in urls if u.lower().endswith(".csv") and "public" in u.lower()})
     if not urls:
-        sys.exit("No PPP CSV resources found on data.sba.gov")
-    return sorted(urls)
+        sys.exit("No PPP CSV files found on data.sba.gov")
+    print(f"Found {len(urls)} PPP files", flush=True)
+    return urls
 
 
 def open_streams(local_dir):
@@ -38,7 +49,7 @@ def open_streams(local_dir):
             yield path, open(path, newline="", encoding="utf-8", errors="replace")
     else:
         for url in resource_urls():
-            resp = urllib.request.urlopen(url, timeout=300)
+            resp = urlopen(url, timeout=600)
             yield url, io.TextIOWrapper(resp, encoding="utf-8", errors="replace", newline="")
 
 

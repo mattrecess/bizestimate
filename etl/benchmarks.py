@@ -14,7 +14,8 @@ import csv
 import json
 import os
 import sys
-import urllib.request
+
+from netutil import urlopen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -105,7 +106,7 @@ def fetch_census():
         if key:
             url += f"&key={key}"
         try:
-            with urllib.request.urlopen(url, timeout=120) as r:
+            with urlopen(url, timeout=120) as r:
                 rows = json.load(r)
         except Exception as e:  # noqa: BLE001
             print(f"Census {year} failed: {e}", file=sys.stderr)

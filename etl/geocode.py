@@ -11,9 +11,10 @@ import csv
 import hashlib
 import io
 import os
-import urllib.request
 import uuid
 import zipfile
+
+from netutil import urlopen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -26,7 +27,7 @@ BATCH_SIZE = 10_000
 
 def zip_centroids():
     if not os.path.exists(GAZ_TXT):
-        with urllib.request.urlopen(GAZ_URL, timeout=300) as r:
+        with urlopen(GAZ_URL, timeout=300) as r:
             z = zipfile.ZipFile(io.BytesIO(r.read()))
         with open(GAZ_TXT, "wb") as f:
             f.write(z.read(z.namelist()[0]))
@@ -63,8 +64,7 @@ def census_batch(rows):
     csv.writer(buf).writerows(rows)
     body, ctype = multipart({"benchmark": "Public_AR_Current"}, "addressFile",
                             "addresses.csv", buf.getvalue().encode())
-    req = urllib.request.Request(BATCH_URL, data=body, headers={"Content-Type": ctype})
-    with urllib.request.urlopen(req, timeout=1800) as r:
+    with urlopen(BATCH_URL, data=body, headers={"Content-Type": ctype}, timeout=1800) as r:
         text = r.read().decode("utf-8", errors="replace")
     out = {}
     for rec in csv.reader(io.StringIO(text)):
