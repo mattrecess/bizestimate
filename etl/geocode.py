@@ -10,9 +10,11 @@ import argparse
 import csv
 import hashlib
 import io
+import math
 import os
 import uuid
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 
 from netutil import urlopen
 
@@ -22,7 +24,9 @@ BIZ_CSV = os.path.join(DATA_DIR, "businesses.csv")
 GAZ_URL = "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2023_Gazetteer/2023_Gaz_zcta_national.zip"
 GAZ_TXT = os.path.join(DATA_DIR, "zcta_gazetteer.txt")
 BATCH_URL = "https://geocoding.geo.census.gov/geocoder/locations/addressbatch"
-BATCH_SIZE = 10_000
+BATCH_SIZE = 2_500           # Census allows 10k, but smaller batches fail less and run in parallel
+WORKERS = 4
+CACHE_CSV = os.path.join(DATA_DIR, "geocode_cache.csv")   # biz_key -> lat, lon ('' = no match)
 
 
 def zip_centroids():
@@ -41,10 +45,12 @@ def zip_centroids():
     return out
 
 
-def jitter(key, scale=0.012):
-    """Deterministic offset so businesses in one ZIP don't stack on a single pin."""
+def jitter(key, radius=0.008):
+    """Deterministic offset within a disc so businesses in one ZIP don't stack on a single pin."""
     h = hashlib.md5(key.encode()).digest()
-    return (h[0] / 255 - 0.5) * scale, (h[1] / 255 - 0.5) * scale
+    angle = int.from_bytes(h[:4], "big") / 2**32 * 2 * math.pi
+    r = radius * math.sqrt(int.from_bytes(h[4:8], "big") / 2**32)
+    return r * math.sin(angle), r * math.cos(angle) / math.cos(math.radians(35.5))
 
 
 def multipart(fields, file_field, filename, content):
@@ -74,6 +80,29 @@ def census_batch(rows):
     return out
 
 
+def census_batch_retry(rows, attempts=3):
+    for n in range(1, attempts + 1):
+        try:
+            return census_batch(rows)
+        except Exception as e:  # noqa: BLE001
+            print(f"batch of {len(rows)} failed (attempt {n}/{attempts}): {e}", flush=True)
+    return None
+
+
+def load_cache():
+    if not os.path.exists(CACHE_CSV):
+        return {}
+    with open(CACHE_CSV, newline="") as f:
+        return {r["biz_key"]: (r["lat"], r["lon"]) for r in csv.DictReader(f)}
+
+
+def save_cache(cache):
+    with open(CACHE_CSV, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["biz_key", "lat", "lon"])
+        w.writerows((k, lat, lon) for k, (lat, lon) in cache.items())
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--addresses", action="store_true", help="street-level Census geocoding")
@@ -89,12 +118,27 @@ def main():
 
     exact = {}
     if args.addresses:
+        cache = load_cache()
+        eligible = [(i, r) for i, r in enumerate(rows) if r["is_individual"] != "True" and r["address"]]
         todo = [(str(i), r["address"], r["city"], r["state"], r["zip"])
-                for i, r in enumerate(rows) if r["is_individual"] != "True" and r["address"]]
-        for start in range(0, len(todo), BATCH_SIZE):
-            exact.update(census_batch(todo[start:start + BATCH_SIZE]))
-            print(f"geocoded {min(start + BATCH_SIZE, len(todo)):,}/{len(todo):,} "
-                  f"({len(exact):,} matched)", flush=True)
+                for i, r in eligible if r["biz_key"] not in cache]
+        print(f"{len(eligible):,} addresses to place, {len(eligible) - len(todo):,} already cached", flush=True)
+        batches = [todo[s:s + BATCH_SIZE] for s in range(0, len(todo), BATCH_SIZE)]
+        done = 0
+        with ThreadPoolExecutor(WORKERS) as pool:
+            for batch, result in zip(batches, pool.map(census_batch_retry, batches)):
+                done += len(batch)
+                if result is None:
+                    continue  # leave uncached so the next run retries it
+                for rid, *_ in batch:
+                    lat, lon = result.get(rid, ("", ""))
+                    cache[rows[int(rid)]["biz_key"]] = (lat, lon)
+                print(f"geocoded {done:,}/{len(todo):,}", flush=True)
+        save_cache(cache)
+        for i, r in eligible:
+            lat, lon = cache.get(r["biz_key"], ("", ""))
+            if lat != "":
+                exact[str(i)] = (float(lat), float(lon))
 
     zips = zip_centroids()
     for i, r in enumerate(rows):
