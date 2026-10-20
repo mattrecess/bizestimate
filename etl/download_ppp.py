@@ -67,7 +67,8 @@ def main():
         for name, stream in open_streams(args.local):
             kept = 0
             with stream:
-                for row in csv.DictReader(stream):
+                # Some SBA files contain stray NUL bytes, which the csv module rejects.
+                for row in csv.DictReader(line.replace("\0", "") for line in stream):
                     st = (row.get("BorrowerState") or row.get("ProjectState") or "").strip().upper()
                     if st != state:
                         continue

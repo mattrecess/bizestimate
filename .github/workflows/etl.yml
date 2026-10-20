@@ -9,6 +9,14 @@ on:
         description: Street-level geocoding (slower)
         type: boolean
         default: false
+  push:
+    branches: [main]
+    paths: ["etl/**", "db/**", ".github/workflows/etl.yml"]
+permissions:
+  contents: write
+concurrency:
+  group: etl
+  cancel-in-progress: true
 jobs:
   etl:
     runs-on: ubuntu-latest
@@ -19,7 +27,20 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r etl/requirements.txt
-      - run: ./etl/run.sh "${{ inputs.state }}" ${{ inputs.street_level && '--addresses' || '' }}
+      - name: Run pipeline
+        run: |
+          set -o pipefail
+          ./etl/run.sh "${{ inputs.state || 'OK' }}" ${{ inputs.street_level && '--addresses' || '' }} 2>&1 | tee "$RUNNER_TEMP/etl.log"
         env:
+          PYTHONUNBUFFERED: "1"
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+      # Publish the log to the etl-logs branch so it can be read without signing in.
+      - name: Publish log
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b etl-logs
+          echo "run ${{ github.run_id }} (${{ github.sha }}): ${{ job.status }}" > etl.log
+          cat "$RUNNER_TEMP/etl.log" >> etl.log 2>/dev/null || true
+          git add etl.log && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" etl-logs
