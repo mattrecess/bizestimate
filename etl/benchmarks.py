@@ -105,11 +105,13 @@ def fetch_census():
         url = f"{base}?get={ncol},{ncol}_LABEL,RCPTOT,PAYANN,EMP&for=us:*&{ncol}=*"
         if key:
             url += f"&key={key}"
+        body = ""
         try:
             with urlopen(url, timeout=120) as r:
-                rows = json.load(r)
+                body = r.read().decode("utf-8", errors="replace")
+            rows = json.loads(body)
         except Exception as e:  # noqa: BLE001
-            print(f"Census {year} failed: {e}", file=sys.stderr)
+            print(f"Census {year} failed: {e}; response starts: {body[:300]!r}", file=sys.stderr)
             continue
         header, body = rows[0], rows[1:]
         idx = {h: i for i, h in enumerate(header)}
