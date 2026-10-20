@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getBusiness } from "@/lib/business";
+import { getBusiness, getComparables } from "@/lib/business";
+import Link from "next/link";
 import { money, moneyRange } from "@/lib/format";
 import ClaimForm from "@/components/ClaimForm";
 import MiniMap from "@/components/MiniMap";
@@ -8,12 +9,20 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const b = await getBusiness((await params).id);
-  return { title: b ? `${b.name} — estimated revenue | BizEstimate` : "Not found" };
+  if (!b) return { title: "Not found" };
+  const where = [b.city, "OK"].filter(Boolean).join(", ");
+  return {
+    title: `${b.name} (${where}) — estimated revenue & EBITDA | BizEstimate`,
+    description: `${b.name} in ${where}: estimated revenue ${money(b.est_revenue_mid)} and EBITDA ${money(b.est_ebitda_mid)} ` +
+      `(${b.industry}), based on public SBA PPP loan data. Estimates only.`,
+    alternates: { canonical: `/business/${b.id}` },
+  };
 }
 
 export default async function BusinessPage({ params }: { params: Promise<{ id: string }> }) {
   const b = await getBusiness((await params).id);
   if (!b) notFound();
+  const comps = await getComparables(b);
   const pct = (v: unknown) => (v == null ? "—" : `${(Number(v) * 100).toFixed(0)}%`);
 
   return (
@@ -78,6 +87,25 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
           </tbody>
         </table>
       </div>
+
+      {comps.length > 0 && (
+        <div className="section">
+          <h2>Comparable businesses nearby</h2>
+          <table>
+            <thead><tr><th>Business</th><th className="hide-sm">City</th><th className="hide-sm">Employees</th><th>Est. revenue</th><th>Est. EBITDA</th><th>Distance</th></tr></thead>
+            <tbody>
+              {comps.map((c) => (
+                <tr key={c.id}>
+                  <td><Link href={`/business/${c.id}`}>{c.name}</Link></td>
+                  <td className="hide-sm">{c.city}</td><td className="hide-sm">{c.jobs_reported ?? "—"}</td>
+                  <td>{money(c.est_revenue_mid)}</td><td>{money(c.est_ebitda_mid)}</td>
+                  <td>{c.miles == null ? "—" : `${Number(c.miles).toFixed(1)} mi`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
 

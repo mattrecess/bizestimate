@@ -2,7 +2,8 @@
 
     DATABASE_URL=postgresql://... python etl/load.py --state OK
 
-Re-running replaces that state's businesses (and their loans) atomically.
+Re-running updates that state's businesses in place (matched on biz_key), so their ids,
+and therefore their page URLs, stay the same; businesses no longer in the data are removed.
 """
 import argparse
 import csv
@@ -75,7 +76,6 @@ def main():
               b["ebitda_margin"], b["source"]) for p, b in load_benchmarks().items()],
         )
 
-        cur.execute("delete from businesses where state = %s", (state,))
         cur.execute(f"create temp table stage_biz ({', '.join(c + ' text' for c in BIZ_COLS)})")
         with cur.copy(f"copy stage_biz ({', '.join(BIZ_COLS)}) from stdin") as cp:
             for r in rows(os.path.join(DATA_DIR, "businesses.csv"), BIZ_COLS):
@@ -88,9 +88,14 @@ def main():
         }
         numeric = {c for c in BIZ_COLS if c.startswith(("est_", "total_"))} - {"est_method", "est_confidence"}
         select = ", ".join(casts.get(c) or (f"{c}::numeric" if c in numeric else c) for c in BIZ_COLS)
+        updates = ", ".join(f"{c} = excluded.{c}" for c in BIZ_COLS if c != "biz_key")
         cur.execute(f"insert into businesses ({', '.join(BIZ_COLS)}) "
-                    f"select {select} from stage_biz on conflict (biz_key) do nothing")
+                    f"select distinct on (biz_key) {select} from stage_biz "
+                    f"on conflict (biz_key) do update set {updates}")
         print(f"businesses: {cur.rowcount:,}")
+        cur.execute("delete from businesses b where state = %s "
+                    "and not exists (select 1 from stage_biz s where s.biz_key = b.biz_key)", (state,))
+        print(f"businesses removed: {cur.rowcount:,}")
 
         cur.execute(f"create temp table stage_loans ({', '.join(c + ' text' for c in LOAN_COLS)})")
         with cur.copy(f"copy stage_loans ({', '.join(LOAN_COLS)}) from stdin") as cp:
@@ -103,7 +108,11 @@ def main():
                 s.amount::numeric, s.payroll_proceed::numeric, s.forgiveness_amount::numeric,
                 s.loan_status, s.lender, s.jobs_reported::numeric::int
             from stage_loans s join businesses b on b.biz_key = s.biz_key
-            on conflict (loan_number) do nothing""")
+            on conflict (loan_number) do update set business_id = excluded.business_id,
+                draw = excluded.draw, date_approved = excluded.date_approved, amount = excluded.amount,
+                payroll_proceed = excluded.payroll_proceed, forgiveness_amount = excluded.forgiveness_amount,
+                loan_status = excluded.loan_status, lender = excluded.lender,
+                jobs_reported = excluded.jobs_reported""")
         print(f"ppp_loans: {cur.rowcount:,}")
         cur.execute("analyze businesses; analyze ppp_loans;")
 

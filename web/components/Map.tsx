@@ -39,6 +39,7 @@ type Props = {
   onBoundsChange?: (bbox: [number, number, number, number]) => void;
   center?: [number, number];
   zoom?: number;
+  fitKey?: string; // when this changes, zoom to the next set of points
 };
 
 // Business pins sit on top of whichever basemap is active; re-added after every style switch.
@@ -63,7 +64,8 @@ function addBizLayers(m: maplibregl.Map, data: GeoJSON.FeatureCollection) {
   });
 }
 
-export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 6 }: Props) {
+export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 6, fitKey = "" }: Props) {
+  const fitted = useRef("");
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const latest = useRef<GeoJSON.FeatureCollection>(EMPTY);
@@ -110,7 +112,14 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
     if (!points) return;
     latest.current = points;
     (map.current?.getSource("biz") as maplibregl.GeoJSONSource | undefined)?.setData(points);
-  }, [points]);
+    if (fitKey && fitKey !== fitted.current && points.features.length && map.current) {
+      fitted.current = fitKey;
+      const bounds = new maplibregl.LngLatBounds();
+      for (const f of points.features) bounds.extend((f.geometry as GeoJSON.Point).coordinates as [number, number]);
+      map.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 800 });
+    }
+    if (!fitKey) fitted.current = "";
+  }, [points, fitKey]);
 
   function toggle() {
     const next = !satellite;

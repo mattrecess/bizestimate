@@ -37,3 +37,29 @@ export async function getBusiness(id: string): Promise<(Business & { loans: Loan
     from ppp_loans where business_id = ${id} order by date_approved`;
   return { ...biz, loans };
 }
+
+export type Comparable = {
+  id: string; name: string; city: string; industry: string; jobs_reported: number | null;
+  est_revenue_mid: Num; est_ebitda_mid: Num; miles: number | null;
+};
+
+// Nearest businesses in the same industry (4-digit NAICS, falling back to the 2-digit sector).
+export async function getComparables(b: Business, limit = 6): Promise<Comparable[]> {
+  if (!b.naics) return [];
+  const lat = b.lat == null ? null : Number(b.lat);
+  const lon = b.lon == null ? null : Number(b.lon);
+  for (const prefix of [b.naics.slice(0, 4), b.naics.slice(0, 2)]) {
+    const distance = lat == null
+      ? sql`null::float8`
+      : sql`69.0 * sqrt(power(lat - ${lat}, 2) + power((lon - ${lon}) * cos(radians(${lat})), 2))`;
+    const rows = await sql<Comparable[]>`
+      select id, name, city, industry, jobs_reported, est_revenue_mid, est_ebitda_mid, ${distance} as miles
+      from businesses
+      where naics like ${prefix + "%"} and id <> ${b.id} and est_revenue_mid is not null
+        ${lat == null ? sql`and city = ${b.city}` : sql`and lat is not null`}
+      order by ${lat == null ? sql`est_revenue_mid desc` : sql`miles`}
+      limit ${limit}`;
+    if (rows.length >= 3 || prefix.length === 2) return rows;
+  }
+  return [];
+}

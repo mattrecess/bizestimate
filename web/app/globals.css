@@ -60,3 +60,7 @@ th { color: var(--muted); font-weight: 500; font-size: 12px; }
   .list { border-left: 0; }
 }
 .map-toggle { position: absolute; top: 10px; left: 10px; z-index: 2; font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.3); background: #fff; color: #16202c; border-color: #fff; }
+footer.foot { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--panel); color: var(--muted); font-size: 12px; }
+footer.foot nav { display: flex; gap: 16px; }
+.section { overflow-x: auto; }
+@media (max-width: 600px) { .hide-sm { display: none; } }
