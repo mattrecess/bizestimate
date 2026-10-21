@@ -14,8 +14,10 @@ import math
 import os
 import uuid
 import zipfile
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
+import overture
 import rooftop
 from netutil import urlopen
 
@@ -150,10 +152,30 @@ def main():
     ]) if args.addresses else rooftop.lookup([])
 
     zips = zip_centroids()
+
+    # Building-level placement from Overture open data (address points, business places, footprints).
+    placed = {}
+    if os.environ.get("OVERTURE", "1") != "0" and eligible:
+        state = eligible[0][1]["state"]
+        try:
+            placed = overture.place(state, [
+                (r["biz_key"], r["name"], r["address"], r["zip"], *(
+                    exact[str(i)] + (True,) if str(i) in exact else
+                    zips[r["zip"]] + (False,) if r["zip"] in zips else (None, None, False)))
+                for i, r in eligible
+            ])
+        except Exception as e:  # noqa: BLE001
+            print(f"Overture placement failed, keeping street-level points: {e!r}", flush=True)
+
     for i, r in enumerate(rows):
-        if r["is_individual"] != "True" and r["biz_key"] in roof:
+        best = placed.get(r["biz_key"]) if r["is_individual"] != "True" else None
+        if best and best[2] in ("rooftop", "place"):
+            r["lat"], r["lon"], r["geo_precision"] = best
+        elif r["is_individual"] != "True" and r["biz_key"] in roof:
             r["lat"], r["lon"] = roof[r["biz_key"]]
             r["geo_precision"] = "rooftop"
+        elif best:
+            r["lat"], r["lon"], r["geo_precision"] = best
         elif str(i) in exact:
             r["lat"], r["lon"] = exact[str(i)]
             r["geo_precision"] = "address"
@@ -168,9 +190,10 @@ def main():
         w.writeheader()
         w.writerows(rows)
     located = sum(1 for r in rows if r.get("lat"))
-    rooftops = sum(1 for r in rows if r.get("geo_precision") == "rooftop")
-    print(f"Located {located:,}/{len(rows):,} businesses ({rooftops:,} rooftop, "
-          f"{len(exact):,} street-level)")
+    kinds = defaultdict(int)
+    for r in rows:
+        kinds[r.get("geo_precision") or "none"] += 1
+    print(f"Located {located:,}/{len(rows):,} businesses: {dict(kinds)}")
 
 
 if __name__ == "__main__":

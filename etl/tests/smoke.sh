@@ -10,6 +10,7 @@ cp "$HERE/fixture_ppp.csv" "$WORK/fixture/"
 # Fake ZIP centroids so geocode.py needs no network.
 printf 'GEOID\tALAND\tAWATER\tALAND_SQMI\tAWATER_SQMI\tINTPTLAT\tINTPTLONG   \n73102\t1\t0\t1\t0\t35.4700\t-97.5200\n74103\t1\t0\t1\t0\t36.1550\t-95.9930\n73069\t1\t0\t1\t0\t35.2200\t-97.4400\n73034\t1\t0\t1\t0\t35.6700\t-97.4500\n' > "$WORK/data/zcta_gazetteer.txt"
 cd "$WORK"
+export OVERTURE=0   # keep the smoke test offline
 "$PY" etl/download_ppp.py --state OK --local fixture
 "$PY" etl/build.py --state OK
 "$PY" etl/geocode.py

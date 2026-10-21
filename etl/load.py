@@ -85,7 +85,7 @@ def main():
         # (sole proprietors, whose addresses we never geocode, and addresses the Census couldn't
         # match) are left out, which also removes any already loaded.
         cur.execute("delete from stage_biz where geo_precision is null "
-                    "or geo_precision not in ('rooftop', 'address') "
+                    "or geo_precision not in ('rooftop', 'place', 'building', 'address') "
                     "or coalesce(address, '') = ''")
         print(f"skipped without a street-level address: {cur.rowcount:,}")
         casts = {
