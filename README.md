@@ -10,9 +10,9 @@ web/   Next.js app: map + list explorer, business pages, JSON API, claim/removal
 
 ## How the estimates work
 
-1. **Payroll.** A PPP loan was 2.5× average monthly payroll (3.5× for second-draw loans in NAICS 72), so annual payroll ≈ `loan ÷ 2.5 × 12`. A business's first-draw loan is preferred because it was sized on 2019 payroll.
-2. **Revenue** = payroll ÷ the industry's payroll-to-revenue ratio (Economic Census, matched on the most specific NAICS prefix available).
-3. **EBITDA** = revenue × the industry's EBITDA margin.
+1. **Revenue** = employees reported on the PPP loan × the industry's revenue per employee (matched on the most specific NAICS prefix available).
+2. **EBITDA** = revenue × the industry's EBITDA margin.
+3. **Cross-check.** A PPP loan was 2.5× average monthly payroll (3.5× for second-draw loans in NAICS 72), so payroll ≈ `loan ÷ 2.5 × 12`, and payroll ÷ the industry payroll-to-revenue ratio gives a second revenue figure. More than 2× disagreement marks the estimate low confidence; businesses with no reported jobs use this method instead.
 4. **Only businesses geocoded to their exact street address are listed.** Sole proprietors and the self-employed are excluded.
 
 The ranges and margins are set in `etl/build.py` and `etl/benchmarks.py`. The built-in sector ratios are **rounded approximations**. `benchmarks.py --fetch` replaces them with exact Census figures; `run.sh` does this automatically.
