@@ -13,7 +13,7 @@ web/   Next.js app: map + list explorer, business pages, JSON API, claim/removal
 1. **Payroll.** A PPP loan was 2.5× average monthly payroll (3.5× for second-draw loans in NAICS 72), so annual payroll ≈ `loan ÷ 2.5 × 12`. A business's first-draw loan is preferred because it was sized on 2019 payroll.
 2. **Revenue** = payroll ÷ the industry's payroll-to-revenue ratio (Economic Census, matched on the most specific NAICS prefix available).
 3. **EBITDA** = revenue × the industry's EBITDA margin.
-4. **Sole proprietors and the self-employed** were sized on owner profit, so the annualized amount is treated as owner earnings (≈ EBITDA), and revenue assumes a 30% net margin. Their street addresses are never shown, and their map pins sit at a ZIP-code centroid.
+4. **Only businesses geocoded to their exact street address are listed.** Sole proprietors and the self-employed are excluded.
 
 The ranges and margins are set in `etl/build.py` and `etl/benchmarks.py`. The built-in sector ratios are **rounded approximations**. `benchmarks.py --fetch` replaces them with exact Census figures; `run.sh` does this automatically.
 

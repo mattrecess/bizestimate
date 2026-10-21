@@ -23,10 +23,10 @@ export default function Methodology() {
           When a business reported no employees, this payroll method is used instead.</p>
       </div>
       <div className="section">
-        <h2>One-person businesses</h2>
-        <p>Sole proprietors and self-employed borrowers who reported no employees were sized on owner net profit, not
-          payroll. For them we treat the annualized loan as owner earnings and assume a 30% net margin. We never show their street
-          address, and map pins are placed at the ZIP code, not the home.</p>
+        <h2>Which businesses are listed</h2>
+        <p>We only list businesses whose address could be matched to an exact street location by the U.S. Census
+          geocoder, so every map pin sits at the business&apos;s own address. Sole proprietors, self-employed
+          individuals and independent contractors are not listed, since their address is often a home.</p>
       </div>
       <p className="disclaimer">Source data: SBA PPP FOIA release (public records). All figures are statistical
         estimates, not reported financials, and reflect 2019–2020 payroll. Owners can claim a listing to correct it

@@ -23,8 +23,8 @@ export default function Terms() {
       </div>
       <div className="section">
         <h2>Privacy</h2>
-        <p>For sole proprietors, self-employed individuals and independent contractors we do not display a street
-          address, and their map location is approximate (ZIP-code level).</p>
+        <p>Sole proprietors, self-employed individuals and independent contractors are not listed, since their
+          business address is often a home address.</p>
       </div>
       <div className="section">
         <h2>Corrections and removal</h2>

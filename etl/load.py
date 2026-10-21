@@ -2,6 +2,7 @@
 
     DATABASE_URL=postgresql://... python etl/load.py --state OK
 
+Only businesses geocoded to their street address are loaded.
 Re-running updates that state's businesses in place (matched on biz_key), so their ids,
 and therefore their page URLs, stay the same; businesses no longer in the data are removed.
 """
@@ -80,6 +81,12 @@ def main():
         with cur.copy(f"copy stage_biz ({', '.join(BIZ_COLS)}) from stdin") as cp:
             for r in rows(os.path.join(DATA_DIR, "businesses.csv"), BIZ_COLS):
                 cp.write_row(r)
+        # Only list businesses pinned at their own geocoded street address; ZIP-level placements
+        # (sole proprietors, whose addresses we never geocode, and addresses the Census couldn't
+        # match) are left out, which also removes any already loaded.
+        cur.execute("delete from stage_biz where geo_precision is distinct from 'address' "
+                    "or coalesce(address, '') = ''")
+        print(f"skipped without a street-level address: {cur.rowcount:,}")
         casts = {
             "is_individual": "coalesce(is_individual::boolean, false)",
             "is_nonprofit": "coalesce(is_nonprofit::boolean, false)",
