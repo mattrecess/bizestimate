@@ -55,18 +55,32 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
 
       <div className="section">
         <h2>How we estimated this <span className={`badge ${b.est_confidence === "low" ? "low" : ""}`}>{b.est_confidence} confidence</span></h2>
-        {b.est_method === "payroll" ? (
+        {b.est_method === "employees" && (
           <table><tbody>
+            <tr><td>Employees reported to the SBA</td><td>{b.jobs_reported}</td></tr>
+            <tr><td>Industry revenue per employee</td><td>{money(b.revenue_per_employee)}</td></tr>
+            <tr><td>Revenue = employees × revenue per employee</td><td>{money(b.est_revenue_mid)}</td></tr>
+            <tr><td>Industry EBITDA margin</td><td>{pct(b.ebitda_margin)}</td></tr>
+            <tr><td>EBITDA = revenue × margin</td><td>{money(b.est_ebitda_mid)}</td></tr>
+            <tr><td>Cross-check: revenue implied by PPP payroll</td><td>{money(b.est_revenue_by_payroll)}</td></tr>
+          </tbody></table>
+        )}
+        {b.est_method === "payroll" && (
+          <table><tbody>
+            <tr><td colSpan={2}>No employee count was reported, so this uses the PPP loan instead.</td></tr>
             <tr><td>Annual payroll implied by PPP loan</td><td>{money(b.est_payroll)}</td></tr>
             <tr><td>Industry payroll ÷ revenue</td><td>{pct(b.payroll_to_revenue)}</td></tr>
             <tr><td>Revenue = payroll ÷ ratio</td><td>{money(b.est_revenue_mid)}</td></tr>
             <tr><td>Industry EBITDA margin</td><td>{pct(b.ebitda_margin)}</td></tr>
-            <tr><td>Cross-check: employees × industry revenue per employee</td><td>{money(b.est_revenue_by_employees)}</td></tr>
           </tbody></table>
-        ) : (
-          <p>This looks like a one-person business. Its PPP loan was sized on owner earnings rather than
-            payroll, so we treat the annualized amount as owner earnings (≈ EBITDA) and assume a 30% net margin to
-            estimate revenue. Treat these numbers as rough.</p>
+        )}
+        {b.est_method === "owner_earnings" && (
+          <p>This looks like a one-person business with no employee count. Its PPP loan was sized on owner earnings
+            rather than payroll, so we treat the annualized amount as owner earnings (≈ EBITDA) and assume a 30% net
+            margin to estimate revenue. Treat these numbers as rough.</p>
+        )}
+        {b.est_confidence === "low" && b.est_method === "employees" && (
+          <p className="disclaimer">Low confidence: the employee-based and payroll-based estimates differ by more than 2×.</p>
         )}
         <p className="disclaimer">Benchmarks: {b.benchmark_source ?? "sector default"}. PPP loans were sized on 2019–2020
           payroll, so figures reflect that period. These are statistical estimates, not reported financials.</p>

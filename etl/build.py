@@ -6,6 +6,10 @@ Reads data/ppp_<state>.csv, writes data/businesses.csv and data/loans.csv.
 
 Method
 ------
+Primary: revenue = reported jobs x the industry's revenue per employee; EBITDA = revenue x
+the industry margin. The payroll method below is kept as a cross-check, and used when a
+business reported no jobs.
+
 A first-draw PPP loan was 2.5x average monthly 2019 payroll (3.5x for second
 draws in NAICS 72), so annual payroll ~= loan / multiplier * 12. Revenue is
 payroll / the industry's payroll-to-revenue ratio, EBITDA is revenue x the
@@ -29,6 +33,7 @@ INDIVIDUAL_TYPES = {"sole proprietorship", "self-employed individuals", "indepen
 SOLE_PROP_NET_MARGIN = 0.30          # owner earnings / revenue for one-person businesses
 PAYROLL_RANGE = (0.75, 1.35)         # payroll excludes comp over $100k/yr, so skew high
 OWNER_RANGE = (0.6, 1.6)
+EMPLOYEE_RANGE = (0.7, 1.4)          # reported jobs are a point-in-time headcount
 SUFFIXES = re.compile(r"\b(LLC|L L C|INC|INCORPORATED|CORP|CORPORATION|CO|COMPANY|LTD|PLLC|PC|LP|LLP|DBA)\b")
 
 
@@ -58,21 +63,33 @@ def estimate(loan_amount, draw, naics, jobs, business_type, bench):
     multiplier = 3.5 if draw == "second" and (naics or "").startswith("72") else 2.5
     annual = loan_amount / multiplier * 12
     individual = (business_type or "").strip().lower() in INDIVIDUAL_TYPES
-    est = {"est_revenue_by_employees": None}
-    if jobs and jobs > 0 and bench.get("revenue_per_employee"):
-        est["est_revenue_by_employees"] = round(jobs * bench["revenue_per_employee"])
+    owner_only = individual and (jobs or 0) <= 1
 
-    if individual and (jobs or 0) <= 1:
-        ebitda = annual
-        revenue = ebitda / SOLE_PROP_NET_MARGIN
-        lo, hi = OWNER_RANGE
-        est.update(est_payroll=None, est_method="owner_earnings", est_confidence="low")
+    # Payroll method: one-person businesses were sized on owner earnings, everyone else on payroll.
+    if owner_only:
+        payroll_revenue, payroll_ebitda = annual / SOLE_PROP_NET_MARGIN, annual
     else:
-        revenue = annual / bench["payroll_to_revenue"]
+        payroll_revenue = annual / bench["payroll_to_revenue"]
+        payroll_ebitda = payroll_revenue * bench["ebitda_margin"]
+    est = {
+        "est_payroll": None if owner_only else round(annual),
+        "est_revenue_by_payroll": round(payroll_revenue),
+        "est_revenue_by_employees": None,
+    }
+
+    # Primary method: reported employees x the industry's revenue per employee.
+    if jobs and jobs > 0 and bench.get("revenue_per_employee"):
+        revenue = jobs * bench["revenue_per_employee"]
         ebitda = revenue * bench["ebitda_margin"]
-        lo, hi = PAYROLL_RANGE
-        est.update(est_payroll=round(annual), est_method="payroll",
-                   est_confidence="medium" if jobs and jobs > 0 else "low")
+        lo, hi = EMPLOYEE_RANGE
+        # When the two methods disagree by more than 2x, flag the estimate as shaky.
+        agree = 0.5 <= revenue / payroll_revenue <= 2
+        est.update(est_revenue_by_employees=round(revenue), est_method="employees",
+                   est_confidence="medium" if agree else "low")
+    else:
+        revenue, ebitda = payroll_revenue, payroll_ebitda
+        lo, hi = OWNER_RANGE if owner_only else PAYROLL_RANGE
+        est.update(est_method="owner_earnings" if owner_only else "payroll", est_confidence="low")
     est.update(
         est_revenue_low=round(revenue * lo), est_revenue_mid=round(revenue),
         est_revenue_high=round(revenue * hi), est_ebitda_low=round(ebitda * lo),
@@ -85,7 +102,7 @@ BUSINESS_COLS = [
     "biz_key", "name", "address", "city", "state", "zip", "county", "naics", "industry",
     "business_type", "is_individual", "is_nonprofit", "jobs_reported", "est_payroll",
     "est_revenue_low", "est_revenue_mid", "est_revenue_high", "est_ebitda_low",
-    "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees", "est_method",
+    "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees", "est_revenue_by_payroll", "est_method",
     "est_confidence", "total_ppp_amount",
 ]
 LOAN_COLS = ["loan_number", "biz_key", "draw", "date_approved", "amount", "payroll_proceed",

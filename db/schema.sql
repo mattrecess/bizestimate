@@ -35,14 +35,18 @@ create table if not exists businesses (
   est_ebitda_low      numeric,
   est_ebitda_mid      numeric,
   est_ebitda_high     numeric,
-  est_revenue_by_employees numeric,              -- cross-check: jobs x sector revenue/employee
-  est_method          text,                      -- 'payroll' | 'owner_earnings'
+  est_revenue_by_employees numeric,              -- jobs x industry revenue/employee (primary method)
+  est_revenue_by_payroll numeric,                -- PPP-implied payroll / industry ratio (cross-check)
+  est_method          text,                      -- 'employees' | 'payroll' | 'owner_earnings'
   est_confidence      text,                      -- 'medium' | 'low'
   total_ppp_amount    numeric,
   search              tsvector generated always as (
     to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(city,'') || ' ' || coalesce(industry,''))
   ) stored
 );
+
+-- Columns added after the first release.
+alter table businesses add column if not exists est_revenue_by_payroll numeric;
 
 create index if not exists businesses_search_idx on businesses using gin (search);
 create index if not exists businesses_latlon_idx on businesses (lat, lon);

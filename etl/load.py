@@ -23,7 +23,7 @@ BIZ_COLS = [
     "biz_key", "name", "address", "city", "state", "zip", "county", "naics", "industry",
     "business_type", "is_individual", "is_nonprofit", "jobs_reported", "lat", "lon",
     "geo_precision", "est_payroll", "est_revenue_low", "est_revenue_mid", "est_revenue_high",
-    "est_ebitda_low", "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees",
+    "est_ebitda_low", "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees", "est_revenue_by_payroll",
     "est_method", "est_confidence", "total_ppp_amount",
 ]
 LOAN_COLS = ["loan_number", "biz_key", "draw", "date_approved", "amount", "payroll_proceed",
