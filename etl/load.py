@@ -84,7 +84,8 @@ def main():
         # Only list businesses pinned at their own geocoded street address; ZIP-level placements
         # (sole proprietors, whose addresses we never geocode, and addresses the Census couldn't
         # match) are left out, which also removes any already loaded.
-        cur.execute("delete from stage_biz where geo_precision is distinct from 'address' "
+        cur.execute("delete from stage_biz where geo_precision is null "
+                    "or geo_precision not in ('rooftop', 'address') "
                     "or coalesce(address, '') = ''")
         print(f"skipped without a street-level address: {cur.rowcount:,}")
         casts = {

@@ -16,6 +16,7 @@ import uuid
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 
+import rooftop
 from netutil import urlopen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -105,7 +106,8 @@ def save_cache(cache):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--addresses", action="store_true", help="street-level Census geocoding")
+    ap.add_argument("--addresses", action="store_true",
+                    help="look up new addresses (cached results are always applied)")
     args = ap.parse_args()
 
     with open(BIZ_CSV, newline="") as f:
@@ -116,10 +118,10 @@ def main():
         if extra not in fields:
             fields.append(extra)
 
-    exact = {}
+    # Street-level (Census, interpolated along the street) for every non-individual business.
+    cache = load_cache()
+    eligible = [(i, r) for i, r in enumerate(rows) if r["is_individual"] != "True" and r["address"]]
     if args.addresses:
-        cache = load_cache()
-        eligible = [(i, r) for i, r in enumerate(rows) if r["is_individual"] != "True" and r["address"]]
         todo = [(str(i), r["address"], r["city"], r["state"], r["zip"])
                 for i, r in eligible if r["biz_key"] not in cache]
         print(f"{len(eligible):,} addresses to place, {len(eligible) - len(todo):,} already cached", flush=True)
@@ -135,14 +137,24 @@ def main():
                     cache[rows[int(rid)]["biz_key"]] = (lat, lon)
                 print(f"geocoded {done:,}/{len(todo):,}", flush=True)
         save_cache(cache)
-        for i, r in eligible:
-            lat, lon = cache.get(r["biz_key"], ("", ""))
-            if lat != "":
-                exact[str(i)] = (float(lat), float(lon))
+    exact = {}
+    for i, r in eligible:
+        lat, lon = cache.get(r["biz_key"], ("", ""))
+        if lat != "":
+            exact[str(i)] = (float(lat), float(lon))
+
+    # Rooftop (Geocodio) where available; this puts the pin on the building itself.
+    roof = rooftop.lookup([
+        (r["biz_key"], r["address"], r["city"], r["state"], r["zip"], float(r.get("est_revenue_mid") or 0))
+        for _, r in eligible
+    ]) if args.addresses else rooftop.lookup([])
 
     zips = zip_centroids()
     for i, r in enumerate(rows):
-        if str(i) in exact:
+        if r["is_individual"] != "True" and r["biz_key"] in roof:
+            r["lat"], r["lon"] = roof[r["biz_key"]]
+            r["geo_precision"] = "rooftop"
+        elif str(i) in exact:
             r["lat"], r["lon"] = exact[str(i)]
             r["geo_precision"] = "address"
         elif r["zip"] in zips:
@@ -156,7 +168,9 @@ def main():
         w.writeheader()
         w.writerows(rows)
     located = sum(1 for r in rows if r.get("lat"))
-    print(f"Located {located:,}/{len(rows):,} businesses ({len(exact):,} street-level)")
+    rooftops = sum(1 for r in rows if r.get("geo_precision") == "rooftop")
+    print(f"Located {located:,}/{len(rows):,} businesses ({rooftops:,} rooftop, "
+          f"{len(exact):,} street-level)")
 
 
 if __name__ == "__main__":
