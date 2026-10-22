@@ -8,4 +8,5 @@ PY="${PYTHON:-python3}"
 "$PY" etl/download_ppp.py --state "$STATE"
 "$PY" etl/build.py --state "$STATE"
 "$PY" etl/geocode.py $GEO_FLAG
+"$PY" etl/diagnose.py --state "$STATE" || echo "diagnose failed (non-fatal)"
 "$PY" etl/load.py --state "$STATE"

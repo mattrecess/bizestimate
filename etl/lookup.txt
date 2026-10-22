@@ -1,0 +1,3 @@
+# Names to explain in the data-load log (substring of the PPP borrower name).
+RED DIRT SEPTIC
+RED DIRT
