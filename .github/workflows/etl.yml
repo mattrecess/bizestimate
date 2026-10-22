@@ -35,6 +35,7 @@ jobs:
             data/owners_cache.csv
             data/owners_ai_cache.csv
             data/owners_ai_pending.json
+            data/website_check_cache.json
           key: geocode-${{ github.run_id }}
           restore-keys: geocode-
       - name: Run pipeline

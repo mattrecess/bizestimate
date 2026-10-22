@@ -47,9 +47,14 @@ def street_core(street):
     return " ".join(words) or street
 
 
+def ordered_name_tokens(name):
+    """Significant words of a business name, in order ("THE RED DIRT GYPSY LLC" -> RED, DIRT, GYPSY)."""
+    words = re.sub(r"[^A-Z0-9 ]", " ", (name or "").upper().replace("'", "").replace("&", " AND ")).split()
+    return [w for w in words if w not in NAME_NOISE and len(w) > 1]
+
+
 def name_tokens(name):
-    words = re.sub(r"[^A-Z0-9 ]", " ", (name or "").upper().replace("&", " AND ")).split()
-    return frozenset(w for w in words if w not in NAME_NOISE and len(w) > 1)
+    return frozenset(ordered_name_tokens(name))
 
 
 def name_score(a, b):
