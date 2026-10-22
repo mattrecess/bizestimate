@@ -6,6 +6,15 @@ import MiniMap from "./MiniMap";
 
 export type Profile = Business & { loans: Loan[]; comps: Comparable[] };
 
+// "https://www.blastrac.com/" -> "blastrac.com"
+function siteLabel(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "Website";
+  }
+}
+
 const pct = (v: unknown) => (v == null ? "—" : `${(Number(v) * 100).toFixed(0)}%`);
 
 // Shared by the full business page and the explorer's side panel (compact, no mini-map).
@@ -23,6 +32,11 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           {[b.address, b.city, `OK ${b.zip}`].filter(Boolean).join(", ")} · {b.industry} (NAICS {b.naics || "n/a"})
           {b.is_nonprofit && " · Nonprofit"}
         </div>
+        {b.website && (
+          <a className="website" href={b.website} target="_blank" rel="nofollow noopener noreferrer">
+            {siteLabel(b.website)} ↗
+          </a>
+        )}
       </div>
 
       <div className="stats">
