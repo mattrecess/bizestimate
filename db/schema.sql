@@ -47,6 +47,7 @@ create table if not exists businesses (
 
 -- Columns added after the first release.
 alter table businesses add column if not exists est_revenue_by_payroll numeric;
+alter table businesses add column if not exists website text;   -- from Overture places (name match)
 
 create index if not exists businesses_search_idx on businesses using gin (search);
 create index if not exists businesses_latlon_idx on businesses (lat, lon);

@@ -89,11 +89,12 @@ def load_layers(state):
             "ymin": pc.field("bbox", "ymin"), "ymax": pc.field("bbox", "ymax"),
         }, bounds)
         pq.write_table(t, bld_path)
-    places_path = os.path.join(DATA_DIR, f"overture_{state.lower()}_places_{release}.parquet")
+    places_path = os.path.join(DATA_DIR, f"overture_{state.lower()}_places_v2_{release}.parquet")
     if not os.path.exists(places_path):
         print(f"Overture {release}: downloading {state} places…", flush=True)
         t = _fetch(fs, release, "places", "place", {
             "name": pc.field("names", "primary"), "confidence": pc.field("confidence"),
+            "websites": pc.field("websites"),
             "lon": pc.field("bbox", "xmin"), "lat": pc.field("bbox", "ymin"),
         }, bounds)
         pq.write_table(t, places_path)
@@ -222,23 +223,35 @@ def name_score(a, b):
     return score if common >= 2 or min(len(a), len(b)) == 1 else score * 0.8
 
 
+SOCIAL = ("facebook.com", "instagram.com", "twitter.com", "x.com", "linkedin.com", "yelp.com", "tiktok.com")
+
+
+def pick_website(urls):
+    """The business's own site if listed, else a social profile; None if nothing usable."""
+    good = [u.strip() for u in (urls or []) if u and re.match(r"^https?://[^\s/]+\.[^\s]+$", u.strip())]
+    own = [u for u in good if not any(d in u.lower() for d in SOCIAL)]
+    return (own or good or [None])[0]
+
+
 class PlaceIndex:
     CELL = 0.01  # degrees, ~1 km
 
     def __init__(self, table):
         self.cells = defaultdict(list)
+        websites = table.column("websites").to_pylist() if "websites" in table.column_names else None
         rows = zip(*(table.column(c).to_pylist() for c in ("name", "confidence", "lat", "lon")))
         n = 0
-        for name, conf, lat, lon in rows:
+        for idx, (name, conf, lat, lon) in enumerate(rows):
             tokens = name_tokens(name)
             if not tokens or lat is None or (conf or 0) < 0.4:
                 continue
-            self.cells[(int(lon // self.CELL), int(lat // self.CELL))].append((tokens, lat, lon))
+            site = pick_website(websites[idx]) if websites else None
+            self.cells[(int(lon // self.CELL), int(lat // self.CELL))].append((tokens, lat, lon, site))
             n += 1
         print(f"Indexed {n:,} Overture places", flush=True)
 
     def find(self, name, lat, lon):
-        """Best same-name place within PLACE_RADIUS_M of (lat, lon), or None."""
+        """Best same-name place within PLACE_RADIUS_M of (lat, lon) as (lat, lon, website), or None."""
         tokens = name_tokens(name)
         if not tokens:
             return None
@@ -248,21 +261,21 @@ class PlaceIndex:
         best, best_key = None, None
         for i in range(cx - reach, cx + reach + 1):
             for j in range(cy - reach, cy + reach + 1):
-                for p_tokens, p_lat, p_lon in self.cells.get((i, j), ()):
+                for p_tokens, p_lat, p_lon, p_site in self.cells.get((i, j), ()):
                     score = name_score(tokens, p_tokens)
                     if score < PLACE_MIN_SCORE:
                         continue
                     d = math.hypot((p_lon - lon) * mx, (p_lat - lat) * my)
                     if d > PLACE_RADIUS_M:
                         continue
-                    key = (score, -d)
+                    key = (score, p_site is not None, -d)
                     if best_key is None or key > best_key:
-                        best, best_key = (p_lat, p_lon), key
+                        best, best_key = (p_lat, p_lon, p_site), key
         return best
 
 
 def place(state, rows):
-    """rows: [(biz_key, name, address, zip5, lat, lon, street_level)] -> {biz_key: (lat, lon, precision)}
+    """rows: [(biz_key, name, address, zip5, lat, lon, street_level)] -> {biz_key: (lat, lon, precision, website)}
 
     lat/lon is the Census street-level point (street_level=True), or the ZIP centre when the Census
     had no match; the ZIP centre is only used to search for same-name places nearby.
@@ -276,14 +289,14 @@ def place(state, rows):
             hit = addresses.find(parsed[0], parsed[1], zip5)
             if hit:
                 snapped = buildings.snap(*hit, max_m=15) or hit
-                out[biz_key] = (snapped[0], snapped[1], "rooftop")
+                out[biz_key] = (snapped[0], snapped[1], "rooftop", None)
                 counts["exact address point"] += 1
                 continue
         if s_lat is not None:
             hit = places.find(name, s_lat, s_lon)
             if hit:
-                snapped = buildings.snap(*hit, max_m=20) or hit
-                out[biz_key] = (snapped[0], snapped[1], "place")
+                snapped = buildings.snap(hit[0], hit[1], max_m=20) or hit
+                out[biz_key] = (snapped[0], snapped[1], "place", hit[2])
                 counts["business name match"] += 1
                 continue
         if parsed:
@@ -291,15 +304,23 @@ def place(state, rows):
             if guess:
                 snapped = buildings.snap(*guess)
                 if snapped:
-                    out[biz_key] = (snapped[0], snapped[1], "building")
+                    out[biz_key] = (snapped[0], snapped[1], "building", None)
                     counts["neighbours + building"] += 1
                     continue
         if s_lat is not None and street_level:
             snapped = buildings.snap(s_lat, s_lon)
             if snapped:
-                out[biz_key] = (snapped[0], snapped[1], "building")
+                out[biz_key] = (snapped[0], snapped[1], "building", None)
                 counts["street point + building"] += 1
                 continue
         counts["no building found"] += 1
-    print(f"Overture {release} placement: {dict(counts)}", flush=True)
+    # Websites: for businesses not placed via a place match, look for a same-name place near the pin.
+    names = {r[0]: r[1] for r in rows}
+    for biz_key, (lat, lon, precision, site) in out.items():
+        if site is None and precision != "place":
+            hit = places.find(names[biz_key], lat, lon)
+            if hit and hit[2]:
+                out[biz_key] = (lat, lon, precision, hit[2])
+    with_site = sum(1 for v in out.values() if v[3])
+    print(f"Overture {release} placement: {dict(counts)}; websites found: {with_site:,}", flush=True)
     return out

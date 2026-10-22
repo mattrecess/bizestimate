@@ -116,7 +116,7 @@ def main():
         reader = csv.DictReader(f)
         fields = reader.fieldnames
         rows = list(reader)
-    for extra in ("lat", "lon", "geo_precision"):
+    for extra in ("lat", "lon", "geo_precision", "website"):
         if extra not in fields:
             fields.append(extra)
 
@@ -169,13 +169,14 @@ def main():
 
     for i, r in enumerate(rows):
         best = placed.get(r["biz_key"]) if r["is_individual"] != "True" else None
+        r["website"] = best[3] if best else ""
         if best and best[2] in ("rooftop", "place"):
-            r["lat"], r["lon"], r["geo_precision"] = best
+            r["lat"], r["lon"], r["geo_precision"] = best[:3]
         elif r["is_individual"] != "True" and r["biz_key"] in roof:
             r["lat"], r["lon"] = roof[r["biz_key"]]
             r["geo_precision"] = "rooftop"
         elif best:
-            r["lat"], r["lon"], r["geo_precision"] = best
+            r["lat"], r["lon"], r["geo_precision"] = best[:3]
         elif str(i) in exact:
             r["lat"], r["lon"] = exact[str(i)]
             r["geo_precision"] = "address"
