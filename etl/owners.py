@@ -217,6 +217,11 @@ def main():
         w.writerows(rows)
     print(f"Owners: found a name for {found:,} businesses ({found / max(len(sites), 1):.0%} of scanned websites)",
           flush=True)
+    # A fixed sample in the log, so results can be spot-checked without database access.
+    hits = sorted((r for r in rows if r["owner_name"]), key=lambda r: r["biz_key"])
+    for r in hits[:: max(1, len(hits) // 20)][:20]:
+        print(f"  sample: {r['name']} ({r['city']}) -> {r['owner_title']}: {r['owner_name']} | {r['owner_source']}",
+              flush=True)
 
 
 if __name__ == "__main__":
