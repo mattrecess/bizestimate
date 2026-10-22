@@ -9,7 +9,8 @@ export type Business = {
   geo_precision: string | null; est_payroll: Num; est_revenue_low: Num; est_revenue_mid: Num;
   est_revenue_high: Num; est_ebitda_low: Num; est_ebitda_mid: Num; est_ebitda_high: Num;
   est_revenue_by_employees: Num; est_revenue_by_payroll: Num; est_method: string; est_confidence: string; total_ppp_amount: Num;
-  website: string | null; payroll_to_revenue: Num; revenue_per_employee: Num; ebitda_margin: Num; benchmark_source: string | null;
+  website: string | null; owner_name: string | null; owner_title: string | null;
+  owner_source: string | null; payroll_to_revenue: Num; revenue_per_employee: Num; ebitda_margin: Num; benchmark_source: string | null;
 };
 export type Loan = {
   loan_number: string; draw: string; date_approved: Date | null; amount: Num;
@@ -24,7 +25,9 @@ export async function getBusiness(id: string): Promise<(Business & { loans: Loan
            b.geo_precision, b.est_payroll, b.est_revenue_low, b.est_revenue_mid, b.est_revenue_high,
            b.est_ebitda_low, b.est_ebitda_mid, b.est_ebitda_high, b.est_revenue_by_employees, b.est_revenue_by_payroll,
            b.est_method, b.est_confidence, b.total_ppp_amount,
-           to_jsonb(b) ->> 'website' as website, -- tolerant of databases loaded before the column existed
+           -- via to_jsonb: tolerant of databases loaded before these columns existed
+           to_jsonb(b) ->> 'website' as website, to_jsonb(b) ->> 'owner_name' as owner_name,
+           to_jsonb(b) ->> 'owner_title' as owner_title, to_jsonb(b) ->> 'owner_source' as owner_source,
            ib.payroll_to_revenue, ib.revenue_per_employee, ib.ebitda_margin, ib.source as benchmark_source
     from businesses b
     left join lateral (

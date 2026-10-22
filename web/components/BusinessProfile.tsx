@@ -15,6 +15,14 @@ function siteLabel(url: string) {
   }
 }
 
+// People search for the owner at this business when we know a name, otherwise a company search.
+function linkedInSearch(b: Profile) {
+  const name = b.name.replace(/,?\s+(LLC|L\.L\.C\.|INC\.?|CORP\.?|CO\.?|PLLC|LTD\.?)$/i, "");
+  return b.owner_name
+    ? `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${b.owner_name} ${name}`)}`
+    : `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(name)}`;
+}
+
 const pct = (v: unknown) => (v == null ? "—" : `${(Number(v) * 100).toFixed(0)}%`);
 
 // Shared by the full business page and the explorer's side panel (compact, no mini-map).
@@ -32,11 +40,20 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           {[b.address, b.city, `OK ${b.zip}`].filter(Boolean).join(", ")} · {b.industry} (NAICS {b.naics || "n/a"})
           {b.is_nonprofit && " · Nonprofit"}
         </div>
-        {b.website && (
-          <a className="website" href={b.website} target="_blank" rel="nofollow noopener noreferrer">
-            {siteLabel(b.website)} ↗
-          </a>
+        {b.owner_name && (
+          <div className="owner">
+            {b.owner_title || "Owner"}: <strong>{b.owner_name}</strong>
+            {b.owner_source && (
+              <> · <a href={b.owner_source} target="_blank" rel="nofollow noopener noreferrer">source</a></>
+            )}
+          </div>
         )}
+        <div className="links">
+          {b.website && (
+            <a href={b.website} target="_blank" rel="nofollow noopener noreferrer">{siteLabel(b.website)} ↗</a>
+          )}
+          <a href={linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer">Find on LinkedIn ↗</a>
+        </div>
       </div>
 
       <div className="stats">

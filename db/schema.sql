@@ -48,6 +48,9 @@ create table if not exists businesses (
 -- Columns added after the first release.
 alter table businesses add column if not exists est_revenue_by_payroll numeric;
 alter table businesses add column if not exists website text;   -- from Overture places (name match)
+alter table businesses add column if not exists owner_name text;     -- from the business website (etl/owners.py)
+alter table businesses add column if not exists owner_title text;
+alter table businesses add column if not exists owner_source text;   -- page the name was found on
 
 create index if not exists businesses_search_idx on businesses using gin (search);
 create index if not exists businesses_latlon_idx on businesses (lat, lon);

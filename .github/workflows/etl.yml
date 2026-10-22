@@ -32,6 +32,7 @@ jobs:
           path: |
             data/geocode_cache.csv
             data/rooftop_cache.csv
+            data/owners_cache.csv
           key: geocode-${{ github.run_id }}
           restore-keys: geocode-
       - name: Run pipeline

@@ -74,4 +74,5 @@ footer.foot nav { display: flex; gap: 16px; }
 .profile.compact .section { padding: 12px; margin-top: 12px; }
 .profile.compact td, .profile.compact th { padding: 5px 6px; font-size: 13px; }
 .maplibregl-popup-content { color: #16202c; }
-.hero .website { display: inline-block; margin-top: 6px; font-weight: 600; }
+.hero .owner { margin-top: 8px; }
+.hero .links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 6px; font-weight: 600; }
