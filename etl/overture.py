@@ -19,6 +19,8 @@ import pyarrow.dataset as ds
 import pyarrow.fs as pafs
 import pyarrow.parquet as pq
 
+from matching import name_score, name_tokens, normalize_street, parse_address, street_core
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
 BUCKET = "overturemaps-us-west-2"
@@ -28,20 +30,7 @@ NEIGHBOUR_SPAN = 200      # max house-number gap to interpolate between neighbou
 MIN_BUILDING_M2 = 60      # ignore sheds and carports
 PLACE_RADIUS_M = 1_500    # how far from the street point a same-name place may be
 PLACE_MIN_SCORE = 0.6     # name similarity (0-1) needed for a place match
-NAME_NOISE = {"LLC", "L", "C", "INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "PLLC",
-              "PC", "LP", "LLP", "PA", "DBA", "THE", "OF", "AND", "OKLAHOMA", "OK", "OKC", "TULSA"}
-
-SUFFIX = {
-    "STREET": "ST", "AVENUE": "AVE", "AV": "AVE", "BOULEVARD": "BLVD", "DRIVE": "DR", "ROAD": "RD",
-    "LANE": "LN", "COURT": "CT", "PLACE": "PL", "PARKWAY": "PKWY", "HIGHWAY": "HWY", "TERRACE": "TER",
-    "CIRCLE": "CIR", "EXPRESSWAY": "EXPY", "FREEWAY": "FWY", "TRAIL": "TRL", "SQUARE": "SQ",
-    "CENTER": "CTR", "PLAZA": "PLZ", "POINT": "PT", "CROSSING": "XING", "TURNPIKE": "TPKE",
-}
-DIRECTION = {
-    "NORTH": "N", "SOUTH": "S", "EAST": "E", "WEST": "W", "NORTHWEST": "NW", "NORTHEAST": "NE",
-    "SOUTHWEST": "SW", "SOUTHEAST": "SE",
-}
-UNIT_WORDS = {"STE", "SUITE", "UNIT", "APT", "BLDG", "BUILDING", "RM", "ROOM", "FL", "FLOOR", "SPC", "LOT", "DEPT"}
+ZIP_SEARCH_M = 25_000     # when only the ZIP is known: search this far, but only same-ZIP, near-exact names
 
 
 def _fs():
@@ -89,42 +78,17 @@ def load_layers(state):
             "ymin": pc.field("bbox", "ymin"), "ymax": pc.field("bbox", "ymax"),
         }, bounds)
         pq.write_table(t, bld_path)
-    places_path = os.path.join(DATA_DIR, f"overture_{state.lower()}_places_v2_{release}.parquet")
+    places_path = os.path.join(DATA_DIR, f"overture_{state.lower()}_places_v3_{release}.parquet")
     if not os.path.exists(places_path):
         print(f"Overture {release}: downloading {state} places…", flush=True)
         t = _fetch(fs, release, "places", "place", {
             "name": pc.field("names", "primary"), "confidence": pc.field("confidence"),
             "websites": pc.field("websites"),
+            "postcode": pc.struct_field(pc.list_element(pc.field("addresses"), 0), "postcode"),
             "lon": pc.field("bbox", "xmin"), "lat": pc.field("bbox", "ymin"),
         }, bounds)
         pq.write_table(t, places_path)
     return release, pq.read_table(addr_path), pq.read_table(bld_path), pq.read_table(places_path)
-
-
-def parse_address(addr):
-    """'13209 N Santa Fe Avenue Ste 100' -> ('13209', 'N SANTA FE AVE'); None for PO boxes etc."""
-    s = re.sub(r"[^A-Z0-9 ]", " ", (addr or "").upper().replace("#", " STE "))
-    tokens = s.split()
-    if not tokens or not re.match(r"^\d+[A-Z]?$", tokens[0]):
-        return None
-    number = re.match(r"^\d+", tokens[0]).group()
-    street = []
-    for tok in tokens[1:]:
-        if tok in UNIT_WORDS:
-            break
-        street.append(SUFFIX.get(tok, DIRECTION.get(tok, tok)))
-    return (number, " ".join(street)) if street else None
-
-
-def normalize_street(street):
-    parsed = parse_address(f"0 {street or ''}")
-    return parsed[1] if parsed else ""
-
-
-def _core(street):
-    """Street name without directionals and suffix type, for looser matching."""
-    words = [w for w in street.split() if w not in DIRECTION.values() and w not in SUFFIX.values()]
-    return " ".join(words) or street
 
 
 def _meters(lat):
@@ -183,21 +147,21 @@ class AddressIndex:
                 continue
             n, st, z = m.group(), normalize_street(street), (postcode or "")[:5]
             self.exact.setdefault((n, st, z), (lat, lon))
-            self.loose[(n, _core(st), z)].append((lat, lon))
-            self.by_street[(_core(st), z)].append((int(n), lat, lon))
+            self.loose[(n, street_core(st), z)].append((lat, lon))
+            self.by_street[(street_core(st), z)].append((int(n), lat, lon))
         print(f"Indexed {len(self.exact):,} Overture address points", flush=True)
 
     def find(self, number, street, zip5):
         hit = self.exact.get((number, street, zip5))
         if hit:
             return hit
-        loose = self.loose.get((number, _core(street), zip5), [])
+        loose = self.loose.get((number, street_core(street), zip5), [])
         return loose[0] if len(loose) == 1 else None
 
     def interpolate(self, number, street, zip5):
         """Position from same-street, same-side (odd/even) neighbouring house numbers."""
         n = int(number)
-        side = [p for p in self.by_street.get((_core(street), zip5), ()) if p[0] % 2 == n % 2]
+        side = [p for p in self.by_street.get((street_core(street), zip5), ()) if p[0] % 2 == n % 2]
         lower = max((p for p in side if p[0] < n and n - p[0] <= NEIGHBOUR_SPAN), default=None)
         upper = min((p for p in side if p[0] > n and p[0] - n <= NEIGHBOUR_SPAN), default=None)
         if lower and upper:
@@ -207,20 +171,6 @@ class AddressIndex:
         if near and abs(near[0] - n) <= 20:
             return near[1], near[2]
         return None
-
-
-def name_tokens(name):
-    words = re.sub(r"[^A-Z0-9 ]", " ", (name or "").upper().replace("&", " AND ")).split()
-    return frozenset(w for w in words if w not in NAME_NOISE and len(w) > 1)
-
-
-def name_score(a, b):
-    """Similarity of two token sets: overlap relative to the smaller set, damped for one-word names."""
-    if not a or not b:
-        return 0.0
-    common = len(a & b)
-    score = common / min(len(a), len(b))
-    return score if common >= 2 or min(len(a), len(b)) == 1 else score * 0.8
 
 
 SOCIAL = ("facebook.com", "instagram.com", "twitter.com", "x.com", "linkedin.com", "yelp.com", "tiktok.com")
@@ -239,6 +189,7 @@ class PlaceIndex:
     def __init__(self, table):
         self.cells = defaultdict(list)
         websites = table.column("websites").to_pylist() if "websites" in table.column_names else None
+        postcodes = table.column("postcode").to_pylist() if "postcode" in table.column_names else None
         rows = zip(*(table.column(c).to_pylist() for c in ("name", "confidence", "lat", "lon")))
         n = 0
         for idx, (name, conf, lat, lon) in enumerate(rows):
@@ -246,27 +197,35 @@ class PlaceIndex:
             if not tokens or lat is None or (conf or 0) < 0.4:
                 continue
             site = pick_website(websites[idx]) if websites else None
-            self.cells[(int(lon // self.CELL), int(lat // self.CELL))].append((tokens, lat, lon, site))
+            zip5 = ((postcodes[idx] if postcodes else None) or "")[:5]
+            self.cells[(int(lon // self.CELL), int(lat // self.CELL))].append((tokens, lat, lon, site, zip5))
             n += 1
         print(f"Indexed {n:,} Overture places", flush=True)
 
-    def find(self, name, lat, lon):
-        """Best same-name place within PLACE_RADIUS_M of (lat, lon) as (lat, lon, website), or None."""
+    def find(self, name, lat, lon, zip5=None):
+        """Best same-name place near (lat, lon) as (lat, lon, website), or None.
+
+        With zip5 (the business's location is only known to ZIP level) the search covers the whole
+        ZIP area but only accepts near-exact names on places listed in that same ZIP.
+        """
         tokens = name_tokens(name)
         if not tokens:
             return None
+        radius = ZIP_SEARCH_M if zip5 else PLACE_RADIUS_M
         mx, my = _meters(lat)
-        reach = int(math.ceil(PLACE_RADIUS_M / 111_000 / self.CELL))
+        reach = int(math.ceil(radius / 111_000 / self.CELL))
         cx, cy = int(lon // self.CELL), int(lat // self.CELL)
         best, best_key = None, None
         for i in range(cx - reach, cx + reach + 1):
             for j in range(cy - reach, cy + reach + 1):
-                for p_tokens, p_lat, p_lon, p_site in self.cells.get((i, j), ()):
+                for p_tokens, p_lat, p_lon, p_site, p_zip in self.cells.get((i, j), ()):
                     score = name_score(tokens, p_tokens)
                     if score < PLACE_MIN_SCORE:
                         continue
+                    if zip5 and (p_zip != zip5 or score < 1 or len(tokens & p_tokens) < 2):
+                        continue
                     d = math.hypot((p_lon - lon) * mx, (p_lat - lat) * my)
-                    if d > PLACE_RADIUS_M:
+                    if d > radius:
                         continue
                     key = (score, p_site is not None, -d)
                     if best_key is None or key > best_key:
@@ -293,7 +252,7 @@ def place(state, rows):
                 counts["exact address point"] += 1
                 continue
         if s_lat is not None:
-            hit = places.find(name, s_lat, s_lon)
+            hit = places.find(name, s_lat, s_lon, None if street_level else zip5)
             if hit:
                 snapped = buildings.snap(hit[0], hit[1], max_m=20) or hit
                 out[biz_key] = (snapped[0], snapped[1], "place", hit[2])

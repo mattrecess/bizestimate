@@ -35,7 +35,7 @@ def main():
             name = r["BorrowerName"].strip()
             biz = placed.get(f"{norm_name(name)}|{(r.get('BorrowerZip') or '').strip()[:5]}")
             if biz is None:
-                reason = "dropped before estimating (no loan amount)"
+                reason = "merged into a duplicate listing at the same address, or no loan amount"
             elif biz["is_individual"] == "True":
                 reason = f"EXCLUDED: {biz['business_type']} (sole proprietors/self-employed aren't listed)"
             elif biz.get("geo_precision") not in LISTED:

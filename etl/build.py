@@ -25,6 +25,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from benchmarks import load_benchmarks, lookup
+from matching import name_score, name_tokens, parse_address
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -109,6 +110,36 @@ LOAN_COLS = ["loan_number", "biz_key", "draw", "date_approved", "amount", "payro
              "forgiveness_amount", "loan_status", "lender", "jobs_reported"]
 
 
+def merge_duplicates(loans_by_biz):
+    """Merge businesses filed under slightly different names at the same street address and ZIP,
+    e.g. "RED DIRT PAINTERS, CO" and "RED DIRT PAINTERS CO. DBA CERTAPRO PAINTERS"."""
+    by_address = defaultdict(list)
+    for key, loans in loans_by_biz.items():
+        row = loans[0]["_row"]
+        parsed = parse_address(row.get("BorrowerAddress"))
+        if parsed:
+            by_address[(parsed, key.rsplit("|", 1)[1])].append(key)
+    merged = 0
+    for keys in by_address.values():
+        if len(keys) < 2:
+            continue
+        # Keep the key with the most loans (ties: shortest name), fold similar names into it.
+        keys.sort(key=lambda k: (-len(loans_by_biz[k]), len(k)))
+        kept = []
+        for k in keys:
+            tokens = name_tokens(k.rsplit("|", 1)[0])
+            into = next((t for t in kept if name_score(tokens, name_tokens(t.rsplit("|", 1)[0])) >= 1), None)
+            if into is None:
+                kept.append(k)
+                continue
+            for loan in loans_by_biz.pop(k):
+                loan["biz_key"] = into
+                loans_by_biz[into].append(loan)
+            merged += 1
+    print(f"Merged {merged:,} duplicate listings", flush=True)
+    return loans_by_biz
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--state", default="OK")
@@ -138,6 +169,8 @@ def main():
                 "jobs_reported": int(num(r.get("JobsReported")) or 0) or None,
                 "_row": r,
             })
+
+    loans_by_biz = merge_duplicates(loans_by_biz)
 
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(os.path.join(DATA_DIR, "businesses.csv"), "w", newline="") as bf, \
