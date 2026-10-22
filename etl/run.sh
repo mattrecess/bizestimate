@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 STATE="${1:-OK}"; GEO_FLAG="${2:-}"
 PY="${PYTHON:-python3}"
+mkdir -p data/cache   # cached between runs by the workflow
 "$PY" etl/benchmarks.py --fetch || echo "Using sector-default benchmarks"
 "$PY" etl/download_ppp.py --state "$STATE"
 "$PY" etl/build.py --state "$STATE"

@@ -46,20 +46,48 @@ def domain_label(url):
     return re.sub(r"[^a-z0-9]", "", parts[-2] if len(parts) >= 2 else parts[0])
 
 
+DIRECTIONS = {"NORTH": "N", "SOUTH": "S", "EAST": "E", "WEST": "W", "NORTHEAST": "NE", "NORTHWEST": "NW",
+              "SOUTHEAST": "SE", "SOUTHWEST": "SW"}
+LEGAL = {"LLC", "INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "PLLC", "PC", "LP", "LLP",
+         "PA", "DBA", "THE", "OF", "AND", "IC"}
+EDU_NAMES = {"UNIVERSITY", "COLLEGE", "SCHOOL", "ACADEMY", "SCHOOLS"}
+GOV_NAMES = {"NATION", "TRIBE", "TRIBAL", "CITY", "TOWN", "COUNTY", "AUTHORITY", "DISTRICT", "MUNICIPAL"}
+
+
+def _variants(token):
+    """Spellings a word may take in a domain: BRADYS -> BRADY, SOUTHWEST -> SW."""
+    out = {token}
+    if token.endswith("S") and len(token) > 4:
+        out.add(token[:-1])
+    if token in DIRECTIONS:
+        out.add(DIRECTIONS[token])
+    return {v.lower() for v in out}
+
+
 def domain_matches(name, url, city=""):
     tokens = ordered_name_tokens(name)
     host = urllib.parse.urlparse(url).netloc.lower()
     label = domain_label(url)
-    if not tokens or not label or host.endswith((".edu", ".gov")):
+    words = _words(name)
+    if not tokens or not label:
         return False
-    initials = "".join(t[0] for t in tokens).lower()
-    if len(tokens) >= 2 and (tokens[0] + tokens[1]).lower() in label:
-        return True
+    if host.endswith(".edu") and not words & EDU_NAMES:
+        return False
+    if host.endswith(".gov") and not words & GOV_NAMES:
+        return False
+    # Initials, counting state words too ("Northeast Oklahoma Electric Cooperative" -> noec.coop).
+    raw = [w for w in re.sub(r"[^A-Z0-9 ]", " ", name.upper().replace("'", "")).split() if w not in LEGAL]
+    initials = "".join(w[0] for w in raw).lower()
     if len(initials) >= 3 and label.startswith(initials):
         return True
-    # A lone first word counts only if it's distinctive: not generic, not the city ("Miami ..." on miami.edu).
+    if len(tokens) >= 2 and any(a + b in label for a in _variants(tokens[0]) for b in _variants(tokens[1])):
+        return True
     first = tokens[0]
-    return first not in GENERIC and first not in _words(city or "") and len(first) >= 4 and first.lower() in label
+    if len(tokens) == 1 and len(first) >= 3 and label.startswith(first.lower()):
+        return True   # short one-word names: "HAC" -> hacretail.com
+    # A lone first word counts only if it's distinctive: not generic, not the city ("Miami ..." on miami.edu).
+    return (first not in GENERIC and first not in _words(city or "") and len(first) >= 4
+            and any(v in label for v in _variants(first)))
 
 
 def content_matches(name, city, page):

@@ -180,6 +180,12 @@ def main():
                     and not any(d in site.lower() for d in SOCIAL)):
                 candidates.setdefault(site, r)
         todo = list(candidates.items())[:limit]
+        # Guard: an empty cache facing a large job usually means saved results went missing
+        # (not a genuinely first run), so don't silently pay for everything again.
+        if not cache and not pending and len(todo) > 2_000 and os.environ.get("OWNERS_AI_ALLOW_FRESH") != "1":
+            print(f"Owners AI: REFUSING to look up {len(todo):,} sites with no saved results; "
+                  f"set OWNERS_AI_ALLOW_FRESH=1 if this really is a first run", flush=True)
+            todo = []
         print(f"Owners AI ({MODEL}): {len(candidates):,} unresolved websites, {in_flight:,} already submitted, "
               f"looking up {len(todo):,} more (cap {max_total:,}, {len(cache):,} done)", flush=True)
 
