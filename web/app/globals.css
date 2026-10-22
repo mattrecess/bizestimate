@@ -64,3 +64,13 @@ footer.foot { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: sp
 footer.foot nav { display: flex; gap: 16px; }
 .section { overflow-x: auto; }
 @media (max-width: 600px) { .hide-sm { display: none; } }
+.detail-bar { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.detail-bar .back { font-weight: 600; }
+.profile.compact { padding: 14px 16px 24px; }
+.profile.compact .hero h1 { font-size: 20px; }
+.profile.compact .stats { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 14px 0; }
+.profile.compact .stat { padding: 10px 12px; }
+.profile.compact .stat .v { font-size: 19px; }
+.profile.compact .section { padding: 12px; margin-top: 12px; }
+.profile.compact td, .profile.compact th { padding: 5px 6px; font-size: 13px; }
+.maplibregl-popup-content { color: #16202c; }

@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { SECTORS } from "@/lib/sectors";
 import { money, moneyRange } from "@/lib/format";
+import BusinessProfile, { type Profile } from "@/components/BusinessProfile";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 const PAGE = 50;
@@ -15,7 +15,7 @@ type Biz = {
 };
 
 // Filters are mirrored into the page URL so a search can be bookmarked or shared.
-const URL_KEYS = ["q", "sector", "city", "min_rev", "max_rev", "sort"] as const;
+const URL_KEYS = ["q", "sector", "city", "min_rev", "max_rev", "sort", "id"] as const;
 
 export default function Home() {
   const [ready, setReady] = useState(false);
@@ -31,6 +31,18 @@ export default function Home() {
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<{ total: number; results: Biz[] } | null>(null);
   const [points, setPoints] = useState<GeoJSON.FeatureCollection | null>(null);
+  // Business shown in the side panel (replaces the list until "Back").
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const listScroll = useRef(0);
+
+  function openBusiness(id: number) {
+    if (!selectedId) listScroll.current = panel.current?.scrollTop ?? 0;
+    setSelectedId(id);
+    // On phones the panel sits below the map; bring it into view.
+    if (window.matchMedia("(max-width: 860px)").matches) panel.current?.scrollIntoView({ behavior: "smooth" });
+  }
 
   useEffect(() => {
     const u = new URLSearchParams(window.location.search);
@@ -38,6 +50,7 @@ export default function Home() {
     setSector(u.get("sector") ?? ""); setCity(u.get("city") ?? "");
     setMinRev(u.get("min_rev") ?? ""); setMaxRev(u.get("max_rev") ?? "");
     setSort(u.get("sort") ?? "revenue_desc");
+    if (u.get("id") && /^\d+$/.test(u.get("id")!)) setSelectedId(Number(u.get("id")));
     setReady(true);
     fetch("/api/cities").then((r) => r.json()).then(setCities).catch(() => {});
   }, []);
@@ -46,12 +59,33 @@ export default function Home() {
     if (!ready) return;
     const values: Record<(typeof URL_KEYS)[number], string> = {
       q: debouncedQ, sector, city, min_rev: minRev, max_rev: maxRev, sort: sort === "revenue_desc" ? "" : sort,
+      id: selectedId ? String(selectedId) : "",
     };
     const u = new URLSearchParams();
     for (const k of URL_KEYS) if (values[k]) u.set(k, values[k]);
     const qs = u.toString();
     window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-  }, [ready, debouncedQ, sector, city, minRev, maxRev, sort]);
+  }, [ready, debouncedQ, sector, city, minRev, maxRev, sort, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setProfile(null);
+      requestAnimationFrame(() => panel.current?.scrollTo({ top: listScroll.current }));
+      return;
+    }
+    const ctrl = new AbortController();
+    fetch(`/api/businesses/${selectedId}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => { setProfile(p); if (!p) setSelectedId(null); })
+      .catch(() => {});
+    panel.current?.scrollTo({ top: 0 });
+    return () => ctrl.abort();
+  }, [selectedId]);
+
+  const selectedPoint = useMemo(
+    () => (profile?.lat != null ? { lat: Number(profile.lat), lon: Number(profile.lon) } : null),
+    [profile],
+  );
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(q), 300);
@@ -121,30 +155,45 @@ export default function Home() {
         </select>
       </div>
       <div className="explorer">
-        <div className="map"><Map points={points} onBoundsChange={setBbox} fitKey={fitKey} /></div>
-        <div className="list">
-          <div className="meta">
-            <span>{data ? `${data.total.toLocaleString()} ${data.total === 1 ? "business" : "businesses"}${fitKey ? " found" : " in view"}` : "Loading…"}</span>
-            <span>Estimates</span>
-          </div>
-          {data?.results.map((b) => (
-            <Link key={b.id} href={`/business/${b.id}`} className="card">
-              <div className="name">{b.name}</div>
-              <div className="sub">{b.industry} · {b.city}, OK {b.zip}{b.jobs_reported ? ` · ${b.jobs_reported} employee${b.jobs_reported === 1 ? "" : "s"}` : ""}</div>
-              <div className="nums">
-                <div className="num"><div className="k">Revenue</div><div className="v">{money(b.est_revenue_mid)}</div></div>
-                <div className="num"><div className="k">EBITDA</div><div className="v">{money(b.est_ebitda_mid)}</div></div>
-                <div className="num"><div className="k">Range</div><div className="v" style={{ fontWeight: 400 }}>{moneyRange(b.est_revenue_low, b.est_revenue_high)}</div></div>
+        <div className="map"><Map points={points} onBoundsChange={setBbox} fitKey={fitKey} onSelect={openBusiness} selected={selectedPoint} /></div>
+        <div className="list" ref={panel}>
+          {selectedId && (
+            <div className="detail">
+              <div className="detail-bar">
+                <button className="back" onClick={() => setSelectedId(null)} aria-label="Back to list">← Back</button>
+                <a href={`/business/${selectedId}`} target="_blank" rel="noopener">Open full page ↗</a>
               </div>
-            </Link>
-          ))}
-          {data && data.total > PAGE && (
-            <div className="pager">
-              <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Previous</button>
-              <span style={{ color: "var(--muted)", alignSelf: "center" }}>{offset + 1}–{Math.min(offset + PAGE, data.total)}</span>
-              <button disabled={offset + PAGE >= data.total} onClick={() => setOffset(offset + PAGE)}>Next</button>
+              {profile && Number(profile.id) === selectedId
+                ? <BusinessProfile b={profile} compact onSelect={openBusiness} />
+                : <div className="meta">Loading…</div>}
             </div>
           )}
+          {/* The list stays mounted while a profile is open, so Back returns to the same scroll position. */}
+          <div style={{ display: selectedId ? "none" : undefined }}>
+            <div className="meta">
+              <span>{data ? `${data.total.toLocaleString()} ${data.total === 1 ? "business" : "businesses"}${fitKey ? " found" : " in view"}` : "Loading…"}</span>
+              <span>Estimates</span>
+            </div>
+            {data?.results.map((b) => (
+              <a key={b.id} href={`/business/${b.id}`} className="card"
+                onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); openBusiness(Number(b.id)); } }}>
+                <div className="name">{b.name}</div>
+                <div className="sub">{b.industry} · {b.city}, OK {b.zip}{b.jobs_reported ? ` · ${b.jobs_reported} employee${b.jobs_reported === 1 ? "" : "s"}` : ""}</div>
+                <div className="nums">
+                  <div className="num"><div className="k">Revenue</div><div className="v">{money(b.est_revenue_mid)}</div></div>
+                  <div className="num"><div className="k">EBITDA</div><div className="v">{money(b.est_ebitda_mid)}</div></div>
+                  <div className="num"><div className="k">Range</div><div className="v" style={{ fontWeight: 400 }}>{moneyRange(b.est_revenue_low, b.est_revenue_high)}</div></div>
+                </div>
+              </a>
+            ))}
+            {data && data.total > PAGE && (
+              <div className="pager">
+                <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Previous</button>
+                <span style={{ color: "var(--muted)", alignSelf: "center" }}>{offset + 1}–{Math.min(offset + PAGE, data.total)}</span>
+                <button disabled={offset + PAGE >= data.total} onClick={() => setOffset(offset + PAGE)}>Next</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

@@ -40,10 +40,12 @@ type Props = {
   center?: [number, number];
   zoom?: number;
   fitKey?: string; // when this changes, zoom to the next set of points
+  onSelect?: (id: number) => void; // pin clicked; without it, pins open a popup link instead
+  selected?: { lat: number; lon: number } | null; // highlighted pin
 };
 
 // Business pins sit on top of whichever basemap is active; re-added after every style switch.
-function addBizLayers(m: maplibregl.Map, data: GeoJSON.FeatureCollection) {
+function addBizLayers(m: maplibregl.Map, data: GeoJSON.FeatureCollection, selected: GeoJSON.FeatureCollection) {
   if (m.getSource("biz")) return;
   m.addSource("biz", { type: "geojson", data, cluster: true, clusterRadius: 40, clusterMaxZoom: 13 });
   m.addLayer({
@@ -62,15 +64,31 @@ function addBizLayers(m: maplibregl.Map, data: GeoJSON.FeatureCollection) {
     id: "points", type: "circle", source: "biz", filter: ["!", ["has", "point_count"]],
     paint: { "circle-color": "#ff6a13", "circle-radius": 6, "circle-stroke-width": 2, "circle-stroke-color": "#fff" },
   });
+  m.addSource("selected", { type: "geojson", data: selected });
+  m.addLayer({
+    id: "selected", type: "circle", source: "selected",
+    paint: { "circle-color": "#0b6bcb", "circle-radius": 10, "circle-stroke-width": 3, "circle-stroke-color": "#fff" },
+  });
 }
 
-export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 6, fitKey = "" }: Props) {
+const pointFC = (p: { lat: number; lon: number } | null | undefined): GeoJSON.FeatureCollection => ({
+  type: "FeatureCollection",
+  features: p ? [{ type: "Feature", geometry: { type: "Point", coordinates: [p.lon, p.lat] }, properties: {} }] : [],
+});
+
+const shortMoney = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1e3)}K`);
+
+export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 6, fitKey = "", onSelect, selected }: Props) {
   const fitted = useRef("");
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const latest = useRef<GeoJSON.FeatureCollection>(EMPTY);
   const boundsCb = useRef(onBoundsChange);
   boundsCb.current = onBoundsChange;
+  const selectCb = useRef(onSelect);
+  selectCb.current = onSelect;
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
   const [satellite, setSatellite] = useState(true);
 
   useEffect(() => {
@@ -81,23 +99,39 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       const b = m.getBounds();
       boundsCb.current?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
     };
-    m.on("style.load", () => addBizLayers(m, latest.current));
+    m.on("style.load", () => addBizLayers(m, latest.current, pointFC(selectedRef.current)));
     m.on("click", "clusters", async (e) => {
       const f = e.features![0];
       const src = m.getSource("biz") as maplibregl.GeoJSONSource;
       const z = await src.getClusterExpansionZoom(f.properties!.cluster_id);
       m.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom: z });
     });
+    const hover = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
     m.on("click", "points", (e) => {
       const p = e.features![0].properties!;
-      const rev = Number(p.rev) >= 1e6 ? `$${(Number(p.rev) / 1e6).toFixed(1)}M` : `$${Math.round(Number(p.rev) / 1e3)}K`;
+      if (selectCb.current) {
+        hover.remove();
+        selectCb.current(Number(p.id));
+        return;
+      }
       const div = document.createElement("div");
       const a = document.createElement("a");
       a.href = `/business/${p.id}`;
       a.textContent = p.name;
-      div.append(a, document.createElement("br"), `Est. revenue ${rev}`);
+      div.append(a, document.createElement("br"), `Est. revenue ${shortMoney(Number(p.rev))}`);
       new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(m);
     });
+    // Name and revenue on hover, so pins can be scanned without opening each one.
+    m.on("mousemove", "points", (e) => {
+      if (!selectCb.current) return;
+      const f = e.features![0];
+      const div = document.createElement("div");
+      const strong = document.createElement("strong");
+      strong.textContent = f.properties!.name;
+      div.append(strong, document.createElement("br"), `Est. revenue ${shortMoney(Number(f.properties!.rev))}`);
+      hover.setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number]).setDOMContent(div).addTo(m);
+    });
+    m.on("mouseleave", "points", () => hover.remove());
     for (const l of ["clusters", "points"]) {
       m.on("mouseenter", l, () => (m.getCanvas().style.cursor = "pointer"));
       m.on("mouseleave", l, () => (m.getCanvas().style.cursor = ""));
@@ -120,6 +154,16 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
     }
     if (!fitKey) fitted.current = "";
   }, [points, fitKey]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    (m.getSource("selected") as maplibregl.GeoJSONSource | undefined)?.setData(pointFC(selected));
+    // Bring the selected business into view if it's off-screen (e.g. picked from comparables).
+    if (selected && !m.getBounds().contains([selected.lon, selected.lat])) {
+      m.easeTo({ center: [selected.lon, selected.lat], zoom: Math.max(m.getZoom(), 14), duration: 800 });
+    }
+  }, [selected]);
 
   function toggle() {
     const next = !satellite;
