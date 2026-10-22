@@ -19,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import anthropic
 
-from owners import BIZ_CSV, LISTED, SOCIAL, _text, collect_pages
+from owners import BIZ_CSV, LISTED, SOCIAL, _text, _valid_name, collect_pages
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -146,7 +146,7 @@ def main():
     applied = []
     for r in rows:
         hit = cache.get((r.get("website") or "").strip())
-        if not r.get("owner_name") and hit and hit["owner_name"]:
+        if not r.get("owner_name") and hit and hit["owner_name"] and _valid_name(hit["owner_name"], r["name"]):
             r["owner_name"], r["owner_title"], r["owner_source"] = hit["owner_name"], hit["owner_title"], hit["owner_source"]
             applied.append(r)
     with open(BIZ_CSV, "w", newline="") as f:

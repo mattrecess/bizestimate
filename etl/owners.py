@@ -53,6 +53,12 @@ NOT_NAMES = {
     "Oklahoma", "City", "Tulsa", "Edmond", "Norman", "Company", "Services", "Group", "Inc", "Llc", "Family",
     "Business", "Customer", "Service", "Owner", "Founder", "President", "General", "Manager", "Office", "Sales",
     "Welcome", "Thank", "Since", "Today", "Here", "This", "That", "With", "Your", "Free", "Best", "New",
+    # job titles and organisation words that otherwise pass as "First Last"
+    "Co", "Corp", "Executive", "Director", "Chief", "Officer", "Vice", "Partner", "Partners", "Board", "Member",
+    "Members", "Meeting", "Staff", "Nurse", "Practitioner", "Doctor", "Agent", "Agency", "Insurance", "Store",
+    "Center", "Health", "Care", "Electric", "Operator", "Operators", "Independent", "Associate", "Assistant",
+    "Administrator", "Coordinator", "Supervisor", "Chairman", "Chair", "Secretary", "Treasurer", "Committee",
+    "Association", "Foundation", "Church", "School", "University", "Department", "State", "County", "National",
 }
 
 
@@ -89,8 +95,10 @@ def _robots(site):
 
 
 def _valid_name(name, business_name):
-    words = name.split()
-    if len(words) < 2 or any(w.strip(".") in NOT_NAMES for w in words):
+    words = name.replace(",", " ").split()
+    # At least two parts, one of them a full word ("B. L. Moore" is fine, "James" isn't).
+    if (len(words) < 2 or not any(len(w.strip(".")) > 1 for w in words)
+            or any(w.strip(".") in NOT_NAMES for w in words)):
         return False
     biz_words = set(re.findall(r"[A-Z]+", (business_name or "").upper()))
     # "Smith Plumbing" names the company, not a person; allow a shared surname only.
@@ -211,8 +219,10 @@ def main():
     found = 0
     for r in rows:
         hit = cache.get((r.get("website") or "").strip())
+        # Re-validated on every run, so tightening the rules also cleans up cached results.
+        good = hit and hit["owner_name"] and _valid_name(hit["owner_name"], r["name"])
         r["owner_name"], r["owner_title"], r["owner_source"] = (
-            (hit["owner_name"], hit["owner_title"], hit["owner_source"]) if hit and hit["owner_name"] else ("", "", ""))
+            (hit["owner_name"], hit["owner_title"], hit["owner_source"]) if good else ("", "", ""))
         found += bool(r["owner_name"])
     with open(BIZ_CSV, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields)
