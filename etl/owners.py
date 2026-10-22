@@ -62,10 +62,10 @@ def _text(raw):
     return re.sub(r"[ \t\r\f\v]+", " ", html.unescape(raw))
 
 
-def _fetch(url):
+def _fetch(url, html_only=True):
     try:
         with urlopen(url, timeout=TIMEOUT) as r:
-            if "html" not in (r.headers.get("Content-Type") or "html"):
+            if html_only and "html" not in (r.headers.get("Content-Type") or "html"):
                 return None, url
             return r.read(MAX_BYTES).decode("utf-8", errors="replace"), r.geturl()
     except Exception:  # noqa: BLE001 - unreachable sites are simply a miss
@@ -81,7 +81,7 @@ def _allowed(robots, url):
 
 def _robots(site):
     rp = urllib.robotparser.RobotFileParser()
-    raw, _ = _fetch(urllib.parse.urljoin(site, "/robots.txt"))
+    raw, _ = _fetch(urllib.parse.urljoin(site, "/robots.txt"), html_only=False)
     if raw is None:
         return None
     rp.parse(raw.splitlines())
@@ -131,18 +131,15 @@ def extract(raw, business_name):
     return min(found, key=lambda f: _title_rank(f[1])) if found else None
 
 
-def scan(site, business_name):
-    """Best (name, title, source_url) on a business website, or None."""
+def collect_pages(site):
+    """[(url, html)] for the homepage and up to MAX_EXTRA_PAGES About/Team pages, honouring robots.txt."""
     robots = _robots(site)
     if not _allowed(robots, site):
-        return None
+        return []
     raw, final = _fetch(site)
     if raw is None:
-        return None
-    best = None
-    hit = extract(raw, business_name)
-    if hit:
-        best = (*hit, final)
+        return []
+    pages = [(final, raw)]
     host = urllib.parse.urlparse(final).netloc
     links = []
     for href in re.findall(r'(?i)<a[^>]+href=["\']([^"\'#]+)', raw):
@@ -150,14 +147,20 @@ def scan(site, business_name):
         if urllib.parse.urlparse(url).netloc == host and ABOUT_LINK.search(href) and url not in links:
             links.append(url)
     for url in links[:MAX_EXTRA_PAGES]:
-        if best and _title_rank(best[1]) == 0:
-            break
-        if not _allowed(robots, url):
-            continue
-        page, page_url = _fetch(url)
-        hit = extract(page, business_name) if page else None
+        if _allowed(robots, url):
+            page, page_url = _fetch(url)
+            if page:
+                pages.append((page_url, page))
+    return pages
+
+
+def scan(site, business_name):
+    """Best (name, title, source_url) on a business website, or None."""
+    best = None
+    for url, page in collect_pages(site):
+        hit = extract(page, business_name)
         if hit and (best is None or _title_rank(hit[1]) < _title_rank(best[1])):
-            best = (*hit, page_url)
+            best = (*hit, url)
     return best
 
 

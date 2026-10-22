@@ -9,5 +9,6 @@ PY="${PYTHON:-python3}"
 "$PY" etl/build.py --state "$STATE"
 "$PY" etl/geocode.py $GEO_FLAG
 "$PY" etl/owners.py || echo "owner scan failed (non-fatal)"
+"$PY" etl/owners_ai.py || echo "AI owner lookup failed (non-fatal)"
 "$PY" etl/diagnose.py --state "$STATE" || echo "diagnose failed (non-fatal)"
 "$PY" etl/load.py --state "$STATE"
