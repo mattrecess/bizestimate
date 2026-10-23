@@ -25,7 +25,9 @@ from owners import BIZ_CSV, LISTED, RECHECK_DAYS, _allowed, _fetch, _robots, _te
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
 CACHE_JSON = os.path.join(DATA_DIR, "website_check_cache.json")
-WORKERS = 32
+WORKERS = 64
+TIME_BUDGET_MIN = int(os.environ.get("WEBSITE_CHECK_MINUTES") or 60)   # rest continues next run
+CHUNK = 2_000
 TEXT_CHARS = 6_000
 # Words too common to identify a business on their own.
 GENERIC = {
@@ -128,11 +130,18 @@ def main():
     todo = sorted({r["website"] for r in listed if not domain_matches(r["name"], r["website"], r.get("city"))
                    and (r["website"] not in cache or cache[r["website"]]["checked"] < cutoff)})
     print(f"Websites: {len(listed):,} to verify, reading {len(todo):,} homepages", flush=True)
+    deadline = time.time() + TIME_BUDGET_MIN * 60
     with ThreadPoolExecutor(WORKERS) as pool:
-        for site, page in zip(todo, pool.map(homepage, todo)):
-            cache[site] = {"page": page, "checked": time.time()}
-    with open(CACHE_JSON, "w") as f:
-        json.dump(cache, f)
+        for start in range(0, len(todo), CHUNK):
+            if time.time() > deadline:
+                print(f"Websites: time budget used; {len(todo) - start:,} homepages left for the next run "
+                      f"(those sites stay hidden until checked)", flush=True)
+                break
+            chunk = todo[start:start + CHUNK]
+            for site, page in zip(chunk, pool.map(homepage, chunk)):
+                cache[site] = {"page": page, "checked": time.time()}
+            with open(CACHE_JSON, "w") as f:
+                json.dump(cache, f)
 
     kept_domain = kept_content = dropped = 0
     dropped_samples = []

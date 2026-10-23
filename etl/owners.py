@@ -26,7 +26,9 @@ DATA_DIR = os.path.join(HERE, "..", "data")
 BIZ_CSV = os.path.join(DATA_DIR, "businesses.csv")
 CACHE_CSV = os.path.join(DATA_DIR, "owners_cache.csv")
 LISTED = {"rooftop", "place", "building", "address"}
-WORKERS = 32
+WORKERS = 64
+TIME_BUDGET_MIN = int(os.environ.get("OWNERS_SCAN_MINUTES") or 150)   # rest continues next run
+CHUNK = 2_000
 TIMEOUT = 10
 MAX_BYTES = 1_000_000
 MAX_EXTRA_PAGES = 3
@@ -206,15 +208,19 @@ def main():
     todo = [(s, n) for s, n in sites.items() if s not in cache or float(cache[s]["checked"] or 0) < cutoff]
     print(f"Owners: {len(sites):,} websites, {len(todo):,} to scan", flush=True)
 
+    deadline = time.time() + TIME_BUDGET_MIN * 60
     with ThreadPoolExecutor(WORKERS) as pool:
-        for done, ((site, _), result) in enumerate(zip(todo, pool.map(lambda t: scan(*t), todo)), 1):
-            name, title, source = result or ("", "", "")
-            cache[site] = {"website": site, "owner_name": name, "owner_title": title,
-                           "owner_source": source, "checked": f"{time.time():.0f}"}
-            if done % 1000 == 0:
-                save_cache(cache)
-                print(f"Owners: scanned {done:,}/{len(todo):,}", flush=True)
-    save_cache(cache)
+        for start in range(0, len(todo), CHUNK):
+            if time.time() > deadline:
+                print(f"Owners: time budget used; {len(todo) - start:,} sites left for the next run", flush=True)
+                break
+            chunk = todo[start:start + CHUNK]
+            for (site, _), result in zip(chunk, pool.map(lambda t: scan(*t), chunk)):
+                name, title, source = result or ("", "", "")
+                cache[site] = {"website": site, "owner_name": name, "owner_title": title,
+                               "owner_source": source, "checked": f"{time.time():.0f}"}
+            save_cache(cache)
+            print(f"Owners: scanned {start + len(chunk):,}/{len(todo):,}", flush=True)
 
     found = 0
     for r in rows:

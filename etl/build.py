@@ -111,8 +111,9 @@ LOAN_COLS = ["loan_number", "biz_key", "draw", "date_approved", "amount", "payro
 
 
 def merge_duplicates(loans_by_biz):
-    """Merge businesses filed under slightly different names at the same street address and ZIP,
-    e.g. "RED DIRT PAINTERS, CO" and "RED DIRT PAINTERS CO. DBA CERTAPRO PAINTERS"."""
+    """Merge businesses filed under slightly different names at the same street address and ZIP
+    ("RED DIRT PAINTERS, CO" / "RED DIRT PAINTERS CO. DBA CERTAPRO PAINTERS"), and the same name
+    in the same city under different ZIPs."""
     by_address = defaultdict(list)
     for key, loans in loans_by_biz.items():
         row = loans[0]["_row"]
@@ -135,6 +136,23 @@ def merge_duplicates(loans_by_biz):
             for loan in loans_by_biz.pop(k):
                 loan["biz_key"] = into
                 loans_by_biz[into].append(loan)
+            merged += 1
+
+    # Same legal name in the same city, filed under different ZIPs (e.g. a home office and a
+    # storefront): one business.
+    by_city = defaultdict(list)
+    for key, loans in loans_by_biz.items():
+        city = (loans[0]["_row"].get("BorrowerCity") or "").strip().upper()
+        if city:
+            by_city[(key.rsplit("|", 1)[0], city)].append(key)
+    for keys in by_city.values():
+        if len(keys) < 2:
+            continue
+        keys.sort(key=lambda k: (-len(loans_by_biz[k]), -max(l["amount"] for l in loans_by_biz[k])))
+        for k in keys[1:]:
+            for loan in loans_by_biz.pop(k):
+                loan["biz_key"] = keys[0]
+                loans_by_biz[keys[0]].append(loan)
             merged += 1
     print(f"Merged {merged:,} duplicate listings", flush=True)
     return loans_by_biz

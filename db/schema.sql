@@ -1,5 +1,7 @@
 -- BizEstimate schema (plain Postgres; works as-is on Supabase).
 
+create extension if not exists pg_trgm;   -- fuzzy name search
+
 create table if not exists industry_benchmarks (
   naics_prefix        text primary key,          -- 2- to 6-digit NAICS prefix
   label               text not null,
@@ -51,8 +53,14 @@ alter table businesses add column if not exists website text;   -- from Overture
 alter table businesses add column if not exists owner_name text;     -- from the business website (etl/owners.py)
 alter table businesses add column if not exists owner_title text;
 alter table businesses add column if not exists owner_source text;   -- page the name was found on
+alter table businesses add column if not exists source text;         -- 'ppp' (loan data) | 'overture' (places only)
+-- Search form of the name: upper case, punctuation dropped, single letters joined ("J & K" -> "JK").
+alter table businesses add column if not exists name_norm text generated always as (
+  regexp_replace(regexp_replace(upper(name), '[^A-Z0-9]+', ' ', 'g'), '\m([A-Z0-9]) (?=[A-Z0-9]\M)', '\1', 'g')
+) stored;
 
 create index if not exists businesses_search_idx on businesses using gin (search);
+create index if not exists businesses_name_trgm_idx on businesses using gin (name gin_trgm_ops);
 create index if not exists businesses_latlon_idx on businesses (lat, lon);
 create index if not exists businesses_rev_idx on businesses (est_revenue_mid desc);
 create index if not exists businesses_naics_idx on businesses (naics text_pattern_ops);

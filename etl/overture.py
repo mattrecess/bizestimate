@@ -78,13 +78,21 @@ def load_layers(state):
             "ymin": pc.field("bbox", "ymin"), "ymax": pc.field("bbox", "ymax"),
         }, bounds)
         pq.write_table(t, bld_path)
-    places_path = os.path.join(DATA_DIR, f"overture_{state.lower()}_places_v3_{release}.parquet")
+    places_path = os.path.join(DATA_DIR, f"overture_{state.lower()}_places_v4_{release}.parquet")
     if not os.path.exists(places_path):
         print(f"Overture {release}: downloading {state} places…", flush=True)
         t = _fetch(fs, release, "places", "place", {
             "name": pc.field("names", "primary"), "confidence": pc.field("confidence"),
             "websites": pc.field("websites"),
             "postcode": pc.struct_field(pc.list_element(pc.field("addresses"), 0), "postcode"),
+            # used by places_only.py to list businesses that aren't in the loan data
+            "id": pc.field("id"),
+            "category": pc.field("basic_category"),
+            "category_detail": pc.struct_field(pc.field("taxonomy"), "primary"),
+            "status": pc.field("operating_status"),
+            "street": pc.struct_field(pc.list_element(pc.field("addresses"), 0), "freeform"),
+            "locality": pc.struct_field(pc.list_element(pc.field("addresses"), 0), "locality"),
+            "region": pc.struct_field(pc.list_element(pc.field("addresses"), 0), "region"),
             "lon": pc.field("bbox", "xmin"), "lat": pc.field("bbox", "ymin"),
         }, bounds)
         pq.write_table(t, places_path)
