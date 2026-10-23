@@ -188,6 +188,16 @@ def sponsors_by_year(rows):
     return out
 
 
+LEGAL = {"LLC", "L", "C", "INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "PLLC",
+         "PC", "P", "LP", "LLP", "PA", "THE", "DBA"}
+
+
+def full_name(name):
+    """Every word but legal suffixes: stricter than name_tokens, which also drops words like OKLAHOMA."""
+    words = re.sub(r"[^A-Z0-9 ]", " ", name.upper().replace("&", " AND ")).split()
+    return " ".join(w for w in words if w not in LEGAL)
+
+
 def match(sponsors, businesses):
     """Map each sponsor EIN to one listed business, or leave it out when unsure."""
     by_token = defaultdict(list)
@@ -218,7 +228,8 @@ def match(sponsors, businesses):
                 same_city = b["city"].upper() in cities
                 if toks == b["tokens"] and (same_addr or same_zip or same_city):
                     score = 3 + same_addr + same_zip   # same name, same place
-                elif toks == b["tokens"] and len(toks) >= 2 and name_count[toks] == 1:
+                elif (toks == b["tokens"] and len(toks) >= 2 and name_count[toks] == 1
+                      and full_name(name) == full_name(b["name"])):
                     score = 2                           # same distinctive name, only one in the state
                                                         # (the filing's address is often the accountant's)
                 elif common >= 2 and common == min(len(toks), len(b["tokens"])) and (same_addr or same_zip):
