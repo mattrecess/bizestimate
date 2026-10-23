@@ -34,6 +34,7 @@ BASE = os.environ.get("FORM5500_URL") or "https://askebsa.dol.gov/FOIA%20Files/{
 FORMS = ["F_5500", "F_5500_SF"]
 FIRST_YEAR = 2020
 REFRESH_DAYS = 30
+CACHE_VERSION = 2   # bump when the row filter changes: the cache only holds rows that passed it
 # Staffing firms report every temp worker they've placed nationwide (hundreds of thousands); those
 # aren't the business's own employees.
 MAX_PARTICIPANTS = 25_000
@@ -149,7 +150,7 @@ def read_csv(f, year, form, state):
 
 
 def load_year(year, state):
-    path = os.path.join(CACHE_DIR, f"{state.lower()}_{year}.csv")
+    path = os.path.join(CACHE_DIR, f"{state.lower()}_{year}_v{CACHE_VERSION}.csv")
     recent = year >= date.today().year - 2
     if os.path.exists(path) and not (recent and time.time() - os.path.getmtime(path) > REFRESH_DAYS * 86400):
         return load_year_cached(path)
