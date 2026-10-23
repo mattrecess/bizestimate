@@ -61,6 +61,9 @@ alter table businesses add column if not exists name_norm text generated always 
 
 create index if not exists businesses_search_idx on businesses using gin (search);
 create index if not exists businesses_name_trgm_idx on businesses using gin (name gin_trgm_ops);
+create index if not exists businesses_name_norm_trgm_idx on businesses using gin (name_norm gin_trgm_ops);
+create index if not exists businesses_city_lower_idx on businesses (lower(city));
+create index if not exists businesses_sector_idx on businesses (left(naics, 2));
 create index if not exists businesses_latlon_idx on businesses (lat, lon);
 create index if not exists businesses_rev_idx on businesses (est_revenue_mid desc);
 create index if not exists businesses_naics_idx on businesses (naics text_pattern_ops);

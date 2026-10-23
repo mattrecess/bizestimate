@@ -31,7 +31,10 @@ export function where(f: Filters) {
   if (f.q) {
     const words = queryWords(f.q);
     const allWords = words.length ? words.map(wordMatch).reduce((a, b) => sql`${a} and ${b}`) : sql`false`;
-    conds.push(sql`((${allWords}) or word_similarity(${f.q}, name) >= 0.8)`);
+    // Each branch is index-backed (tsvector, name_norm trigrams, name trigrams via <%) so a search
+    // touches only candidate rows instead of scanning every business.
+    conds.push(sql`(search @@ websearch_to_tsquery('simple', ${f.q}) or (${allWords})
+      or (${f.q} <% name and word_similarity(${f.q}, name) >= 0.8))`);
   }
   if (prefixes) conds.push(sql`left(naics, 2) in ${sql(prefixes)}`);
   if (f.city) conds.push(sql`lower(city) = lower(${f.city})`);
