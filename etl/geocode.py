@@ -20,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 import overture
 import rooftop
 from netutil import urlopen
+from csvio import write_rows
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -186,10 +187,7 @@ def main():
             r["lat"], r["lon"] = round(lat + dlat, 6), round(lon + dlon, 6)
             r["geo_precision"] = "zip"
 
-    with open(BIZ_CSV, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fields)
-        w.writeheader()
-        w.writerows(rows)
+    write_rows(BIZ_CSV, fields, rows)
     located = sum(1 for r in rows if r.get("lat"))
     kinds = defaultdict(int)
     for r in rows:

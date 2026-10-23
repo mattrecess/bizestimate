@@ -18,6 +18,7 @@ from collections import defaultdict
 from benchmarks import load_benchmarks, lookup
 from matching import name_score, name_tokens
 from overture import _meters, load_layers, pick_website
+from csvio import write_rows
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -200,11 +201,7 @@ def main():
             "source": "overture",
         })
 
-    with open(BIZ_CSV, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
-        w.writeheader()
-        w.writerows(rows)
-        w.writerows(added)
+    write_rows(BIZ_CSV, fields, rows + added)
     print(f"Places-only: added {len(added):,} businesses without loan data; skipped {dict(skipped)}", flush=True)
 
 

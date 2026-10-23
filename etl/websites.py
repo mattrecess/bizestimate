@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from matching import ordered_name_tokens
 from owners import BIZ_CSV, LISTED, RECHECK_DAYS, _allowed, _fetch, _robots, _text
+from csvio import write_rows
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -104,6 +105,13 @@ def content_matches(name, city, page):
 
 def homepage(site):
     """{'title', 'text'} of a site's homepage (robots.txt respected), or None if unreadable."""
+    try:
+        return _homepage(site)
+    except Exception:  # noqa: BLE001 - a malformed site is just unreadable
+        return None
+
+
+def _homepage(site):
     if not _allowed(_robots(site), site):
         return None
     raw, _ = _fetch(site)
@@ -157,10 +165,7 @@ def main():
         if len(dropped_samples) < 15:
             dropped_samples.append(f"{r['name']} ({r['city']}) x {r['website']}")
         r["website"] = ""
-    with open(BIZ_CSV, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fields)
-        w.writeheader()
-        w.writerows(rows)
+    write_rows(BIZ_CSV, fields, rows)
     print(f"Websites: kept {kept_domain:,} by domain, {kept_content:,} by homepage; dropped {dropped:,}", flush=True)
     for s in dropped_samples:
         print(f"  dropped: {s}", flush=True)

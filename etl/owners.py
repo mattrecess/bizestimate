@@ -20,6 +20,7 @@ import urllib.robotparser
 from concurrent.futures import ThreadPoolExecutor
 
 from netutil import HEADERS, urlopen
+from csvio import write_rows
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
@@ -27,7 +28,7 @@ BIZ_CSV = os.path.join(DATA_DIR, "businesses.csv")
 CACHE_CSV = os.path.join(DATA_DIR, "owners_cache.csv")
 LISTED = {"rooftop", "place", "building", "address"}
 WORKERS = 64
-TIME_BUDGET_MIN = int(os.environ.get("OWNERS_SCAN_MINUTES") or 150)   # rest continues next run
+TIME_BUDGET_MIN = int(os.environ.get("OWNERS_SCAN_MINUTES") or 45)   # rest continues next run
 CHUNK = 2_000
 TIMEOUT = 10
 MAX_BYTES = 1_000_000
@@ -153,8 +154,12 @@ def collect_pages(site):
     host = urllib.parse.urlparse(final).netloc
     links = []
     for href in re.findall(r'(?i)<a[^>]+href=["\']([^"\'#]+)', raw):
-        url = urllib.parse.urljoin(final, href)
-        if urllib.parse.urlparse(url).netloc == host and ABOUT_LINK.search(href) and url not in links:
+        try:
+            url = urllib.parse.urljoin(final, href)
+            same_host = urllib.parse.urlparse(url).netloc == host
+        except ValueError:   # malformed link, e.g. href="http://[$vHost_Rails]/"
+            continue
+        if same_host and ABOUT_LINK.search(href) and url not in links:
             links.append(url)
     for url in links[:MAX_EXTRA_PAGES]:
         if _allowed(robots, url):
@@ -165,7 +170,16 @@ def collect_pages(site):
 
 
 def scan(site, business_name):
-    """Best (name, title, source_url) on a business website, or None."""
+    """Best (name, title, source_url) on a business website, or None (also on any error, so one
+    malformed site can't stop the scan)."""
+    try:
+        return _scan(site, business_name)
+    except Exception as e:  # noqa: BLE001
+        print(f"Owners: skipped {site}: {e!r}", flush=True)
+        return None
+
+
+def _scan(site, business_name):
     best = None
     for url, page in collect_pages(site):
         hit = extract(page, business_name)
@@ -230,10 +244,7 @@ def main():
         r["owner_name"], r["owner_title"], r["owner_source"] = (
             (hit["owner_name"], hit["owner_title"], hit["owner_source"]) if good else ("", "", ""))
         found += bool(r["owner_name"])
-    with open(BIZ_CSV, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fields)
-        w.writeheader()
-        w.writerows(rows)
+    write_rows(BIZ_CSV, fields, rows)
     print(f"Owners: found a name for {found:,} businesses ({found / max(len(sites), 1):.0%} of scanned websites)",
           flush=True)
     # A fixed sample in the log, so results can be spot-checked without database access.

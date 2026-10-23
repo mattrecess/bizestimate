@@ -89,6 +89,15 @@ def main():
                     "or geo_precision not in ('rooftop', 'place', 'building', 'address') "
                     "or coalesce(address, '') = ''")
         print(f"skipped without a street-level address: {cur.rowcount:,}")
+        # Safety net: a truncated input file must never wipe the site. Refuse to shrink a state's
+        # listings by more than 30% unless LOAD_ALLOW_SHRINK=1.
+        cur.execute("select count(*) from stage_biz")
+        staged = cur.fetchone()[0]
+        cur.execute("select count(*) from businesses where state = %s", (state,))
+        existing = cur.fetchone()[0]
+        if existing and staged < 0.7 * existing and os.environ.get("LOAD_ALLOW_SHRINK") != "1":
+            raise SystemExit(f"Refusing to load: {staged:,} businesses would replace {existing:,} "
+                             f"(more than a 30% drop). Set LOAD_ALLOW_SHRINK=1 if that's intended.")
         casts = {
             "is_individual": "coalesce(is_individual::boolean, false)",
             "is_nonprofit": "coalesce(is_nonprofit::boolean, false)",
