@@ -36,7 +36,8 @@ def http():
         try:
             with urllib.request.urlopen(urllib.request.Request(SITE + p, headers={"User-Agent": "probe"}), timeout=60) as r:
                 body = r.read()
-                print(f"{r.status} {time.time() - t:6.2f}s {len(body):>9,}B {p} {body[:160]!r}", flush=True)
+                cache = r.headers.get("x-vercel-cache", "-")
+                print(f"{r.status} {time.time() - t:6.2f}s {len(body):>9,}B cdn={cache} {p} {body[:120]!r}", flush=True)
         except Exception as e:  # noqa: BLE001
             print(f"ERR {time.time() - t:6.2f}s {p} {e!r} {getattr(e, 'read', lambda: b'')()[:300]!r}", flush=True)
 
