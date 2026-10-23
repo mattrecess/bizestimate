@@ -34,6 +34,9 @@ BASE = os.environ.get("FORM5500_URL") or "https://askebsa.dol.gov/FOIA%20Files/{
 FORMS = ["F_5500", "F_5500_SF"]
 FIRST_YEAR = 2020
 REFRESH_DAYS = 30
+# Staffing firms report every temp worker they've placed nationwide (hundreds of thousands); those
+# aren't the business's own employees.
+MAX_PARTICIPANTS = 25_000
 CACHE_COLS = ["year", "form", "ein", "plan_num", "name", "dba", "address", "city", "zip", "naics", "active"]
 
 csv.field_size_limit(sys.maxsize)
@@ -126,7 +129,7 @@ def read_csv(f, year, form, state):
         if not get(r, "pension") or get(r, "entity") not in ("", "2"):
             continue
         active = to_int(get(r, "active"))
-        if not active or active <= 0:
+        if not active or active <= 0 or active > MAX_PARTICIPANTS:
             continue
         # Prefer the physical location when the filing gives one in the state.
         pre = "loc_" if loc_here and get(r, "loc_city") else ""
@@ -166,7 +169,7 @@ def sponsors_by_year(rows):
     """{ein: {"years": {year: active}, "names": set, "addrs": [...]}}; largest plan per sponsor-year."""
     out = defaultdict(lambda: {"years": {}, "names": set(), "places": set()})
     for r in rows:
-        if not r["ein"]:
+        if not r["ein"] or r["active"] > MAX_PARTICIPANTS:   # (older caches weren't filtered)
             continue
         s = out[r["ein"]]
         s["years"][r["year"]] = max(s["years"].get(r["year"], 0), r["active"])
@@ -185,6 +188,10 @@ def match(sponsors, businesses):
         b["addr"] = parse_address(b["address"])
         for t in b["tokens"]:
             by_token[t].append(b)
+    # How many listed businesses carry each exact name, so a unique name can match on its own.
+    name_count = defaultdict(int)
+    for b in businesses:
+        name_count[b["tokens"]] += 1
     matches = {}
     for ein, s in sponsors.items():
         addrs = {parse_address(a) for a, _, _ in s["places"]} - {None}
@@ -203,6 +210,9 @@ def match(sponsors, businesses):
                 same_city = b["city"].upper() in cities
                 if toks == b["tokens"] and (same_addr or same_zip or same_city):
                     score = 3 + same_addr + same_zip   # same name, same place
+                elif toks == b["tokens"] and len(toks) >= 2 and name_count[toks] == 1:
+                    score = 2                           # same distinctive name, only one in the state
+                                                        # (the filing's address is often the accountant's)
                 elif common >= 2 and common == min(len(toks), len(b["tokens"])) and (same_addr or same_zip):
                     score = 2 + same_addr               # one name contains the other, same ZIP
                 elif same_addr and common >= 1 and common / min(len(toks), len(b["tokens"])) >= 0.5:
@@ -245,6 +255,9 @@ def main():
                     counts[key][year] = (n, ein)
         print(f"Form 5500: matched {len(matches):,} of {len(sponsors):,} sponsors to "
               f"{len(counts):,} listed businesses", flush=True)
+        unmatched = sorted((max(s["years"].values()), sorted(s["names"])[0], sorted(s["places"])[0][1])
+                           for ein, s in sponsors.items() if ein not in matches)
+        print(f"Form 5500: largest unmatched sponsors: {unmatched[::-1][:40]}", flush=True)
         names = {b["biz_key"]: b["name"] for b in businesses}
         for key in list(counts)[:15]:
             series = ", ".join(f"{y}: {n}" for y, (n, _) in sorted(counts[key].items()))

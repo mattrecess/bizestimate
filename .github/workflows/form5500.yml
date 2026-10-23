@@ -1,0 +1,42 @@
+name: Form 5500 headcounts
+# Runs just the Form 5500 step (also part of the full pipeline) so changes to it show results in
+# minutes rather than after the whole data load.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["etl/form5500.py", ".github/workflows/form5500.yml"]
+permissions:
+  contents: write
+concurrency:
+  group: form5500
+  cancel-in-progress: true
+jobs:
+  form5500:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: data/cache/form5500
+          key: form5500-${{ github.run_id }}
+          restore-keys: form5500-
+      - run: |
+          set -o pipefail
+          python etl/migrate.py
+          python etl/form5500.py --state OK 2>&1 | tee "$RUNNER_TEMP/form5500.log"
+        env:
+          PYTHONUNBUFFERED: "1"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Published like the ETL log so it can be read without signing in.
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b form5500-logs
+          cp "$RUNNER_TEMP/form5500.log" form5500.log 2>/dev/null || echo none > form5500.log
+          git add form5500.log && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" form5500-logs
