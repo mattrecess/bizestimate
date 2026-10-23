@@ -122,7 +122,7 @@ def main():
                 if r.get("geo_precision") in LISTED and r.get("is_individual") != "True"
                 and not r.get("owner_name") and r["biz_key"] not in cache][: max(max_total - len(cache), 0)]
         print(f"Owners search: {len(todo):,} businesses to search ({len(cache):,} of {max_total:,} done)", flush=True)
-        client = anthropic.Anthropic(api_key=key)
+        client = anthropic.Anthropic(api_key=key, max_retries=6)  # backs off on 429s
         searched, tokens = [], [0, 0]
         for r in todo:   # sequential: Brave allows about one query per second
             started = time.time()
@@ -144,7 +144,7 @@ def main():
                 print(f"Owners search: {r['name']}: {e!r}", flush=True)
                 return r, None, (0, 0)
 
-        with ThreadPoolExecutor(8) as pool:
+        with ThreadPoolExecutor(3) as pool:  # stays under the per-minute token limit
             for r, result, (t_in, t_out) in pool.map(work, searched):
                 tokens[0] += t_in
                 tokens[1] += t_out
