@@ -171,7 +171,7 @@ def main():
     cache = load_cache()
     pending = load_pending()
     key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    max_total = int(os.environ.get("OWNERS_AI_MAX_TOTAL") or 20_000)
+    max_total = int(os.environ.get("OWNERS_AI_MAX_TOTAL") or 80_000)   # approved: all listed websites (~$7 more)
     in_flight = sum(len(b["items"]) for b in pending)
     limit = min(int(os.environ.get("OWNERS_AI_LIMIT") or 20_000), max(max_total - len(cache) - in_flight, 0))
     deadline = time.time() + 60 * int(os.environ.get("OWNERS_AI_WAIT_MIN") or 240)
@@ -183,8 +183,7 @@ def main():
         queued = {e["site"] for b in pending for e in b["items"].values()}
         for r in sorted(rows, key=lambda r: -float(r.get("est_revenue_mid") or 0)):
             site = (r.get("website") or "").strip()
-            # Businesses added from Overture places (no loan data) aren't sent to the paid lookup.
-            if (site and not r.get("owner_name") and r.get("geo_precision") in LISTED and r.get("source") != "overture"
+            if (site and not r.get("owner_name") and r.get("geo_precision") in LISTED
                     and r.get("is_individual") != "True" and site not in cache and site not in queued
                     and not any(d in site.lower() for d in SOCIAL)):
                 candidates.setdefault(site, r)

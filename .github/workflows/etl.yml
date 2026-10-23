@@ -57,6 +57,8 @@ jobs:
           GEOCODIO_DAILY_LIMIT: ${{ vars.GEOCODIO_DAILY_LIMIT }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OWNERS_AI_MAX_TOTAL: ${{ vars.OWNERS_AI_MAX_TOTAL }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+          OWNERS_SEARCH_MAX_TOTAL: ${{ vars.OWNERS_SEARCH_MAX_TOTAL }}
       # Publish the log to the etl-logs branch so it can be read without signing in.
       - name: Publish log
         if: always()

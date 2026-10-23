@@ -14,5 +14,6 @@ mkdir -p data/cache   # cached between runs by the workflow
 "$PY" etl/websites.py || echo "website check failed (non-fatal)"
 "$PY" etl/owners.py || echo "owner scan failed (non-fatal)"
 "$PY" etl/owners_ai.py || echo "AI owner lookup failed (non-fatal)"
+"$PY" etl/owners_search.py || echo "search owner lookup failed (non-fatal)"
 "$PY" etl/diagnose.py --state "$STATE" || echo "diagnose failed (non-fatal)"
 "$PY" etl/load.py --state "$STATE"
