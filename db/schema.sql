@@ -97,3 +97,14 @@ create table if not exists claims (
   request_removal     boolean not null default false,
   created_at          timestamptz not null default now()
 );
+
+-- Yearly headcounts from other sources (Form 5500 retirement-plan participants), keyed by biz_key
+-- so they survive reloads of businesses. PPP's 2020 headcount stays in businesses.jobs_reported.
+create table if not exists headcounts (
+  biz_key   text not null,
+  year      int not null,
+  employees int not null,
+  source    text not null,          -- 'form5500'
+  ein       text,
+  primary key (biz_key, year, source)
+);
