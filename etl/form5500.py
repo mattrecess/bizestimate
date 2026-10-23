@@ -34,10 +34,13 @@ BASE = os.environ.get("FORM5500_URL") or "https://askebsa.dol.gov/FOIA%20Files/{
 FORMS = ["F_5500", "F_5500_SF"]
 FIRST_YEAR = 2020
 REFRESH_DAYS = 30
-CACHE_VERSION = 2   # bump when the row filter changes: the cache only holds rows that passed it
+CACHE_VERSION = 3   # bump when the row filter changes: the cache only holds rows that passed it
 # Staffing firms report every temp worker they've placed nationwide (hundreds of thousands); those
 # aren't the business's own employees.
 MAX_PARTICIPANTS = 25_000
+# Plan-entity code meaning "single employer" differs by form: 2 on the 5500 (1 = multiemployer,
+# 3 = multiple-employer), 1 on the 5500-SF (2 = multiple-employer).
+SINGLE_EMPLOYER = {"F_5500": ("", "2"), "F_5500_SF": ("", "1")}
 CACHE_COLS = ["year", "form", "ein", "plan_num", "name", "dba", "address", "city", "zip", "naics", "active"]
 
 csv.field_size_limit(sys.maxsize)
@@ -130,7 +133,7 @@ def read_csv(f, year, form, state):
             f"active={'y' if to_int(get(r, 'active')) else 'n'}"] += 1
         # Retirement plans only; and only single-employer ones (multiemployer union plans and
         # multiple-employer plans such as PEOs cover many unrelated businesses).
-        if not get(r, "pension") or get(r, "entity") not in ("", "2"):
+        if not get(r, "pension") or get(r, "entity") not in SINGLE_EMPLOYER[form]:
             continue
         active = to_int(get(r, "active"))
         if not active or active <= 0 or active > MAX_PARTICIPANTS:
