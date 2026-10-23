@@ -18,7 +18,7 @@ import sys
 import tempfile
 import time
 import zipfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date
 
 import psycopg
@@ -118,12 +118,15 @@ def read_csv(f, year, form, state):
     idx = {k: header.index(v) for k, v in cols.items()}
     get = lambda r, k: r[idx[k]].strip() if k in idx and idx[k] < len(r) else ""  # noqa: E731
     out, seen, kept = [], 0, 0
+    why = Counter()   # what the in-state filings look like, to catch layout or code changes
     for r in reader:
         seen += 1
         mail_here = get(r, "state").upper() == state
         loc_here = get(r, "loc_state").upper() == state
         if not (mail_here or loc_here):
             continue
+        why[f"entity={get(r, 'entity') or '-'} pension={'y' if get(r, 'pension') else 'n'} "
+            f"active={'y' if to_int(get(r, 'active')) else 'n'}"] += 1
         # Retirement plans only; and only single-employer ones (multiemployer union plans and
         # multiple-employer plans such as PEOs cover many unrelated businesses).
         if not get(r, "pension") or get(r, "entity") not in ("", "2"):
@@ -140,7 +143,8 @@ def read_csv(f, year, form, state):
             "city": get(r, pre + "city"), "zip": get(r, pre + "zip")[:5], "naics": get(r, "naics"),
             "active": active,
         })
-    print(f"Form 5500: {form} {year}: {kept:,} {state} retirement plans of {seen:,} filings", flush=True)
+    print(f"Form 5500: {form} {year}: {kept:,} {state} retirement plans of {seen:,} filings; "
+          f"in-state filings by type: {dict(why.most_common(8))}", flush=True)
     return out
 
 
