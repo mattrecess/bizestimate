@@ -49,6 +49,19 @@ def db():
                                 "order by age desc nulls last limit 15"):
             print("activity:", row)
         print("rows:", conn.execute("select count(*), pg_size_pretty(pg_total_relation_size('businesses')) from businesses").fetchone())
+        if conn.execute("select to_regclass('headcounts')").fetchone()[0]:
+            print("headcounts: businesses, rows =", conn.execute(
+                "select count(distinct biz_key), count(*) from headcounts").fetchone())
+            print("headcounts by year:", conn.execute(
+                "select year, count(*), sum(employees) from headcounts group by year order by year").fetchall())
+            print("headcounts by listing source:", conn.execute(
+                "select b.source, count(distinct b.biz_key) from headcounts h join businesses b using (biz_key) "
+                "group by 1").fetchall())
+            for row in conn.execute("""
+                    select b.id, b.name, b.city, b.jobs_reported, string_agg(h.year || ':' || h.employees, ' ' order by h.year)
+                    from headcounts h join businesses b using (biz_key)
+                    group by 1, 2, 3, 4 order by random() limit 25"""):
+                print("  sample:", row)
         for name, q in [("list all", LIST.format(bbox="")), ("list bbox", LIST.format(bbox=BOX)),
                         ("points all", POINTS.format(bbox="")), ("points bbox", POINTS.format(bbox=BOX))]:
             print(f"--- {name}")
