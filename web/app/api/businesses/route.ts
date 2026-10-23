@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { parseFilters, publicAddress, where } from "@/lib/queries";
+import { parseFilters, publicAddress, relevance, where } from "@/lib/queries";
 
 const SORTS = {
   revenue_desc: sql`est_revenue_mid desc nulls last`,
@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
     sql`
       select id, name, ${publicAddress}, city, state, zip, naics, industry, jobs_reported,
              est_revenue_low, est_revenue_mid, est_revenue_high,
-             est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, lat, lon
-      from businesses where ${w} order by ${sort} limit ${limit} offset ${offset}`,
+             est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon
+      from businesses where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
     sql`select count(*)::int as count from businesses where ${w}`,
   ]);
   return NextResponse.json({ total: count, results: rows });

@@ -26,7 +26,13 @@ export function parseFilters(p: URLSearchParams): Filters {
 export function where(f: Filters) {
   const prefixes = SECTORS.find((s) => s.label === f.sector)?.prefixes;
   const conds = [sql`true`];
-  if (f.q) conds.push(sql`(search @@ websearch_to_tsquery('simple', ${f.q}) or name ilike ${f.q + "%"})`);
+  // Every word of the query starts a word of the name ("tru solutions" -> TRUE SOLUTIONS ...,
+  // "jk janitorial" -> J K JANITORIAL), or the name is a close misspelling of the query.
+  if (f.q) {
+    const words = queryWords(f.q);
+    const allWords = words.length ? words.map(wordMatch).reduce((a, b) => sql`${a} and ${b}`) : sql`false`;
+    conds.push(sql`((${allWords}) or word_similarity(${f.q}, name) >= 0.8)`);
+  }
   if (prefixes) conds.push(sql`left(naics, 2) in ${sql(prefixes)}`);
   if (f.city) conds.push(sql`lower(city) = lower(${f.city})`);
   if (f.minRev !== undefined) conds.push(sql`est_revenue_mid >= ${f.minRev}`);
@@ -36,6 +42,25 @@ export function where(f: Filters) {
     conds.push(sql`lat between ${s} and ${n} and lon between ${w} and ${e}`);
   }
   return conds.reduce((acc, c) => sql`${acc} and ${c}`);
+}
+
+// Same normalisation as the name_norm column: upper case, punctuation out, single letters joined.
+function queryWords(q: string) {
+  return q.toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim()
+    .replace(/\b([A-Z0-9]) (?=[A-Z0-9]\b)/g, "$1")
+    .split(" ").filter(Boolean).slice(0, 8);
+}
+
+const wordMatch = (w: string) => sql`name_norm ~ ${"\\m" + w}`;
+
+// When searching: names matching more of the query's words first, then the closest spelling.
+export function relevance(f: Filters) {
+  if (!f.q) return sql``;
+  const words = queryWords(f.q);
+  const matched = words.length
+    ? words.map((w) => sql`(${wordMatch(w)})::int`).reduce((a, b) => sql`${a} + ${b}`)
+    : sql`0`;
+  return sql`${matched} desc, word_similarity(${f.q}, name) desc,`;
 }
 
 // Never expose a street address for individuals (sole props, self-employed).

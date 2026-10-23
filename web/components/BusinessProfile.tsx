@@ -70,7 +70,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         <div className="stat">
           <div className="k">Employees (reported to SBA)</div>
           <div className="v">{b.jobs_reported ?? "—"}</div>
-          <div className="r">Total PPP: {money(b.total_ppp_amount)}</div>
+          <div className="r">{b.est_method === "industry_average" ? "No PPP loan on record" : `Total PPP: ${money(b.total_ppp_amount)}`}</div>
         </div>
       </div>
 
@@ -100,14 +100,21 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             rather than payroll, so we treat the annualized amount as owner earnings (≈ EBITDA) and assume a 30% net
             margin to estimate revenue. Treat these numbers as rough.</p>
         )}
+        {b.est_method === "industry_average" && (
+          <p>This business has no PPP loan on record, so there is no business-specific data. The figures are the
+            typical estimated revenue of {b.industry} businesses in our Oklahoma data: the middle value, with the
+            range covering the middle half of those businesses. EBITDA applies the industry margin
+            ({pct(b.ebitda_margin)}). Treat these as a rough guide — owners can claim the listing to correct them.</p>
+        )}
         {b.est_confidence === "low" && b.est_method === "employees" && (
           <p className="disclaimer">Low confidence: the employee-based and payroll-based estimates differ by more than 2×.</p>
         )}
         <p className="disclaimer">Benchmarks: {b.benchmark_source ?? "sector default"}. PPP loans were sized on 2019–2020
-          payroll, so figures reflect that period. These are statistical estimates, not reported financials.</p>
+          payroll, so figures reflect that period. These are statistical estimates, not reported financials.
+          {b.est_method === "industry_average" && " Listing details come from Overture Maps open data."}</p>
       </div>
 
-      <div className="section">
+      {b.loans.length > 0 && <div className="section">
         <h2>PPP loans</h2>
         <table>
           <thead><tr><th>Approved</th><th>Draw</th><th>Amount</th><th>Forgiven</th><th>Jobs</th><th>Lender</th></tr></thead>
@@ -121,7 +128,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             ))}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {comps.length > 0 && (
         <div className="section">

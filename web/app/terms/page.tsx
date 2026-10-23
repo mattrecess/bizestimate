@@ -17,7 +17,8 @@ export default function Terms() {
         <h2>Where the data comes from</h2>
         <p>Business names, addresses, industry codes, reported jobs and loan details come from the U.S. Small
           Business Administration&apos;s public Paycheck Protection Program (PPP) loan data, released under the
-          Freedom of Information Act. Industry ratios come from U.S. Census Bureau data. Locations come from the
+          Freedom of Information Act. Businesses without a PPP loan, websites and some locations come from Overture
+          Maps Foundation open data; those businesses show industry averages, not figures about them. Industry ratios come from U.S. Census Bureau data. Locations come from the
           Census geocoder. Loan data reflects 2020–2021 and may be out of date; a listed business may have
           moved, changed or closed. See <Link href="/methodology">how estimates work</Link>.</p>
       </div>

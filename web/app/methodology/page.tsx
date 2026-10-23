@@ -23,6 +23,13 @@ export default function Methodology() {
           When a business reported no employees, this payroll method is used instead.</p>
       </div>
       <div className="section">
+        <h2>Businesses without a PPP loan</h2>
+        <p>Many businesses never took a PPP loan. We list those from Overture Maps&apos; open business directory
+          (skipping any already in the loan data), marked <strong>Industry avg</strong>. With no business-specific
+          data, their figures are the typical estimated revenue of PPP businesses in the same industry in Oklahoma:
+          the middle value, with a range covering the middle half. They say nothing about that particular business.</p>
+      </div>
+      <div className="section">
         <h2>Which businesses are listed</h2>
         <p>We only list businesses whose address could be matched to an exact street location by the U.S. Census
           geocoder, so every map pin sits at the business&apos;s own address. Sole proprietors, self-employed

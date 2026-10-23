@@ -11,7 +11,7 @@ const PAGE = 50;
 type Biz = {
   id: number; name: string; address: string | null; city: string; zip: string; industry: string;
   jobs_reported: number | null; est_revenue_low: string; est_revenue_mid: string; est_revenue_high: string;
-  est_ebitda_mid: string; est_confidence: string;
+  est_ebitda_mid: string; est_confidence: string; est_method: string;
 };
 
 // Filters are mirrored into the page URL so a search can be bookmarked or shared.
@@ -177,7 +177,10 @@ export default function Home() {
             {data?.results.map((b) => (
               <a key={b.id} href={`/business/${b.id}`} className="card"
                 onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); openBusiness(Number(b.id)); } }}>
-                <div className="name">{b.name}</div>
+                <div className="name">
+                  {b.name}
+                  {b.est_method === "industry_average" && <span className="tag" title="No loan data: typical figures for this industry">Industry avg</span>}
+                </div>
                 <div className="sub">{b.industry} · {b.city}, OK {b.zip}{b.jobs_reported ? ` · ${b.jobs_reported} employee${b.jobs_reported === 1 ? "" : "s"}` : ""}</div>
                 <div className="nums">
                   <div className="num"><div className="k">Revenue</div><div className="v">{money(b.est_revenue_mid)}</div></div>
