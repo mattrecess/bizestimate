@@ -1,0 +1,28 @@
+name: Probe site
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/probe.py", ".github/workflows/probe.yml"]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install "psycopg[binary]"
+      - run: python tools/probe.py 2>&1 | tee "$RUNNER_TEMP/probe.log"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Published like the ETL log so it can be read without signing in.
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b probe-logs
+          cp "$RUNNER_TEMP/probe.log" probe.log 2>/dev/null || echo none > probe.log
+          git add probe.log && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" probe-logs
