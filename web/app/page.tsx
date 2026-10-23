@@ -24,6 +24,8 @@ export default function Home() {
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<{ total: number; results: Biz[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [points, setPoints] = useState<GeoJSON.FeatureCollection | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   // Phones show the map or the list, not both.
@@ -112,18 +114,31 @@ export default function Home() {
     const p = new URLSearchParams(params);
     p.set("sort", sort); p.set("limit", String(PAGE)); p.set("offset", String(offset));
     setLoading(true);
-    fetch(`/api/businesses?${p}`, { signal: ctrl.signal })
-      .then((r) => r.json()).then((d) => { setData(d); setLoading(false); }).catch(() => {});
+    setFailed(false);
+    const load = (retries: number): Promise<void> =>
+      fetch(`/api/businesses?${p}`, { signal: ctrl.signal })
+        .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+        .then((d) => { setData(d); setLoading(false); })
+        .catch((e) => {
+          if (ctrl.signal.aborted) return;
+          // One quiet retry covers a cold start or a busy database; after that, offer a button.
+          if (retries > 0) return new Promise<void>((ok) => setTimeout(ok, 1500)).then(() => load(retries - 1));
+          console.error("business list failed", e);
+          setLoading(false);
+          setFailed(true);
+        });
+    load(1);
     return () => ctrl.abort();
-  }, [ready, params, sort, offset]);
+  }, [ready, params, sort, offset, attempt]);
 
   useEffect(() => {
     if (!ready) return;
     const ctrl = new AbortController();
     setPoints(null); // so the map never fits to the previous search's pins
-    fetch(`/api/points?${params}`, { signal: ctrl.signal }).then((r) => r.json()).then(setPoints).catch(() => {});
+    fetch(`/api/points?${params}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null)).then((d) => d && setPoints(d)).catch(() => {});
     return () => ctrl.abort();
-  }, [ready, params]);
+  }, [ready, params, attempt]);
 
   function changePage(next: number) {
     setOffset(next);
@@ -164,12 +179,19 @@ export default function Home() {
           <div style={{ display: selectedId ? "none" : undefined }}>
             <div className="list-head">
               <span className="count">
-                {data ? `${total.toLocaleString()} ${total === 1 ? "business" : "businesses"}` : "Loading…"}
+                {failed ? "Couldn't load businesses" : data ? `${total.toLocaleString()} ${total === 1 ? "business" : "businesses"}` : "Loading…"}
               </span>
               <span className="sub">{fitKey ? "matching your search" : "in map view"} · estimates</span>
             </div>
+            {failed && (
+              <div className="empty">
+                <h3>Something went wrong loading businesses</h3>
+                <p>The database may be busy. Try again in a moment.</p>
+                <button className="btn primary" onClick={() => setAttempt((a) => a + 1)}>Retry</button>
+              </div>
+            )}
             <div className="cards" aria-busy={loading}>
-              {!data && Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton" />)}
+              {!data && !failed && Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton" />)}
               {data?.results.map((b) => (
                 <BizCard key={b.id} b={b} hovered={hovered === Number(b.id)} onOpen={openBusiness} onHover={setHovered} />
               ))}
