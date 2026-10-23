@@ -106,11 +106,16 @@ def main():
         }
         numeric = {c for c in BIZ_COLS if c.startswith(("est_", "total_"))} - {"est_method", "est_confidence"}
         select = ", ".join(casts.get(c) or (f"{c}::numeric" if c in numeric else c) for c in BIZ_COLS)
-        updates = ", ".join(f"{c} = excluded.{c}" for c in BIZ_COLS if c != "biz_key")
+        cols = [c for c in BIZ_COLS if c != "biz_key"]
+        updates = ", ".join(f"{c} = excluded.{c}" for c in cols)
+        # Only rewrite rows that changed: rewriting all of them every day bloats the table and
+        # leaves the database busy vacuuming, which made the site hang for minutes after a load.
+        changed = (f"({', '.join('businesses.' + c for c in cols)}) is distinct from "
+                   f"({', '.join('excluded.' + c for c in cols)})")
         cur.execute(f"insert into businesses ({', '.join(BIZ_COLS)}) "
                     f"select distinct on (biz_key) {select} from stage_biz "
-                    f"on conflict (biz_key) do update set {updates}")
-        print(f"businesses: {cur.rowcount:,}")
+                    f"on conflict (biz_key) do update set {updates} where {changed}")
+        print(f"businesses added or changed: {cur.rowcount:,}")
         cur.execute("delete from businesses b where state = %s "
                     "and not exists (select 1 from stage_biz s where s.biz_key = b.biz_key)", (state,))
         print(f"businesses removed: {cur.rowcount:,}")
@@ -130,8 +135,14 @@ def main():
                 draw = excluded.draw, date_approved = excluded.date_approved, amount = excluded.amount,
                 payroll_proceed = excluded.payroll_proceed, forgiveness_amount = excluded.forgiveness_amount,
                 loan_status = excluded.loan_status, lender = excluded.lender,
-                jobs_reported = excluded.jobs_reported""")
-        print(f"ppp_loans: {cur.rowcount:,}")
+                jobs_reported = excluded.jobs_reported
+            where (ppp_loans.business_id, ppp_loans.draw, ppp_loans.date_approved, ppp_loans.amount,
+                   ppp_loans.payroll_proceed, ppp_loans.forgiveness_amount, ppp_loans.loan_status,
+                   ppp_loans.lender, ppp_loans.jobs_reported)
+              is distinct from (excluded.business_id, excluded.draw, excluded.date_approved, excluded.amount,
+                   excluded.payroll_proceed, excluded.forgiveness_amount, excluded.loan_status,
+                   excluded.lender, excluded.jobs_reported)""")
+        print(f"ppp_loans added or changed: {cur.rowcount:,}")
         cur.execute("analyze businesses; analyze ppp_loans;")
 
 

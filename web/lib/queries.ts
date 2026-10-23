@@ -66,5 +66,8 @@ export function relevance(f: Filters) {
   return sql`${matched} desc, word_similarity(${f.q}, name) desc,`;
 }
 
+// Search results can be served from Vercel's CDN: the data changes at most once a day.
+export const CACHE = "public, s-maxage=600, stale-while-revalidate=86400";
+
 // Never expose a street address for individuals (sole props, self-employed).
 export const publicAddress = sql`case when is_individual then null else address end as address`;

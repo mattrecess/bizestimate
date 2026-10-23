@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { parseFilters, relevance, where } from "@/lib/queries";
+import { CACHE, parseFilters, relevance, where } from "@/lib/queries";
 
 // Pin label: $1.2M / $850K.
 const shortMoney = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.max(1, Math.round(v / 1e3))}K`);
@@ -22,5 +22,5 @@ export async function GET(req: NextRequest) {
         label: shortMoney(Number(r.est_revenue_mid)), avg: r.est_method === "industry_average" ? 1 : 0,
       },
     })),
-  });
+  }, { headers: { "Cache-Control": CACHE } });
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { parseFilters, publicAddress, relevance, where } from "@/lib/queries";
+import { CACHE, parseFilters, publicAddress, relevance, where } from "@/lib/queries";
 
 const SORTS = {
   revenue_desc: sql`est_revenue_mid desc nulls last`,
@@ -18,19 +18,18 @@ export async function GET(req: NextRequest) {
   const offset = Math.max(Number(p.get("offset")) || 0, 0);
   const w = where(f);
 
-  // One query returns the page and the total (window count), so a search costs a single round trip.
-  const rows = await sql`
-    select id, name, ${publicAddress}, city, state, zip, naics, industry, jobs_reported,
-           est_revenue_low, est_revenue_mid, est_revenue_high,
-           est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
-           coalesce(owner_name, '') <> '' as has_owner,
-           coalesce(website, '') <> '' as has_website,
-           count(*) over ()::int as total
-    from businesses where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`;
-  // Past the last page there are no rows to carry the total, so count separately.
-  const count = rows.length
-    ? rows[0].total
-    : offset ? (await sql`select count(*)::int as count from businesses where ${w}`)[0].count : 0;
-  for (const r of rows) delete r.total;
-  return NextResponse.json({ total: count, results: rows });
+  // The page and the total run side by side; without a window count, the page can come straight
+  // off an index instead of sorting every matching business.
+  const [rows, [{ count }]] = await Promise.all([
+    sql`
+      select id, name, ${publicAddress}, city, state, zip, naics, industry, jobs_reported,
+             est_revenue_low, est_revenue_mid, est_revenue_high,
+             est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
+             coalesce(owner_name, '') <> '' as has_owner,
+             coalesce(website, '') <> '' as has_website
+      from businesses where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
+    sql`select count(*)::int as count from businesses where ${w}`,
+  ]);
+  // Let Vercel's CDN answer repeat requests (the default view especially) without the database.
+  return NextResponse.json({ total: count, results: rows }, { headers: { "Cache-Control": CACHE } });
 }

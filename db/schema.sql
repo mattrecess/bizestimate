@@ -66,6 +66,8 @@ create index if not exists businesses_city_lower_idx on businesses (lower(city))
 create index if not exists businesses_sector_idx on businesses (left(naics, 2));
 create index if not exists businesses_latlon_idx on businesses (lat, lon);
 create index if not exists businesses_rev_idx on businesses (est_revenue_mid desc);
+-- Matches the list's "order by est_revenue_mid desc nulls last", so the top 50 come off the index.
+create index if not exists businesses_rev_nl_idx on businesses (est_revenue_mid desc nulls last);
 create index if not exists businesses_naics_idx on businesses (naics text_pattern_ops);
 create index if not exists businesses_city_idx on businesses (state, city);
 
