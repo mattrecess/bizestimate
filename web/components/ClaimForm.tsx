@@ -27,7 +27,7 @@ export default function ClaimForm({ businessId }: { businessId: number }) {
       <input name="reported_ebitda" type="number" placeholder="Actual EBITDA (optional)" />
       <textarea name="message" rows={3} placeholder="Anything else?" />
       <label><input type="checkbox" name="request_removal" /> Remove this listing</label>
-      <button className="primary" disabled={status === "sending"}>Submit claim</button>
+      <button className="btn primary" disabled={status === "sending"}>Submit claim</button>
       {status === "error" && <p style={{ color: "var(--warn)" }}>{error}</p>}
     </form>
   );

@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
     select id, name, ${publicAddress}, city, state, zip, naics, industry, jobs_reported,
            est_revenue_low, est_revenue_mid, est_revenue_high,
            est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
+           coalesce(owner_name, '') <> '' as has_owner,
+           coalesce(website, '') <> '' as has_website,
            count(*) over ()::int as total
     from businesses where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`;
   // Past the last page there are no rows to carry the total, so count separately.

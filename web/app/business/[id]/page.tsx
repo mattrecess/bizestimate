@@ -1,3 +1,4 @@
+import Footer from "@/components/Footer";
 import { notFound } from "next/navigation";
 import { getBusiness, getComparables } from "@/lib/business";
 import { money } from "@/lib/format";
@@ -22,8 +23,11 @@ export default async function BusinessPage({ params }: { params: Promise<{ id: s
   if (!b) notFound();
   const comps = await getComparables(b);
   return (
-    <main className="page">
-      <BusinessProfile b={{ ...b, comps }} />
-    </main>
+    <>
+      <main className="page">
+        <BusinessProfile b={{ ...b, comps }} />
+      </main>
+      <Footer />
+    </>
   );
 }

@@ -1,8 +1,12 @@
+"use client";
+import { useState } from "react";
 import Link from "next/link";
 import type { Business, Comparable, Loan } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import ClaimForm from "./ClaimForm";
+import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
+import RangeBar from "./RangeBar";
 
 export type Profile = Business & { loans: Loan[]; comps: Comparable[] };
 
@@ -24,126 +28,177 @@ function linkedInSearch(b: Profile) {
 }
 
 const pct = (v: unknown) => (v == null ? "—" : `${(Number(v) * 100).toFixed(0)}%`);
+const initials = (name: string) => name.split(/\s+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
-// Shared by the full business page and the explorer's side panel (compact, no mini-map).
+type Tab = "overview" | "financials" | "loans" | "comparables" | "claim";
+
+// Shared by the full business page and the explorer's side panel (compact: no mini-map).
 export default function BusinessProfile({ b, compact = false, onSelect }: {
   b: Profile;
   compact?: boolean;
   onSelect?: (id: number) => void;
 }) {
-  const comps = b.comps;
+  const [tab, setTab] = useState<Tab>("overview");
+  const [copied, setCopied] = useState(false);
+  const noLoan = b.est_method === "industry_average";
+  const tabs: [Tab, string][] = [
+    ["overview", "Overview"], ["financials", "How we estimated"],
+    ...(b.loans.length ? [["loans", `PPP loans (${b.loans.length})`] as [Tab, string]] : []),
+    ...(b.comps.length ? [["comparables", "Comparables"] as [Tab, string]] : []),
+    ["claim", "Claim"],
+  ];
+
+  async function share() {
+    const url = `${window.location.origin}/business/${b.id}`;
+    try {
+      if (navigator.share) await navigator.share({ title: b.name, url });
+      else { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800); }
+    } catch { /* share sheet dismissed */ }
+  }
+
   return (
-    <div className={compact ? "profile compact" : "profile"}>
-      <div className="hero">
-        <h1>{b.name}</h1>
-        <div className="sub">
-          {[b.address, b.city, `OK ${b.zip}`].filter(Boolean).join(", ")} · {b.industry} (NAICS {b.naics || "n/a"})
-          {b.is_nonprofit && " · Nonprofit"}
-        </div>
-        {b.owner_name && (
-          <div className="owner">
-            {b.owner_title || "Owner"}: <strong>{b.owner_name}</strong>
-            {b.owner_source && (
-              <> · <a href={b.owner_source} target="_blank" rel="nofollow noopener noreferrer">source</a></>
-            )}
+    <div className={compact ? "profile" : "profile full"}>
+      <div className="p-head">
+        <div className="ind-icon"><Icon name={industryIcon(b.naics)} size={24} /></div>
+        <div>
+          <h1>{b.name}</h1>
+          <div className="sub">
+            {[b.address, b.city, `OK ${b.zip}`].filter(Boolean).join(", ")}
           </div>
+          <div className="badges">
+            <span className="badge info">{b.industry}</span>
+            {noLoan ? <span className="badge">Industry avg</span> : <span className="badge good">PPP loan data</span>}
+            {b.is_nonprofit && <span className="badge">Nonprofit</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="actions">
+        {b.website && (
+          <a className="btn" href={b.website} target="_blank" rel="nofollow noopener noreferrer">
+            <Icon name="globe" size={15} />{siteLabel(b.website)}
+          </a>
         )}
-        <div className="links">
-          {b.website && (
-            <a href={b.website} target="_blank" rel="nofollow noopener noreferrer">{siteLabel(b.website)} ↗</a>
+        <a className="btn" href={linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer">
+          <Icon name="linkedin" size={15} />LinkedIn
+        </a>
+        <button className="btn" onClick={share}><Icon name="share" size={15} />{copied ? "Link copied" : "Share"}</button>
+        <button className="btn" onClick={() => setTab("claim")}><Icon name="flag" size={15} />Claim</button>
+      </div>
+
+      {b.owner_name && (
+        <div className="owner-card">
+          <div className="avatar">{initials(b.owner_name) || <Icon name="user" />}</div>
+          <div>
+            <div className="who">{b.owner_name}</div>
+            <div className="src">
+              {b.owner_title || "Owner"}
+              {b.owner_source && <> · <a href={b.owner_source} target="_blank" rel="nofollow noopener noreferrer">source</a></>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="tabs" role="tablist">
+        {tabs.map(([key, label]) => (
+          <button key={key} role="tab" className="tab" aria-selected={tab === key} onClick={() => setTab(key)}>{label}</button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <>
+          <div className="tiles">
+            <div className="tile">
+              <div className="k">Est. revenue</div>
+              <div className="v">{money(b.est_revenue_mid)}</div>
+              <RangeBar low={b.est_revenue_low} mid={b.est_revenue_mid} high={b.est_revenue_high} />
+            </div>
+            <div className="tile">
+              <div className="k">Est. EBITDA</div>
+              <div className="v">{money(b.est_ebitda_mid)}</div>
+              <RangeBar low={b.est_ebitda_low} mid={b.est_ebitda_mid} high={b.est_ebitda_high} />
+            </div>
+            <div className="tile">
+              <div className="k">Employees</div>
+              <div className="v">{b.jobs_reported ?? "—"}</div>
+              <div className="r">{noLoan ? "No PPP loan on record" : "Reported to the SBA"}</div>
+            </div>
+            <div className="tile">
+              <div className="k">{noLoan ? "Estimate basis" : "Total PPP"}</div>
+              <div className="v">{noLoan ? "Industry" : money(b.total_ppp_amount)}</div>
+              <div className="r">
+                <span className={`badge ${b.est_confidence === "low" ? "warn" : "good"}`}>{b.est_confidence} confidence</span>
+              </div>
+            </div>
+          </div>
+          {noLoan && (
+            <p className="disclaimer">No PPP loan on record: these are typical figures for {b.industry} businesses in
+              Oklahoma, not this business&apos;s own. <button className="link-btn" onClick={() => setTab("financials")}>How we estimate</button></p>
           )}
-          <a href={linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer">Find on LinkedIn ↗</a>
-        </div>
-      </div>
+          {!compact && b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
+        </>
+      )}
 
-      <div className="stats">
-        <div className="stat">
-          <div className="k">Estimated revenue</div>
-          <div className="v">{money(b.est_revenue_mid)}</div>
-          <div className="r">{moneyRange(b.est_revenue_low, b.est_revenue_high)}</div>
-        </div>
-        <div className="stat">
-          <div className="k">Estimated EBITDA</div>
-          <div className="v">{money(b.est_ebitda_mid)}</div>
-          <div className="r">{moneyRange(b.est_ebitda_low, b.est_ebitda_high)}</div>
-        </div>
-        <div className="stat">
-          <div className="k">Employees (reported to SBA)</div>
-          <div className="v">{b.jobs_reported ?? "—"}</div>
-          <div className="r">{b.est_method === "industry_average" ? "No PPP loan on record" : `Total PPP: ${money(b.total_ppp_amount)}`}</div>
-        </div>
-      </div>
-
-      <div className="section">
-        <h2>How we estimated this <span className={`badge ${b.est_confidence === "low" ? "low" : ""}`}>{b.est_confidence} confidence</span></h2>
-        {b.est_method === "employees" && (
-          <table><tbody>
-            <tr><td>Employees reported to the SBA</td><td>{b.jobs_reported}</td></tr>
-            <tr><td>Industry revenue per employee</td><td>{money(b.revenue_per_employee)}</td></tr>
-            <tr><td>Revenue = employees × revenue per employee</td><td>{money(b.est_revenue_mid)}</td></tr>
-            <tr><td>Industry EBITDA margin</td><td>{pct(b.ebitda_margin)}</td></tr>
-            <tr><td>EBITDA = revenue × margin</td><td>{money(b.est_ebitda_mid)}</td></tr>
-            <tr><td>Cross-check: revenue implied by PPP payroll</td><td>{money(b.est_revenue_by_payroll)}</td></tr>
-          </tbody></table>
-        )}
-        {b.est_method === "payroll" && (
-          <table><tbody>
-            <tr><td colSpan={2}>No employee count was reported, so this uses the PPP loan instead.</td></tr>
-            <tr><td>Annual payroll implied by PPP loan</td><td>{money(b.est_payroll)}</td></tr>
-            <tr><td>Industry payroll ÷ revenue</td><td>{pct(b.payroll_to_revenue)}</td></tr>
-            <tr><td>Revenue = payroll ÷ ratio</td><td>{money(b.est_revenue_mid)}</td></tr>
-            <tr><td>Industry EBITDA margin</td><td>{pct(b.ebitda_margin)}</td></tr>
-          </tbody></table>
-        )}
-        {b.est_method === "owner_earnings" && (
-          <p>This looks like a one-person business with no employee count. Its PPP loan was sized on owner earnings
-            rather than payroll, so we treat the annualized amount as owner earnings (≈ EBITDA) and assume a 30% net
-            margin to estimate revenue. Treat these numbers as rough.</p>
-        )}
-        {b.est_method === "industry_average" && (
-          <p>This business has no PPP loan on record, so there is no business-specific data. The figures are the
-            typical estimated revenue of {b.industry} businesses in our Oklahoma data: the middle value, with the
-            range covering the middle half of those businesses. EBITDA applies the industry margin
-            ({pct(b.ebitda_margin)}). Treat these as a rough guide — owners can claim the listing to correct them.</p>
-        )}
-        {b.est_confidence === "low" && b.est_method === "employees" && (
-          <p className="disclaimer">Low confidence: the employee-based and payroll-based estimates differ by more than 2×.</p>
-        )}
-        <p className="disclaimer">Benchmarks: {b.benchmark_source ?? "sector default"}. PPP loans were sized on 2019–2020
-          payroll, so figures reflect that period. These are statistical estimates, not reported financials.
-          {b.est_method === "industry_average" && " Listing details come from Overture Maps open data."}</p>
-      </div>
-
-      {b.loans.length > 0 && <div className="section">
-        <h2>PPP loans</h2>
-        <table>
-          <thead><tr><th>Approved</th><th>Draw</th><th>Amount</th><th>Forgiven</th><th>Jobs</th><th>Lender</th></tr></thead>
-          <tbody>
-            {b.loans.map((l) => (
-              <tr key={l.loan_number}>
-                <td>{l.date_approved ? new Date(l.date_approved).toLocaleDateString() : "—"}</td>
-                <td>{l.draw}</td><td>{money(l.amount)}</td><td>{money(l.forgiveness_amount)}</td>
-                <td>{l.jobs_reported ?? "—"}</td><td>{l.lender}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>}
-
-      {comps.length > 0 && (
+      {tab === "financials" && (
         <div className="section">
-          <h2>Comparable businesses nearby</h2>
+          <h2>How we estimated this</h2>
+          {b.est_method === "employees" && (
+            <table><tbody>
+              <tr><td>Employees reported to the SBA</td><td className="num">{b.jobs_reported}</td></tr>
+              <tr><td>Industry revenue per employee</td><td className="num">{money(b.revenue_per_employee)}</td></tr>
+              <tr><td>Revenue = employees × revenue per employee</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
+              <tr><td>Industry EBITDA margin</td><td className="num">{pct(b.ebitda_margin)}</td></tr>
+              <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
+              <tr><td>Cross-check: revenue implied by PPP payroll</td><td className="num">{money(b.est_revenue_by_payroll)}</td></tr>
+            </tbody></table>
+          )}
+          {b.est_method === "payroll" && (
+            <table><tbody>
+              <tr><td colSpan={2}>No employee count was reported, so this uses the PPP loan instead.</td></tr>
+              <tr><td>Annual payroll implied by PPP loan</td><td className="num">{money(b.est_payroll)}</td></tr>
+              <tr><td>Industry payroll ÷ revenue</td><td className="num">{pct(b.payroll_to_revenue)}</td></tr>
+              <tr><td>Revenue = payroll ÷ ratio</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
+              <tr><td>Industry EBITDA margin</td><td className="num">{pct(b.ebitda_margin)}</td></tr>
+            </tbody></table>
+          )}
+          {b.est_method === "owner_earnings" && (
+            <p>This looks like a one-person business with no employee count. Its PPP loan was sized on owner earnings
+              rather than payroll, so we treat the annualized amount as owner earnings (≈ EBITDA) and assume a 30% net
+              margin to estimate revenue. Treat these numbers as rough.</p>
+          )}
+          {noLoan && (
+            <p>This business has no PPP loan on record, so there is no business-specific data. The figures are the
+              typical estimated revenue of {b.industry} businesses in our Oklahoma data: the middle value, with the
+              range covering the middle half of those businesses. EBITDA applies the industry margin
+              ({pct(b.ebitda_margin)}). Treat these as a rough guide — owners can claim the listing to correct them.</p>
+          )}
+          <table><tbody>
+            <tr><td>Revenue range</td><td className="num">{moneyRange(b.est_revenue_low, b.est_revenue_high)}</td></tr>
+            <tr><td>EBITDA range</td><td className="num">{moneyRange(b.est_ebitda_low, b.est_ebitda_high)}</td></tr>
+            <tr><td>Industry (NAICS)</td><td className="num">{b.industry} ({b.naics || "n/a"})</td></tr>
+          </tbody></table>
+          {b.est_confidence === "low" && b.est_method === "employees" && (
+            <p className="disclaimer">Low confidence: the employee-based and payroll-based estimates differ by more than 2×.</p>
+          )}
+          <p className="disclaimer">Benchmarks: {b.benchmark_source ?? "sector default"}. PPP loans were sized on 2019–2020
+            payroll, so figures reflect that period. These are statistical estimates, not reported financials.
+            {noLoan && " Listing details come from Overture Maps open data."}{" "}
+            <Link href="/methodology">Full methodology</Link></p>
+        </div>
+      )}
+
+      {tab === "loans" && (
+        <div className="section">
+          <h2>PPP loans</h2>
           <table>
-            <thead><tr><th>Business</th><th className="hide-sm">City</th><th className="hide-sm">Employees</th><th>Est. revenue</th><th>Est. EBITDA</th><th>Distance</th></tr></thead>
+            <thead><tr><th>Approved</th><th>Draw</th><th className="num">Amount</th><th className="num hide-sm">Forgiven</th><th className="num">Jobs</th><th className="hide-sm">Lender</th></tr></thead>
             <tbody>
-              {comps.map((c) => (
-                <tr key={c.id}>
-                  <td>{onSelect
-                    ? <a href={`/business/${c.id}`} onClick={(e) => { e.preventDefault(); onSelect(Number(c.id)); }}>{c.name}</a>
-                    : <Link href={`/business/${c.id}`}>{c.name}</Link>}</td>
-                  <td className="hide-sm">{c.city}</td><td className="hide-sm">{c.jobs_reported ?? "—"}</td>
-                  <td>{money(c.est_revenue_mid)}</td><td>{money(c.est_ebitda_mid)}</td>
-                  <td>{c.miles == null ? "—" : `${Number(c.miles).toFixed(1)} mi`}</td>
+              {b.loans.map((l) => (
+                <tr key={l.loan_number}>
+                  <td>{l.date_approved ? new Date(l.date_approved).toLocaleDateString() : "—"}</td>
+                  <td>{l.draw}</td><td className="num">{money(l.amount)}</td>
+                  <td className="num hide-sm">{money(l.forgiveness_amount)}</td>
+                  <td className="num">{l.jobs_reported ?? "—"}</td><td className="hide-sm">{l.lender}</td>
                 </tr>
               ))}
             </tbody>
@@ -151,13 +206,37 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         </div>
       )}
 
-      {!compact && b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
+      {tab === "comparables" && (
+        <div className="section">
+          <h2>Similar businesses nearby</h2>
+          <table>
+            <thead><tr><th>Business</th><th className="num">Est. revenue</th><th className="num hide-sm">Est. EBITDA</th><th className="num">Distance</th></tr></thead>
+            <tbody>
+              {b.comps.map((c) => (
+                <tr key={c.id}>
+                  <td>
+                    {onSelect
+                      ? <a href={`/business/${c.id}`} onClick={(e) => { e.preventDefault(); onSelect(Number(c.id)); }}>{c.name}</a>
+                      : <Link href={`/business/${c.id}`}>{c.name}</Link>}
+                    <div className="disclaimer" style={{ margin: 0 }}>{c.city}{c.jobs_reported ? ` · ${c.jobs_reported} employees` : ""}</div>
+                  </td>
+                  <td className="num">{money(c.est_revenue_mid)}</td>
+                  <td className="num hide-sm">{money(c.est_ebitda_mid)}</td>
+                  <td className="num">{c.miles == null ? "—" : `${Number(c.miles).toFixed(1)} mi`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      <div className="section">
-        <h2>Own this business?</h2>
-        <p style={{ color: "var(--muted)", marginTop: 0 }}>Claim this listing to correct the numbers or request removal.</p>
-        <ClaimForm key={b.id} businessId={Number(b.id)} />
-      </div>
+      {tab === "claim" && (
+        <div className="section">
+          <h2>Own this business?</h2>
+          <p style={{ color: "var(--muted)" }}>Claim this listing to correct the numbers or request removal.</p>
+          <ClaimForm key={b.id} businessId={Number(b.id)} />
+        </div>
+      )}
     </div>
   );
 }

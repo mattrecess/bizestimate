@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { parseFilters, relevance, where } from "@/lib/queries";
 
+// Pin label: $1.2M / $850K.
+const shortMoney = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.max(1, Math.round(v / 1e3))}K`);
+
 // Lightweight GeoJSON for the map: biggest businesses first, capped.
 export async function GET(req: NextRequest) {
   const f = parseFilters(req.nextUrl.searchParams);
   const rows = await sql`
-    select id, name, lat, lon, est_revenue_mid from businesses
+    select id, name, lat, lon, est_revenue_mid, est_method from businesses
     where lat is not null and ${where(f)}
     order by ${relevance(f)} est_revenue_mid desc nulls last limit 5000`;
   return NextResponse.json({
@@ -14,7 +17,10 @@ export async function GET(req: NextRequest) {
     features: rows.map((r) => ({
       type: "Feature",
       geometry: { type: "Point", coordinates: [r.lon, r.lat] },
-      properties: { id: Number(r.id), name: r.name, rev: Number(r.est_revenue_mid) },
+      properties: {
+        id: Number(r.id), name: r.name, rev: Number(r.est_revenue_mid),
+        label: shortMoney(Number(r.est_revenue_mid)), avg: r.est_method === "industry_average" ? 1 : 0,
+      },
     })),
   });
 }

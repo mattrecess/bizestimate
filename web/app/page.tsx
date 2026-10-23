@@ -1,18 +1,15 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { SECTORS } from "@/lib/sectors";
-import { money, moneyRange } from "@/lib/format";
 import BusinessProfile, { type Profile } from "@/components/BusinessProfile";
+import BizCard, { type Biz } from "@/components/BizCard";
+import FilterBar, { type FilterState } from "@/components/FilterBar";
+import Icon from "@/components/Icon";
+import SearchBox from "@/components/SearchBox";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 const PAGE = 50;
-
-type Biz = {
-  id: number; name: string; address: string | null; city: string; zip: string; industry: string;
-  jobs_reported: number | null; est_revenue_low: string; est_revenue_mid: string; est_revenue_high: string;
-  est_ebitda_mid: string; est_confidence: string; est_method: string;
-};
+const NO_FILTERS: FilterState = { sector: "", city: "", minRev: "", maxRev: "", sort: "revenue_desc" };
 
 // Filters are mirrored into the page URL so a search can be bookmarked or shared.
 const URL_KEYS = ["q", "sector", "city", "min_rev", "max_rev", "sort", "id"] as const;
@@ -20,36 +17,37 @@ const URL_KEYS = ["q", "sector", "city", "min_rev", "max_rev", "sort", "id"] as 
 export default function Home() {
   const [ready, setReady] = useState(false);
   const [cities, setCities] = useState<{ city: string; count: number }[]>([]);
-  const [city, setCity] = useState("");
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
-  const [sector, setSector] = useState("");
-  const [minRev, setMinRev] = useState("");
-  const [maxRev, setMaxRev] = useState("");
-  const [sort, setSort] = useState("revenue_desc");
+  const [filters, setFilters] = useState<FilterState>(NO_FILTERS);
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<{ total: number; results: Biz[] } | null>(null);
+  const [loading, setLoading] = useState(true);
   const [points, setPoints] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
+  // Phones show the map or the list, not both.
+  const [view, setView] = useState<"map" | "list">("map");
   // Business shown in the side panel (replaces the list until "Back").
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
+  const { sector, city, minRev, maxRev, sort } = filters;
 
   function openBusiness(id: number) {
     if (!selectedId) listScroll.current = panel.current?.scrollTop ?? 0;
     setSelectedId(id);
-    // On phones the panel sits below the map; bring it into view.
-    if (window.matchMedia("(max-width: 860px)").matches) panel.current?.scrollIntoView({ behavior: "smooth" });
+    setView("list");
   }
 
   useEffect(() => {
     const u = new URLSearchParams(window.location.search);
     setQ(u.get("q") ?? ""); setDebouncedQ(u.get("q") ?? "");
-    setSector(u.get("sector") ?? ""); setCity(u.get("city") ?? "");
-    setMinRev(u.get("min_rev") ?? ""); setMaxRev(u.get("max_rev") ?? "");
-    setSort(u.get("sort") ?? "revenue_desc");
+    setFilters({
+      sector: u.get("sector") ?? "", city: u.get("city") ?? "",
+      minRev: u.get("min_rev") ?? "", maxRev: u.get("max_rev") ?? "", sort: u.get("sort") ?? "revenue_desc",
+    });
     if (u.get("id") && /^\d+$/.test(u.get("id")!)) setSelectedId(Number(u.get("id")));
     setReady(true);
     fetch("/api/cities").then((r) => r.json()).then(setCities).catch(() => {});
@@ -113,7 +111,9 @@ export default function Home() {
     const ctrl = new AbortController();
     const p = new URLSearchParams(params);
     p.set("sort", sort); p.set("limit", String(PAGE)); p.set("offset", String(offset));
-    fetch(`/api/businesses?${p}`, { signal: ctrl.signal }).then((r) => r.json()).then(setData).catch(() => {});
+    setLoading(true);
+    fetch(`/api/businesses?${p}`, { signal: ctrl.signal })
+      .then((r) => r.json()).then((d) => { setData(d); setLoading(false); }).catch(() => {});
     return () => ctrl.abort();
   }, [ready, params, sort, offset]);
 
@@ -125,79 +125,79 @@ export default function Home() {
     return () => ctrl.abort();
   }, [ready, params]);
 
+  function changePage(next: number) {
+    setOffset(next);
+    panel.current?.scrollTo({ top: 0 });
+  }
+
+  const anyFilter = debouncedQ || sector || city || minRev || maxRev;
+  const total = data?.total ?? 0;
+
   return (
     <>
-      <div className="filters">
-        <input type="search" placeholder="Search business name, city or industry" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select value={sector} onChange={(e) => setSector(e.target.value)}>
-          <option value="">All industries</option>
-          {SECTORS.map((s) => <option key={s.label}>{s.label}</option>)}
-        </select>
-        <select value={city} onChange={(e) => setCity(e.target.value)}>
-          <option value="">All cities</option>
-          {city && !cities.some((c) => c.city === city) && <option>{city}</option>}
-          {cities.map((c) => <option key={c.city} value={c.city}>{c.city} ({c.count.toLocaleString()})</option>)}
-        </select>
-        <select value={minRev} onChange={(e) => setMinRev(e.target.value)}>
-          <option value="">Min revenue</option>
-          {[250e3, 500e3, 1e6, 2e6, 5e6, 10e6, 25e6].map((v) => <option key={v} value={v}>{money(v)}+</option>)}
-        </select>
-        <select value={maxRev} onChange={(e) => setMaxRev(e.target.value)}>
-          <option value="">Max revenue</option>
-          {[500e3, 1e6, 2e6, 5e6, 10e6, 25e6, 50e6].map((v) => <option key={v} value={v}>up to {money(v)}</option>)}
-        </select>
-        <select value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="revenue_desc">Revenue: high to low</option>
-          <option value="revenue_asc">Revenue: low to high</option>
-          <option value="ebitda_desc">EBITDA: high to low</option>
-          <option value="jobs_desc">Employees: most</option>
-          <option value="name">Name A–Z</option>
-        </select>
+      <div className="toolbar">
+        <SearchBox value={q} onChange={setQ} onPick={openBusiness} />
+        <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
       </div>
-      <div className="explorer">
-        <div className="map"><Map points={points} onBoundsChange={setBbox} fitKey={fitKey} onSelect={openBusiness} selected={selectedPoint} /></div>
-        <div className="list" ref={panel}>
+      <div className="explorer" data-view={view}>
+        <div className="map">
+          <Map points={points} onBoundsChange={setBbox} fitKey={fitKey} onSelect={openBusiness}
+            selected={selectedPoint} hoveredId={hovered} onHover={setHovered} />
+        </div>
+        <div className="panel" ref={panel}>
           {selectedId && (
             <div className="detail">
               <div className="detail-bar">
-                <button className="back" onClick={() => setSelectedId(null)} aria-label="Back to list">← Back</button>
-                <a href={`/business/${selectedId}`} target="_blank" rel="noopener">Open full page ↗</a>
+                <button className="btn" onClick={() => setSelectedId(null)} aria-label="Back to list">
+                  <Icon name="back" size={16} />Back to list
+                </button>
+                <a className="link-btn" href={`/business/${selectedId}`} target="_blank" rel="noopener">
+                  Full page <Icon name="external" size={14} />
+                </a>
               </div>
               {profile && Number(profile.id) === selectedId
                 ? <BusinessProfile b={profile} compact onSelect={openBusiness} />
-                : <div className="meta">Loading…</div>}
+                : <div className="cards"><div className="skeleton" style={{ height: 90 }} /><div className="skeleton" style={{ height: 220 }} /></div>}
             </div>
           )}
           {/* The list stays mounted while a profile is open, so Back returns to the same scroll position. */}
           <div style={{ display: selectedId ? "none" : undefined }}>
-            <div className="meta">
-              <span>{data ? `${data.total.toLocaleString()} ${data.total === 1 ? "business" : "businesses"}${fitKey ? " found" : " in view"}` : "Loading…"}</span>
-              <span>Estimates</span>
+            <div className="list-head">
+              <span className="count">
+                {data ? `${total.toLocaleString()} ${total === 1 ? "business" : "businesses"}` : "Loading…"}
+              </span>
+              <span className="sub">{fitKey ? "matching your search" : "in map view"} · estimates</span>
             </div>
-            {data?.results.map((b) => (
-              <a key={b.id} href={`/business/${b.id}`} className="card"
-                onClick={(e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); openBusiness(Number(b.id)); } }}>
-                <div className="name">
-                  {b.name}
-                  {b.est_method === "industry_average" && <span className="tag" title="No loan data: typical figures for this industry">Industry avg</span>}
-                </div>
-                <div className="sub">{b.industry} · {b.city}, OK {b.zip}{b.jobs_reported ? ` · ${b.jobs_reported} employee${b.jobs_reported === 1 ? "" : "s"}` : ""}</div>
-                <div className="nums">
-                  <div className="num"><div className="k">Revenue</div><div className="v">{money(b.est_revenue_mid)}</div></div>
-                  <div className="num"><div className="k">EBITDA</div><div className="v">{money(b.est_ebitda_mid)}</div></div>
-                  <div className="num"><div className="k">Range</div><div className="v" style={{ fontWeight: 400 }}>{moneyRange(b.est_revenue_low, b.est_revenue_high)}</div></div>
-                </div>
-              </a>
-            ))}
-            {data && data.total > PAGE && (
+            <div className="cards" aria-busy={loading}>
+              {!data && Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton" />)}
+              {data?.results.map((b) => (
+                <BizCard key={b.id} b={b} hovered={hovered === Number(b.id)} onOpen={openBusiness} onHover={setHovered} />
+              ))}
+            </div>
+            {data && total === 0 && (
+              <div className="empty">
+                <Icon name="search" size={28} />
+                <h3>No businesses found</h3>
+                <p>{anyFilter ? "Try a different spelling, or loosen the filters." : "Zoom out or move the map to see more."}</p>
+                {anyFilter && (
+                  <button className="btn" onClick={() => { setQ(""); setFilters((f) => ({ ...NO_FILTERS, sort: f.sort })); }}>
+                    Clear search and filters
+                  </button>
+                )}
+              </div>
+            )}
+            {data && total > PAGE && (
               <div className="pager">
-                <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Previous</button>
-                <span style={{ color: "var(--muted)", alignSelf: "center" }}>{offset + 1}–{Math.min(offset + PAGE, data.total)}</span>
-                <button disabled={offset + PAGE >= data.total} onClick={() => setOffset(offset + PAGE)}>Next</button>
+                <button className="btn" disabled={offset === 0} onClick={() => changePage(Math.max(0, offset - PAGE))}>Previous</button>
+                <span>{(offset + 1).toLocaleString()}–{Math.min(offset + PAGE, total).toLocaleString()} of {total.toLocaleString()}</span>
+                <button className="btn" disabled={offset + PAGE >= total} onClick={() => changePage(offset + PAGE)}>Next</button>
               </div>
             )}
           </div>
         </div>
+        <button className="btn primary view-toggle" onClick={() => setView(view === "map" ? "list" : "map")}>
+          <Icon name={view === "map" ? "list" : "map"} size={16} />{view === "map" ? "List" : "Map"}
+        </button>
       </div>
     </>
   );
