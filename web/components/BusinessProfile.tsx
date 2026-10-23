@@ -1,14 +1,15 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import type { Business, Comparable, Loan } from "@/lib/business";
+import type { Business, Comparable, Headcount, Loan } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import ClaimForm from "./ClaimForm";
+import HeadcountChart from "./HeadcountChart";
 import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
 import RangeBar from "./RangeBar";
 
-export type Profile = Business & { loans: Loan[]; comps: Comparable[] };
+export type Profile = Business & { loans: Loan[]; comps: Comparable[]; headcounts?: Headcount[] };
 
 // "https://www.blastrac.com/" -> "blastrac.com"
 function siteLabel(url: string) {
@@ -29,6 +30,12 @@ function linkedInSearch(b: Profile) {
 
 const pct = (v: unknown) => (v == null ? "—" : `${(Number(v) * 100).toFixed(0)}%`);
 const initials = (name: string) => name.split(/\s+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+
+// Year of the first PPP loan (headcounts were reported then): 2020 for most, 2021 for second-draw-only.
+const pppYear = (loans: Loan[]) => {
+  const d = loans.find((l) => l.date_approved)?.date_approved;
+  return d ? new Date(d).getFullYear() : 2020;
+};
 
 type Tab = "overview" | "financials" | "loans" | "comparables" | "claim";
 
@@ -135,6 +142,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <p className="disclaimer">No PPP loan on record: these are typical figures for {b.industry} businesses in
               Oklahoma, not this business&apos;s own. <button className="link-btn" onClick={() => setTab("financials")}>How we estimate</button></p>
           )}
+          <HeadcountChart
+            ppp={b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null}
+            plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={b.ebitda_margin} />
           {!compact && b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
         </>
       )}

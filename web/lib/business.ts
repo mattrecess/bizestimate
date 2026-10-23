@@ -17,7 +17,9 @@ export type Loan = {
   forgiveness_amount: Num; loan_status: string; lender: string; jobs_reported: number | null;
 };
 
-export async function getBusiness(id: string): Promise<(Business & { loans: Loan[] }) | null> {
+export type Headcount = { year: number; employees: number };
+
+export async function getBusiness(id: string): Promise<(Business & { loans: Loan[]; headcounts: Headcount[] }) | null> {
   if (!/^\d+$/.test(id)) return null;
   const [biz] = await sql<Business[]>`
     select b.id, b.name, ${publicAddress}, b.city, b.state, b.zip, b.county, b.naics, b.industry,
@@ -39,7 +41,11 @@ export async function getBusiness(id: string): Promise<(Business & { loans: Loan
   const loans = await sql<Loan[]>`
     select loan_number, draw, date_approved, amount, forgiveness_amount, loan_status, lender, jobs_reported
     from ppp_loans where business_id = ${id} order by date_approved`;
-  return { ...biz, loans };
+  // Retirement-plan participants by year (Form 5500); empty until that table has been loaded.
+  const headcounts = await sql<Headcount[]>`
+    select h.year, h.employees from headcounts h join businesses b on b.biz_key = h.biz_key
+    where b.id = ${id} and h.source = 'form5500' order by h.year`.catch(() => []);
+  return { ...biz, loans, headcounts };
 }
 
 export type Comparable = {

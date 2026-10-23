@@ -50,7 +50,8 @@ export default function Home() {
       sector: u.get("sector") ?? "", city: u.get("city") ?? "",
       minRev: u.get("min_rev") ?? "", maxRev: u.get("max_rev") ?? "", sort: u.get("sort") ?? "revenue_desc",
     });
-    if (u.get("id") && /^\d+$/.test(u.get("id")!)) setSelectedId(Number(u.get("id")));
+    // A shared link to a business opens its profile (on phones, the list side rather than the map).
+    if (u.get("id") && /^\d+$/.test(u.get("id")!)) { setSelectedId(Number(u.get("id"))); setView("list"); }
     setReady(true);
     fetch("/api/cities").then((r) => r.json()).then(setCities).catch(() => {});
   }, []);
