@@ -6,28 +6,23 @@ import Icon from "./Icon";
 type Suggestion = { id: number; name: string; city: string; est_revenue_mid: string };
 
 // Search input with live business suggestions; Enter searches, picking a suggestion opens it.
-export default function SearchBox({ value, onChange, onPick }: {
+// The suggestions come from the page's own search results, so typing sends a single request.
+export default function SearchBox({ value, onChange, onPick, suggestions }: {
   value: string;
   onChange: (q: string) => void;
   onPick: (id: number) => void;
+  suggestions: { q: string; items: Suggestion[] } | null;
 }) {
   const [text, setText] = useState(value);
-  const [items, setItems] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => setText(value), [value]);
 
-  useEffect(() => {
-    if (text.trim().length < 2) { setItems([]); return; }
-    const ctrl = new AbortController();
-    const t = setTimeout(() => {
-      fetch(`/api/businesses?q=${encodeURIComponent(text)}&limit=6`, { signal: ctrl.signal })
-        .then((r) => r.json()).then((d) => { setItems(d.results ?? []); setActive(-1); }).catch(() => {});
-    }, 150);
-    return () => { clearTimeout(t); ctrl.abort(); };
-  }, [text]);
+  // Only results for what's in the box (not a previous query) are offered.
+  const items = text.trim().length >= 2 && suggestions && suggestions.q === text ? suggestions.items : [];
+  useEffect(() => setActive(-1), [suggestions]);
 
   useEffect(() => {
     const close = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
@@ -55,7 +50,7 @@ export default function SearchBox({ value, onChange, onPick }: {
         }}
       />
       {text && (
-        <button className="clear" aria-label="Clear search" onClick={() => { setText(""); onChange(""); setItems([]); }}>
+        <button className="clear" aria-label="Clear search" onClick={() => { setText(""); onChange(""); }}>
           <Icon name="x" size={16} />
         </button>
       )}

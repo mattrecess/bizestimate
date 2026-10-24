@@ -19,7 +19,7 @@ export type Loan = {
 
 export type Headcount = { year: number; employees: number };
 
-export async function getBusiness(id: string): Promise<(Business & { loans: Loan[]; headcounts: Headcount[] }) | null> {
+export async function getBusinessRow(id: string): Promise<Business | null> {
   if (!/^\d+$/.test(id)) return null;
   const [biz] = await sql<Business[]>`
     select b.id, b.name, ${publicAddress}, b.city, b.state, b.zip, b.county, b.naics, b.industry,
@@ -37,16 +37,25 @@ export async function getBusiness(id: string): Promise<(Business & { loans: Loan
       where b.naics like naics_prefix || '%' order by length(naics_prefix) desc limit 1
     ) ib on true
     where b.id = ${id}`;
-  if (!biz) return null;
-  const loans = await sql<Loan[]>`
-    select loan_number, draw, date_approved, amount, forgiveness_amount, loan_status, lender, jobs_reported
-    from ppp_loans where business_id = ${id} order by date_approved`;
-  // Retirement-plan participants by year (Form 5500); empty until that table has been loaded.
-  const headcounts = await sql<Headcount[]>`
-    select h.year, h.employees from headcounts h join businesses b on b.biz_key = h.biz_key
-    where b.id = ${id} and h.source = 'form5500' order by h.year`.catch(() => []);
-  return { ...biz, loans, headcounts };
+  return biz ?? null;
 }
+
+// Everything a profile shows. After the business row, the rest load side by side.
+export async function getProfile(id: string) {
+  const biz = await getBusinessRow(id);
+  if (!biz) return null;
+  const [loans, headcounts, comps] = await Promise.all([getLoans(id), getHeadcounts(id), getComparables(biz)]);
+  return { ...biz, loans, headcounts, comps };
+}
+
+const getLoans = (id: string) => sql<Loan[]>`
+  select loan_number, draw, date_approved, amount, forgiveness_amount, loan_status, lender, jobs_reported
+  from ppp_loans where business_id = ${id} order by date_approved`;
+
+// Retirement-plan participants by year (Form 5500); empty until that table has been loaded.
+const getHeadcounts = (id: string) => sql<Headcount[]>`
+  select h.year, h.employees from headcounts h join businesses b on b.biz_key = h.biz_key
+  where b.id = ${id} and h.source = 'form5500' order by h.year`.catch(() => [] as Headcount[]);
 
 export type Comparable = {
   id: string; name: string; city: string; industry: string; jobs_reported: number | null;

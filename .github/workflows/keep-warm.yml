@@ -1,0 +1,21 @@
+name: Keep site warm
+# With little traffic the site's server functions go to sleep, and the next visitor waits seconds
+# for them (and their database connection) to start. A light request every few minutes keeps the
+# list, map and profile endpoints awake. The changing "warm" value skips the CDN cache so the
+# request really reaches the function.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: |
+          site=https://bizestimate-six.vercel.app
+          t=$(date +%s)
+          for path in "/api/businesses?limit=1&warm=$t" "/api/points?bbox=-97.6,35.4,-97.5,35.5&warm=$t" \
+                      "/api/businesses/1289747?warm=$t" "/api/cities?warm=$t"; do
+            curl -s -o /dev/null -w "%{http_code} %{time_total}s $path\n" "$site$path" || true
+          done

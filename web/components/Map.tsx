@@ -159,7 +159,7 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       const f = e.features![0];
       const src = m.getSource("biz") as maplibregl.GeoJSONSource;
       const z = await src.getClusterExpansionZoom(f.properties!.cluster_id);
-      m.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom: z });
+      m.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom: z }, { user: true });
     });
     const hover = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: [0, -34] });
     const pins = ["points", "tags"];
@@ -197,8 +197,10 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
     }
     // The container can still be settling its size at creation; recentre once it has.
     m.on("load", () => { m.resize(); if (!boundsCb.current) m.jumpTo({ center }); });
-    m.on("load", emit);
-    m.on("moveend", emit);
+    // Report the view only when it actually moves (dragging, zooming, a cluster click, flying to
+    // results), not for the initial view or a resize: an early report would cancel the page's
+    // first, whole-state requests and start slower uncached ones.
+    m.on("moveend", (e: maplibregl.MapLibreEvent & { user?: boolean }) => { if (e.originalEvent || e.user) emit(); });
     return () => m.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -211,7 +213,7 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       fitted.current = fitKey;
       const bounds = new maplibregl.LngLatBounds();
       for (const f of points.features) bounds.extend((f.geometry as GeoJSON.Point).coordinates as [number, number]);
-      map.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 800 });
+      map.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 800 }, { user: true });
     }
     if (!fitKey) fitted.current = "";
   }, [points, fitKey]);
@@ -222,7 +224,7 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
     (m.getSource("selected") as maplibregl.GeoJSONSource | undefined)?.setData(pointFC(selected));
     // Bring the selected business into view if it's off-screen (e.g. picked from comparables).
     if (selected && !m.getBounds().contains([selected.lon, selected.lat])) {
-      m.easeTo({ center: [selected.lon, selected.lat], zoom: Math.max(m.getZoom(), 14), duration: 800 });
+      m.easeTo({ center: [selected.lon, selected.lat], zoom: Math.max(m.getZoom(), 14), duration: 800 }, { user: true });
     }
   }, [selected]);
 

@@ -1,13 +1,13 @@
 import Footer from "@/components/Footer";
 import { notFound } from "next/navigation";
-import { getBusiness, getComparables } from "@/lib/business";
+import { getBusinessRow, getProfile } from "@/lib/business";
 import { money } from "@/lib/format";
 import BusinessProfile from "@/components/BusinessProfile";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const b = await getBusiness((await params).id);
+  const b = await getBusinessRow((await params).id);
   if (!b) return { title: "Not found" };
   const where = [b.city, "OK"].filter(Boolean).join(", ");
   return {
@@ -19,13 +19,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function BusinessPage({ params }: { params: Promise<{ id: string }> }) {
-  const b = await getBusiness((await params).id);
+  const b = await getProfile((await params).id);
   if (!b) notFound();
-  const comps = await getComparables(b);
   return (
     <>
       <main className="page">
-        <BusinessProfile b={{ ...b, comps }} />
+        <BusinessProfile b={b} />
       </main>
       <Footer />
     </>

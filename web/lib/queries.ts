@@ -67,7 +67,8 @@ export function relevance(f: Filters) {
 }
 
 // Search results can be served from Vercel's CDN: the data changes at most once a day.
-export const CACHE = "public, s-maxage=600, stale-while-revalidate=86400";
+// max-age lets the browser reuse a response it just fetched (e.g. going back to a search).
+export const CACHE = "public, max-age=60, s-maxage=600, stale-while-revalidate=86400";
 
 // Never expose a street address for individuals (sole props, self-employed).
 export const publicAddress = sql`case when is_individual then null else address end as address`;

@@ -9,6 +9,16 @@ import SearchBox from "@/components/SearchBox";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 const PAGE = 50;
+const PIN_LIMIT = 5000;   // /api/points cap: a capped result means zooming in can reveal more
+
+type Box = [number, number, number, number]; // west, south, east, north
+// Pins are fetched for the view plus half a screen on each side, on a coarse grid, so small pans
+// need no new request and repeat views share a CDN-cached URL.
+function padBox([w, s, e, n]: Box): Box {
+  const dx = (e - w) / 2, dy = (n - s) / 2, g = 0.05;
+  return [Math.floor((w - dx) / g) * g, Math.floor((s - dy) / g) * g, Math.ceil((e + dx) / g) * g, Math.ceil((n + dy) / g) * g];
+}
+const inside = (a: Box, b: Box) => a[0] >= b[0] && a[1] >= b[1] && a[2] <= b[2] && a[3] <= b[3];
 const NO_FILTERS: FilterState = { sector: "", city: "", minRev: "", maxRev: "", sort: "revenue_desc" };
 
 // Filters are mirrored into the page URL so a search can be bookmarked or shared.
@@ -22,11 +32,14 @@ export default function Home() {
   const [filters, setFilters] = useState<FilterState>(NO_FILTERS);
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
   const [offset, setOffset] = useState(0);
-  const [data, setData] = useState<{ total: number; results: Biz[] } | null>(null);
+  const [data, setData] = useState<{ total: number; results: Biz[]; q: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [points, setPoints] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [pinArea, setPinArea] = useState<Box | null>(null);
+  const pinsCapped = useRef(false);
+  const pinsFitKey = useRef<string | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   // Phones show the map or the list, not both.
   const [view, setView] = useState<"map" | "list">("map");
@@ -89,23 +102,40 @@ export default function Home() {
   );
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q), 300);
+    const t = setTimeout(() => setDebouncedQ(q), 200);
     return () => clearTimeout(t);
   }, [q]);
 
   const fitKey = city || debouncedQ ? `${city}|${debouncedQ}` : "";
 
-  const params = useMemo(() => {
+  // Strings, not objects, so a render that changes nothing never repeats a request.
+  const filterParams = useMemo(() => {
     const p = new URLSearchParams();
     if (debouncedQ) p.set("q", debouncedQ);
     if (sector) p.set("sector", sector);
     if (city) p.set("city", city);
     if (minRev) p.set("min_rev", minRev);
     if (maxRev) p.set("max_rev", maxRev);
-    // A city or name search covers the whole state; the map then flies to the matches.
-    if (bbox && !fitKey) p.set("bbox", bbox.map((n) => n.toFixed(4)).join(","));
-    return p;
-  }, [debouncedQ, sector, city, minRev, maxRev, bbox, fitKey]);
+    return p.toString();
+  }, [debouncedQ, sector, city, minRev, maxRev]);
+  // A city or name search covers the whole state; the map then flies to the matches.
+  const fmtBox = (b: Box) => b.map((n) => n.toFixed(4)).join(",");
+  const params = useMemo(() => {
+    const p = new URLSearchParams(filterParams);
+    if (bbox && !fitKey) p.set("bbox", fmtBox(bbox));
+    return p.toString();
+  }, [filterParams, bbox, fitKey]);
+
+  // Widen the pin area only when the view leaves it, or when a capped result may be hiding pins.
+  useEffect(() => {
+    if (!bbox || fitKey) { setPinArea(null); return; }
+    setPinArea((area) => (area && inside(bbox, area) && !pinsCapped.current ? area : padBox(bbox)));
+  }, [bbox, fitKey]);
+  const pinParams = useMemo(() => {
+    const p = new URLSearchParams(filterParams);
+    if (pinArea && !fitKey) p.set("bbox", fmtBox(pinArea));
+    return p.toString();
+  }, [filterParams, pinArea, fitKey]);
 
   useEffect(() => setOffset(0), [params, sort]);
 
@@ -119,7 +149,7 @@ export default function Home() {
     const load = (retries: number): Promise<void> =>
       fetch(`/api/businesses?${p}`, { signal: ctrl.signal })
         .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-        .then((d) => { setData(d); setLoading(false); })
+        .then((d) => { setData({ ...d, q: debouncedQ }); setLoading(false); })
         .catch((e) => {
           if (ctrl.signal.aborted) return;
           // One quiet retry covers a cold start or a busy database; after that, offer a button.
@@ -130,16 +160,27 @@ export default function Home() {
         });
     load(1);
     return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, params, sort, offset, attempt]);
 
   useEffect(() => {
     if (!ready) return;
     const ctrl = new AbortController();
-    setPoints(null); // so the map never fits to the previous search's pins
-    fetch(`/api/points?${params}`, { signal: ctrl.signal })
-      .then((r) => (r.ok ? r.json() : null)).then((d) => d && setPoints(d)).catch(() => {});
+    // A new search clears the map, so it never flies to the previous search's pins; panning and
+    // zooming keep the current pins up until the new ones arrive.
+    if (pinsFitKey.current !== fitKey) setPoints(null);
+    fetch(`/api/points?${pinParams}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        pinsCapped.current = d.features.length >= PIN_LIMIT;
+        pinsFitKey.current = fitKey;
+        setPoints(d);
+      })
+      .catch(() => {});
     return () => ctrl.abort();
-  }, [ready, params, attempt]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, pinParams, attempt]);
 
   function changePage(next: number) {
     setOffset(next);
@@ -152,7 +193,9 @@ export default function Home() {
   return (
     <>
       <div className="toolbar">
-        <SearchBox value={q} onChange={setQ} onPick={openBusiness} />
+        {/* Suggestions are the top of the list query, so typing costs one request, not two. */}
+        <SearchBox value={q} onChange={setQ} onPick={openBusiness}
+          suggestions={data && data.q && offset === 0 ? { q: data.q, items: data.results.slice(0, 6) } : null} />
         <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
       </div>
       <div className="explorer" data-view={view}>
