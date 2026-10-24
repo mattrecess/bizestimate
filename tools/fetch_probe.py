@@ -5,8 +5,8 @@ import sys
 sys.path.insert(0, "etl")
 from netutil import urlopen  # noqa: E402
 
-for url in ["https://data.sba.gov/dataset/?q=7%28a%29+504+foia", "https://data.sba.gov/dataset/?q=foia",
-            "https://data.sba.gov/en/dataset/7-a-504-foia", "https://data.sba.gov/api/3/action/package_search?q=504"]:
+for url in [f"https://data.sba.gov/dataset/?page={n}" for n in range(1, 7)] + [
+        "https://www.sba.gov/about-sba/sba-performance/open-government/foia/frequently-requested-records/sba-7a-504-loan-data-reports"]:
     try:
         with urlopen(url, timeout=60) as r:
             html = r.read().decode("utf-8", "replace")
