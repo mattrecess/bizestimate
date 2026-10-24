@@ -47,7 +47,10 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
 }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [copied, setCopied] = useState(false);
-  const noLoan = b.est_method === "industry_average";
+  const avg = b.est_method === "industry_average";           // no business-specific data at all
+  const noLoan = !b.loans.length;
+  const fromPlan = b.est_method === "retirement_plan";       // re-based on the newest Form 5500 count
+  const latest = b.headcounts?.length ? b.headcounts[b.headcounts.length - 1] : null;
   const tabs: [Tab, string][] = [
     ["overview", "Overview"], ["financials", "How we estimated"],
     ...(b.loans.length ? [["loans", `PPP loans (${b.loans.length})`] as [Tab, string]] : []),
@@ -74,7 +77,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           </div>
           <div className="badges">
             <span className="badge info">{b.industry}</span>
-            {noLoan ? <span className="badge">Industry avg</span> : <span className="badge good">PPP loan data</span>}
+            {avg ? <span className="badge">Industry avg</span>
+              : fromPlan ? <span className="badge good">401(k) plan data</span>
+              : <span className="badge good">PPP loan data</span>}
             {b.is_nonprofit && <span className="badge">Nonprofit</span>}
           </div>
         </div>
@@ -127,18 +132,27 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             </div>
             <div className="tile">
               <div className="k">Employees</div>
-              <div className="v">{b.jobs_reported ?? "—"}</div>
-              <div className="r">{noLoan ? "No PPP loan on record" : "Reported to the SBA"}</div>
+              {fromPlan && latest ? (
+                <>
+                  <div className="v">{latest.employees.toLocaleString()}</div>
+                  <div className="r">In its retirement plan, {latest.year}{b.jobs_reported ? ` · ${b.jobs_reported} on PPP` : ""}</div>
+                </>
+              ) : (
+                <>
+                  <div className="v">{b.jobs_reported ?? "—"}</div>
+                  <div className="r">{noLoan ? "No PPP loan on record" : "Reported to the SBA"}</div>
+                </>
+              )}
             </div>
             <div className="tile">
               <div className="k">{noLoan ? "Estimate basis" : "Total PPP"}</div>
-              <div className="v">{noLoan ? "Industry" : money(b.total_ppp_amount)}</div>
+              <div className="v">{noLoan ? (fromPlan ? "401(k) filing" : "Industry") : money(b.total_ppp_amount)}</div>
               <div className="r">
                 <span className={`badge ${b.est_confidence === "low" ? "warn" : "good"}`}>{b.est_confidence} confidence</span>
               </div>
             </div>
           </div>
-          {noLoan && (
+          {avg && (
             <p className="disclaimer">No PPP loan on record: these are typical figures for {b.industry} businesses in
               Oklahoma, not this business&apos;s own. <button className="link-btn" onClick={() => setTab("financials")}>How we estimate</button></p>
           )}
@@ -176,7 +190,22 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               rather than payroll, so we treat the annualized amount as owner earnings (≈ EBITDA) and assume a 30% net
               margin to estimate revenue. Treat these numbers as rough.</p>
           )}
-          {noLoan && (
+          {fromPlan && latest && (
+            <table><tbody>
+              <tr><td>Employees in its retirement plan ({latest.year} Form 5500)</td><td className="num">{latest.employees.toLocaleString()}</td></tr>
+              <tr><td>Industry revenue per employee</td><td className="num">{money(b.revenue_per_employee)}</td></tr>
+              <tr><td>Revenue = employees × revenue per employee</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
+              <tr><td>Industry EBITDA margin</td><td className="num">{pct(b.ebitda_margin)}</td></tr>
+              <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
+              {b.jobs_reported ? <tr><td>For comparison: employees reported for PPP ({pppYear(b.loans)})</td><td className="num">{b.jobs_reported}</td></tr> : null}
+            </tbody></table>
+          )}
+          {fromPlan && (
+            <p className="disclaimer">Uses the newest headcount we have: participants in the company&apos;s retirement plan from its
+              Form 5500 filing with the Department of Labor. Plans can leave out part-timers and new hires, so the range
+              leans higher than the estimate.</p>
+          )}
+          {avg && (
             <p>This business has no PPP loan on record, so there is no business-specific data. The figures are the
               typical estimated revenue of {b.industry} businesses in our Oklahoma data: the middle value, with the
               range covering the middle half of those businesses. EBITDA applies the industry margin
@@ -190,8 +219,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           {b.est_confidence === "low" && b.est_method === "employees" && (
             <p className="disclaimer">Low confidence: the employee-based and payroll-based estimates differ by more than 2×.</p>
           )}
-          <p className="disclaimer">Benchmarks: {b.benchmark_source ?? "sector default"}. PPP loans were sized on 2019–2020
-            payroll, so figures reflect that period. These are statistical estimates, not reported financials.
+          <p className="disclaimer">Benchmarks: {b.benchmark_source ?? "sector default"}.
+            {!fromPlan && !avg && " PPP loans were sized on 2019–2020 payroll, so figures reflect that period."} These are
+            statistical estimates, not reported financials.
             {noLoan && " Listing details come from Overture Maps open data."}{" "}
             <Link href="/methodology">Full methodology</Link></p>
         </div>

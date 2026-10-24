@@ -23,6 +23,7 @@ from datetime import date
 
 import psycopg
 
+import headcount_estimates
 from csvio import write_rows
 from load import database_url
 from matching import name_tokens, parse_address
@@ -289,6 +290,7 @@ def main():
                 for year, (n, ein) in years.items():
                     cp.write_row((key, year, n, "form5500", ein))
         cur.execute("analyze headcounts")
+        headcount_estimates.apply(cur, state)
     print("Form 5500: headcounts saved", flush=True)
 
 

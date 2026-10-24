@@ -14,6 +14,7 @@ from urllib.parse import unquote, urlparse
 
 import psycopg
 
+import headcount_estimates
 from benchmarks import load_benchmarks
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -143,6 +144,12 @@ def main():
                    excluded.payroll_proceed, excluded.forgiveness_amount, excluded.loan_status,
                    excluded.lender, excluded.jobs_reported)""")
         print(f"ppp_loans added or changed: {cur.rowcount:,}")
+        # Newer Form 5500 headcounts override the PPP-era estimate; a failure here must not undo the load.
+        try:
+            with conn.transaction():
+                headcount_estimates.apply(cur, state.upper())
+        except psycopg.Error as e:
+            print(f"Re-basing on retirement-plan headcounts failed (non-fatal): {e}", flush=True)
         cur.execute("analyze businesses; analyze ppp_loans;")
 
 

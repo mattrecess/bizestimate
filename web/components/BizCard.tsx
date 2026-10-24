@@ -36,7 +36,9 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
         {b.jobs_reported ? <span className="stat-chip">Employees<b>{b.jobs_reported}</b></span> : null}
       </div>
       <div className="badges">
-        {avg ? <span className="badge">Industry avg</span> : <span className="badge good">PPP data</span>}
+        {avg ? <span className="badge">Industry avg</span>
+          : b.est_method === "retirement_plan" ? <span className="badge good">401(k) data</span>
+          : <span className="badge good">PPP data</span>}
         {b.has_owner && <span className="badge info"><Icon name="user" size={12} />Owner known</span>}
         {b.has_website && <span className="badge"><Icon name="globe" size={12} />Website</span>}
         {!avg && b.est_confidence === "low" && <span className="badge warn">Low confidence</span>}

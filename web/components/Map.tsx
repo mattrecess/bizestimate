@@ -241,7 +241,7 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
       <button className="map-toggle" onClick={toggle}>{satellite ? "Map" : "Satellite"}</button>
       {onSelect && <div className="legend" aria-hidden>
-        <span><i style={{ background: PPP }} />PPP loan data</span>
+        <span><i style={{ background: PPP }} />PPP or 401(k) data</span>
         <span><i style={{ background: AVG }} />Industry average</span>
       </div>}
     </>
