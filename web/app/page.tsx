@@ -31,8 +31,10 @@ export default function Home() {
   const [debouncedQ, setDebouncedQ] = useState("");
   const [filters, setFilters] = useState<FilterState>(NO_FILTERS);
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
-  const [offset, setOffset] = useState(0);
-  const [data, setData] = useState<{ total: number; results: Biz[]; q: string; industry?: string | null } | null>(null);
+  // Continuous scroll: how far the list has been extended, for which search (a new search starts over).
+  const [more, setMore] = useState({ key: "", offset: 0 });
+  const [data, setData] = useState<{ key: string; total: number; results: Biz[]; q: string; industry?: string | null } | null>(null);
+  const sentinel = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -137,7 +139,8 @@ export default function Home() {
     return p.toString();
   }, [filterParams, pinArea, fitKey]);
 
-  useEffect(() => setOffset(0), [params, sort]);
+  const listKey = `${params}&sort=${sort}`;
+  const offset = more.key === listKey ? more.offset : 0;
 
   useEffect(() => {
     if (!ready) return;
@@ -149,7 +152,17 @@ export default function Home() {
     const load = (retries: number): Promise<void> =>
       fetch(`/api/businesses?${p}`, { signal: ctrl.signal })
         .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-        .then((d) => { setData({ ...d, q: debouncedQ }); setLoading(false); })
+        .then((d) => {
+          if (offset === 0) {
+            setData({ ...d, key: listKey, q: debouncedQ });
+            panel.current?.scrollTo({ top: 0 });
+          } else {
+            // Next batch: append to the same search's list.
+            setData((prev) => (prev && prev.key === listKey
+              ? { ...prev, total: d.total, results: [...prev.results, ...d.results] } : prev));
+          }
+          setLoading(false);
+        })
         .catch((e) => {
           if (ctrl.signal.aborted) return;
           // One quiet retry covers a cold start or a busy database; after that, offer a button.
@@ -161,7 +174,18 @@ export default function Home() {
     load(1);
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, params, sort, offset, attempt]);
+  }, [ready, listKey, offset, attempt]);
+
+  // Load the next batch when the bottom of the list comes within a screen of view.
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !data || data.key !== listKey || loading || failed || data.results.length >= data.total) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) setMore({ key: listKey, offset: data.results.length });
+    }, { root: panel.current, rootMargin: "800px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [data, listKey, loading, failed]);
 
   useEffect(() => {
     if (!ready) return;
@@ -182,11 +206,6 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, pinParams, attempt]);
 
-  function changePage(next: number) {
-    setOffset(next);
-    panel.current?.scrollTo({ top: 0 });
-  }
-
   const anyFilter = debouncedQ || sector || city || minRev || maxRev;
   const total = data?.total ?? 0;
 
@@ -195,7 +214,7 @@ export default function Home() {
       <div className="toolbar">
         {/* Suggestions are the top of the list query, so typing costs one request, not two. */}
         <SearchBox value={q} onChange={setQ} onPick={openBusiness}
-          suggestions={data && data.q && offset === 0
+          suggestions={data && data.q
             ? { q: data.q, items: data.results.slice(0, 6), industry: data.industry, total: data.total } : null} />
         <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
       </div>
@@ -230,7 +249,7 @@ export default function Home() {
                 {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : "in map view"} · estimates
               </span>
             </div>
-            {failed && (
+            {failed && !data?.results.length && (
               <div className="empty">
                 <h3>Something went wrong loading businesses</h3>
                 <p>The database may be busy. Try again in a moment.</p>
@@ -255,11 +274,17 @@ export default function Home() {
                 )}
               </div>
             )}
-            {data && total > PAGE && (
-              <div className="pager">
-                <button className="btn" disabled={offset === 0} onClick={() => changePage(Math.max(0, offset - PAGE))}>Previous</button>
-                <span>{(offset + 1).toLocaleString()}–{Math.min(offset + PAGE, total).toLocaleString()} of {total.toLocaleString()}</span>
-                <button className="btn" disabled={offset + PAGE >= total} onClick={() => changePage(offset + PAGE)}>Next</button>
+            {/* Continuous scroll: reaching this loads the next batch. */}
+            <div ref={sentinel} />
+            {data && data.results.length > 0 && (
+              <div className="list-end">
+                {failed ? (
+                  <button className="btn" onClick={() => setAttempt((a) => a + 1)}>Couldn&apos;t load more. Retry</button>
+                ) : data.results.length < total ? (
+                  <span><span className="spinner" aria-hidden /> Loading more… ({data.results.length.toLocaleString()} of {total.toLocaleString()})</span>
+                ) : total > PAGE ? (
+                  <span>All {total.toLocaleString()} shown</span>
+                ) : null}
               </div>
             )}
           </div>

@@ -176,12 +176,16 @@ def load_year_cached(path):
 
 def sponsors_by_year(rows):
     """{ein: {"years": {year: active}, "names": set, "addrs": [...]}}; largest plan per sponsor-year."""
-    out = defaultdict(lambda: {"years": {}, "names": set(), "places": set()})
+    out = defaultdict(lambda: {"years": {}, "names": set(), "places": set(), "naics": None})
     for r in rows:
         if not r["ein"] or r["active"] > MAX_PARTICIPANTS:   # (older caches weren't filtered)
             continue
         s = out[r["ein"]]
         s["years"][r["year"]] = max(s["years"].get(r["year"], 0), r["active"])
+        # The industry code the employer gives on its newest filing (6-digit NAICS).
+        code = re.sub(r"\D", "", r.get("naics") or "")
+        if len(code) == 6 and r["year"] >= s.get("naics_year", 0):
+            s["naics"], s["naics_year"] = code, r["year"]
         for n in (r["name"], r["dba"]):
             if n:
                 s["names"].add(n.upper())
@@ -287,10 +291,10 @@ def main():
         cur.execute("lock table headcounts in share row exclusive mode")
         cur.execute("delete from headcounts h where h.source = 'form5500' and not exists "
                     "(select 1 from businesses b where b.biz_key = h.biz_key and b.state <> %s)", (state,))
-        with cur.copy("copy headcounts (biz_key, year, employees, source, ein) from stdin") as cp:
+        with cur.copy("copy headcounts (biz_key, year, employees, source, ein, naics) from stdin") as cp:
             for key, years in counts.items():
                 for year, (n, ein) in years.items():
-                    cp.write_row((key, year, n, "form5500", ein))
+                    cp.write_row((key, year, n, "form5500", ein, sponsors[ein]["naics"]))
         cur.execute("analyze headcounts")
         headcount_estimates.apply(cur, state)
     print("Form 5500: headcounts saved", flush=True)

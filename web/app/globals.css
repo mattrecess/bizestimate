@@ -288,3 +288,9 @@ footer.foot nav { display: flex; gap: 16px; }
 .suggestions .s-industry .s-name { color: var(--accent); font-weight: 650; display: inline-flex; align-items: center; gap: 6px; }
 .suggestions .s-industry svg { flex: none; }
 .list-head .sub strong { color: var(--text); font-weight: 600; }
+.list-end { display: flex; justify-content: center; padding: 14px 16px 26px; color: var(--muted); font-size: 13px; }
+.list-end > span { display: inline-flex; align-items: center; gap: 8px; }
+.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-strong); border-top-color: var(--accent);
+  display: inline-block; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

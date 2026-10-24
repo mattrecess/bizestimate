@@ -3,12 +3,14 @@ import { sql } from "@/lib/db";
 import { matchIndustry } from "@/lib/industries";
 import { CACHE, parseFilters, publicAddress, relevance, where } from "@/lib/queries";
 
+// Each ends with id, so ties (equal revenue) keep one order and continuous scrolling never repeats
+// or skips a business between batches.
 const SORTS = {
-  revenue_desc: sql`est_revenue_mid desc nulls last`,
-  revenue_asc: sql`est_revenue_mid asc nulls last`,
-  ebitda_desc: sql`est_ebitda_mid desc nulls last`,
-  jobs_desc: sql`jobs_reported desc nulls last`,
-  name: sql`name asc`,
+  revenue_desc: sql`est_revenue_mid desc nulls last, id`,
+  revenue_asc: sql`est_revenue_mid asc nulls last, id`,
+  ebitda_desc: sql`est_ebitda_mid desc nulls last, id`,
+  jobs_desc: sql`jobs_reported desc nulls last, id`,
+  name: sql`name asc, id`,
 };
 
 export async function GET(req: NextRequest) {

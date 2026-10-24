@@ -109,3 +109,4 @@ create table if not exists headcounts (
   ein       text,
   primary key (biz_key, year, source)
 );
+alter table headcounts add column if not exists naics text;   -- industry code on the employer's filing
