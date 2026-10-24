@@ -283,8 +283,11 @@ def main():
             series = ", ".join(f"{y}: {n}" for y, (n, _) in sorted(counts[key].items()))
             print(f"  sample: {names[key]} -> {series} "
                   f"(sponsor {sorted(sponsors[counts[key][min(counts[key])][1]]['names'])[0]})", flush=True)
-        cur.execute("delete from headcounts where source = 'form5500' and biz_key in "
-                    "(select biz_key from businesses where state = %s)", (state,))
+        # The full pipeline and the quick workflow can run this at the same moment: take turns.
+        cur.execute("lock table headcounts in share row exclusive mode")
+        cur.execute("delete from headcounts where source = 'form5500' and (biz_key in "
+                    "(select biz_key from businesses where state = %s) "
+                    "or biz_key not in (select biz_key from businesses))", (state,))
         with cur.copy("copy headcounts (biz_key, year, employees, source, ein) from stdin") as cp:
             for key, years in counts.items():
                 for year, (n, ein) in years.items():
