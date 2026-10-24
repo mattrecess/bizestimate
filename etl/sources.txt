@@ -1,5 +1,6 @@
 # Public-record source steps, run in order by etl/run.sh and the Public records workflow.
 # sec needs the SEC_USER_AGENT secret (a contact email the SEC accepts).
 # irs990
-banks
+# banks
 # sec
+sba_loans
