@@ -19,8 +19,9 @@ from load import database_url
 from matching import match_entities
 from netutil import urlopen
 
-# The SEC requires a contact email; override with the SEC_USER_AGENT secret.
-UA = os.environ.get("SEC_USER_AGENT") or "BizEstimate mattrecess@users.noreply.github.com"
+# The SEC requires a contact email it accepts (it refuses no-reply addresses), set as the
+# SEC_USER_AGENT secret, e.g. "BizEstimate you@example.com".
+UA = os.environ.get("SEC_USER_AGENT", "").strip()
 LIST = ("https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&State={state}&type=10-K"
         "&dateb=&owner=include&count=100&start={start}")
 FACTS = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
@@ -60,6 +61,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--state", default="OK")
     state = ap.parse_args().state.upper()
+    if not UA:
+        print("sec: skipped; add a SEC_USER_AGENT secret (\"BizEstimate you@example.com\") to enable", flush=True)
+        return
     ciks = {}
     for start in range(0, 2000, 100):
         html = get(LIST.format(state=state, start=start))

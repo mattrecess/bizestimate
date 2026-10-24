@@ -1,10 +1,10 @@
 # Public-record source steps, run in order by etl/run.sh and the Public records workflow.
-# sec needs the SEC_USER_AGENT secret (a contact email the SEC accepts).
-# irs990
-# banks
-# sec
-# sba_loans
-# contracts
-# fmcsa
-# osha  (needs a free DOL API key; the old bulk site is retired)
+# founded uses the others' records, so it runs last.
+irs990
+banks
+sec
+sba_loans
+contracts
+fmcsa
 founded
+# osha  (needs a free DOL API key; the old bulk download site is retired)

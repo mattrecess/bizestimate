@@ -9,6 +9,10 @@ mkdir -p data/cache   # cached between runs by the workflow
 "$PY" etl/margins.py --fetch || echo "IRS margins unavailable; using the last saved ones or sector defaults"
 # Early: it only needs businesses already in the database, so headcounts land within minutes.
 "$PY" etl/form5500.py --state "$STATE" || echo "Form 5500 step failed (non-fatal)"
+# Public records (nonprofits, banks, SEC, SBA loans, contracts, DOT, years in business); each non-fatal.
+for m in $(grep -v '^#' etl/sources.txt | awk '{print $1}'); do
+  "$PY" "etl/$m.py" --state "$STATE" || echo "$m failed (non-fatal)"
+done
 "$PY" etl/benchmarks.py --fetch --state "$STATE" || echo "Using sector-default benchmarks"
 "$PY" etl/download_ppp.py --state "$STATE"
 "$PY" etl/build.py --state "$STATE"
