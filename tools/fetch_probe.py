@@ -1,18 +1,18 @@
-"""Check which SEC endpoints accept our requests from GitHub (and what a refusal says)."""
-import urllib.error
-import urllib.request
+"""Find the SBA 7(a)/504 FOIA dataset and its CSV links (run on GitHub)."""
+import re
+import sys
 
-UAS = ["BizEstimate mattrecess@users.noreply.github.com", "BizEstimate admin@bizestimate.com",
-       "Matt Recess mattrecess@users.noreply.github.com"]
-URLS = ["https://data.sec.gov/submissions/CIK0001090012.json",
-        "https://www.sec.gov/files/company_tickers.json",
-        "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&State=OK&type=10-K&dateb=&owner=include&count=100&start=0",
-        "https://efts.sec.gov/LATEST/search-index?q=%22Oklahoma%22&forms=10-K"]
-for ua in UAS:
-    for url in URLS:
-        req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept-Encoding": "identity", "Host": url.split("/")[2]})
-        try:
-            with urllib.request.urlopen(req, timeout=60) as r:
-                print("OK ", r.status, len(r.read()), ua[:30], url[:90])
-        except urllib.error.HTTPError as e:
-            print("ERR", e.code, ua[:30], url[:90], e.read()[:300])
+sys.path.insert(0, "etl")
+from netutil import urlopen  # noqa: E402
+
+for url in ["https://data.sba.gov/dataset/?q=7%28a%29+504+foia", "https://data.sba.gov/dataset/?q=foia",
+            "https://data.sba.gov/en/dataset/7-a-504-foia", "https://data.sba.gov/api/3/action/package_search?q=504"]:
+    try:
+        with urlopen(url, timeout=60) as r:
+            html = r.read().decode("utf-8", "replace")
+    except Exception as e:  # noqa: BLE001
+        print("FAIL", url, e)
+        continue
+    print("==", url, len(html))
+    for m in sorted(set(re.findall(r'(?:href="|"url": ")([^"]*(?:dataset/[a-z0-9-]+|\.csv))"', html)))[:60]:
+        print("  ", m)
