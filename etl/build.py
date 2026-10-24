@@ -96,7 +96,8 @@ def estimate(loan_amount, draw, naics, jobs, business_type, bench, margins):
         est_revenue_low=round(revenue * lo), est_revenue_mid=round(revenue),
         est_revenue_high=round(revenue * hi), est_ebitda_low=round(ebitda * lo),
         est_ebitda_mid=round(ebitda), est_ebitda_high=round(ebitda * hi),
-        est_ebitda_margin=round(ebitda / revenue, 4) if revenue else None,
+        # Recorded only when it came from IRS data, so the site never credits the IRS for a default.
+        est_ebitda_margin=round(ebitda / revenue, 4) if revenue and margins.data and not owner_only else None,
     )
     return est
 

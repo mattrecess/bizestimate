@@ -50,6 +50,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   const noLoan = !b.loans.length;
   const fromPlan = b.est_method === "retirement_plan";       // re-based on the newest Form 5500 count
   const latest = b.headcounts?.length ? b.headcounts[b.headcounts.length - 1] : null;
+  // The margin actually applied (IRS industry margin adjusted for size) when the data has it.
+  const irsMargin = b.est_ebitda_margin != null && b.est_method !== "owner_earnings";
+  const margin = irsMargin ? b.est_ebitda_margin : b.ebitda_margin;
   const tabs: [Tab, string][] = [
     ["overview", "Overview"], ["financials", "How we estimated"],
     ...(b.loans.length ? [["loans", `PPP loans (${b.loans.length})`] as [Tab, string]] : []),
@@ -155,7 +158,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           )}
           <HeadcountChart
             ppp={b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null}
-            plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={b.ebitda_margin} />
+            plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
           {!compact && b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
         </>
       )}
@@ -168,7 +171,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               <tr><td>Employees reported to the SBA</td><td className="num">{b.jobs_reported}</td></tr>
               <tr><td>Industry revenue per employee</td><td className="num">{money(b.revenue_per_employee)}</td></tr>
               <tr><td>Revenue = employees × revenue per employee</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
-              <tr><td>Industry EBITDA margin</td><td className="num">{pct(b.ebitda_margin)}</td></tr>
+              <tr><td>EBITDA margin{irsMargin ? " (industry, adjusted for size)" : " (industry)"}</td><td className="num">{pct(margin)}</td></tr>
               <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
               <tr><td>Cross-check: revenue implied by PPP payroll</td><td className="num">{money(b.est_revenue_by_payroll)}</td></tr>
             </tbody></table>
@@ -179,7 +182,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               <tr><td>Annual payroll implied by PPP loan</td><td className="num">{money(b.est_payroll)}</td></tr>
               <tr><td>Industry payroll ÷ revenue</td><td className="num">{pct(b.payroll_to_revenue)}</td></tr>
               <tr><td>Revenue = payroll ÷ ratio</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
-              <tr><td>Industry EBITDA margin</td><td className="num">{pct(b.ebitda_margin)}</td></tr>
+              <tr><td>EBITDA margin{irsMargin ? " (industry, adjusted for size)" : " (industry)"}</td><td className="num">{pct(margin)}</td></tr>
             </tbody></table>
           )}
           {b.est_method === "owner_earnings" && (
@@ -192,7 +195,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               <tr><td>Employees in its retirement plan ({latest.year} Form 5500)</td><td className="num">{latest.employees.toLocaleString()}</td></tr>
               <tr><td>Industry revenue per employee</td><td className="num">{money(b.revenue_per_employee)}</td></tr>
               <tr><td>Revenue = employees × revenue per employee</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
-              <tr><td>Industry EBITDA margin</td><td className="num">{pct(b.ebitda_margin)}</td></tr>
+              <tr><td>EBITDA margin{irsMargin ? " (industry, adjusted for size)" : " (industry)"}</td><td className="num">{pct(margin)}</td></tr>
               <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
               {b.jobs_reported ? <tr><td>For comparison: employees reported for PPP ({pppYear(b.loans)})</td><td className="num">{b.jobs_reported}</td></tr> : null}
             </tbody></table>
@@ -206,7 +209,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <p>This business has no PPP loan on record, so there is no business-specific data. The figures are the
               typical estimated revenue of {b.industry} businesses in our Oklahoma data: the middle value, with the
               range covering the middle half of those businesses. EBITDA applies the industry margin
-              ({pct(b.ebitda_margin)}). Treat these as a rough guide.</p>
+              ({pct(margin)}). Treat these as a rough guide.</p>
           )}
           <table><tbody>
             <tr><td>Revenue range</td><td className="num">{moneyRange(b.est_revenue_low, b.est_revenue_high)}</td></tr>
@@ -215,6 +218,11 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           </tbody></table>
           {b.est_confidence === "low" && b.est_method === "employees" && (
             <p className="disclaimer">Low confidence: the employee-based and payroll-based estimates differ by more than 2×.</p>
+          )}
+          {irsMargin && (
+            <p className="disclaimer">EBITDA margin: from IRS tax returns of S corporations in this industry (2019–2022),
+              adjusted for company size: smaller companies typically run higher margins. EBITDA here is after
+              owners&apos; salaries.</p>
           )}
           <p className="disclaimer">Benchmarks: {b.benchmark_source ?? "sector default"}.
             {!fromPlan && !avg && " PPP loans were sized on 2019–2020 payroll, so figures reflect that period."} These are

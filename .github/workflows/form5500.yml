@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["etl/form5500.py", ".github/workflows/form5500.yml"]
+    paths: ["etl/form5500.py", "etl/headcount_estimates.py", ".github/workflows/form5500.yml"]
 permissions:
   contents: write
 concurrency:
@@ -23,12 +23,15 @@ jobs:
       - run: pip install -r etl/requirements.txt
       - uses: actions/cache@v4
         with:
-          path: data/cache/form5500
+          path: |
+            data/cache/form5500
+            data/cache/irs_margins.json
           key: form5500-${{ github.run_id }}
           restore-keys: form5500-
       - run: |
           set -o pipefail
           python etl/migrate.py
+          python etl/margins.py --fetch || echo "IRS margins unavailable"
           python etl/form5500.py --state OK 2>&1 | tee "$RUNNER_TEMP/form5500.log"
         env:
           PYTHONUNBUFFERED: "1"

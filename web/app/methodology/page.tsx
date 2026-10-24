@@ -15,7 +15,12 @@ export default function Methodology() {
         </div>
         <div className="section">
           <h2>2. EBITDA from industry margins</h2>
-          <p>Revenue is multiplied by a typical small-business EBITDA margin for the industry.</p>
+          <p>Revenue is multiplied by an EBITDA margin from IRS Statistics of Income data: the actual tax returns of
+            S corporations (the usual structure for small and mid-sized companies) in the same industry, tax years
+            2019–2022 pooled. EBITDA is net business income plus interest, depreciation, depletion and amortization,
+            after owners&apos; salaries. Margins vary with size (across all industries, companies with $1–2.5M in
+            revenue earn about 12%, those with $10–50M about 9%), so each business&apos;s margin is its industry&apos;s
+            margin scaled to its estimated revenue.</p>
         </div>
         <div className="section">
           <h2>3. Cross-check from the PPP loan</h2>
@@ -47,7 +52,7 @@ export default function Methodology() {
             geocoder, so every map pin sits at the business&apos;s own address. Sole proprietors, self-employed
             individuals and independent contractors are not listed, since their address is often a home.</p>
         </div>
-        <p className="disclaimer">Source data: SBA PPP FOIA release and DOL Form 5500 filings (public records). All figures are statistical
+        <p className="disclaimer">Source data: SBA PPP FOIA release, DOL Form 5500 filings and IRS Statistics of Income (public records). All figures are statistical
           estimates, not reported financials; PPP-based ones reflect 2019–2020 payroll.</p>
       </main>
       <Footer />

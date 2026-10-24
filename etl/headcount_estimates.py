@@ -53,7 +53,8 @@ def apply(cur, state):
                 and cur_ebitda is not None and round(ebitda) == round(float(cur_ebitda)):
             continue   # already current: don't rewrite the row
         updates.append((round(revenue * lo), round(revenue), round(revenue * hi),
-                        round(ebitda * lo), round(ebitda), round(ebitda * hi), margin, key))
+                        round(ebitda * lo), round(ebitda), round(ebitda * hi),
+                        margin if margins.data else None, key))
     cur.executemany("""
         update businesses set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
             est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_ebitda_margin = %s,

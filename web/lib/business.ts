@@ -11,6 +11,7 @@ export type Business = {
   est_revenue_by_employees: Num; est_revenue_by_payroll: Num; est_method: string; est_confidence: string; total_ppp_amount: Num;
   website: string | null; owner_name: string | null; owner_title: string | null;
   owner_source: string | null; payroll_to_revenue: Num; revenue_per_employee: Num; ebitda_margin: Num; benchmark_source: string | null;
+  est_ebitda_margin: Num;
 };
 export type Loan = {
   loan_number: string; draw: string; date_approved: Date | null; amount: Num;
@@ -30,6 +31,7 @@ export async function getBusinessRow(id: string): Promise<Business | null> {
            -- via to_jsonb: tolerant of databases loaded before these columns existed
            to_jsonb(b) ->> 'website' as website, to_jsonb(b) ->> 'owner_name' as owner_name,
            to_jsonb(b) ->> 'owner_title' as owner_title, to_jsonb(b) ->> 'owner_source' as owner_source,
+           to_jsonb(b) ->> 'est_ebitda_margin' as est_ebitda_margin,
            ib.payroll_to_revenue, ib.revenue_per_employee, ib.ebitda_margin, ib.source as benchmark_source
     from businesses b
     left join lateral (

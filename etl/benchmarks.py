@@ -94,46 +94,74 @@ def _num(v):
         return None
 
 
-def fetch_census():
-    """Pull receipts, payroll and employment by NAICS from the Economic Census API."""
+STATE_FIPS = {"OK": "40", "TX": "48", "KS": "20", "AR": "05", "MO": "29"}
+MIN_STATE_EMPLOYEES = 300   # below this a state's figure for an industry is too thin to trust
+
+
+def _census_rows(url, ncol):
+    """{naics: (label, receipts $k, payroll $k, employees)} from one Economic Census API call."""
+    with urlopen(url, timeout=120) as r:
+        body = r.read().decode("utf-8", errors="replace")
+    try:
+        rows = json.loads(body)
+    except ValueError as e:
+        raise ValueError(f"{e}; response starts: {body[:300]!r}") from None
+    header, rows = rows[0], rows[1:]
+    idx = {h: i for i, h in enumerate(header)}
+    best = {}
+    for row in rows:
+        code = row[idx[ncol]]
+        rcpt, pay, emp = (_num(row[idx[k]]) for k in ("RCPTOT", "PAYANN", "EMP"))
+        if not code.isdigit() or not rcpt or not pay or rcpt <= 0:
+            continue
+        # Several rows per code (tax status splits); the largest is the all-firms total.
+        if code not in best or rcpt > best[code][1]:
+            best[code] = (row[idx[f"{ncol}_LABEL"]], rcpt, pay, emp)
+    return best
+
+
+def fetch_census(state="OK"):
+    """Pull receipts, payroll and employment by NAICS from the Economic Census API: national
+    figures, replaced by the state's own where it has enough employees in that industry."""
     attempts = [
         ("2022", "NAICS2022", "https://api.census.gov/data/2022/ecnbasic"),
         ("2017", "NAICS2017", "https://api.census.gov/data/2017/ecnbasic"),
     ]
     key = os.environ.get("CENSUS_API_KEY")
+    if not key:
+        print("No CENSUS_API_KEY set (a free key from api.census.gov/data/key_signup.html, saved as a "
+              "GitHub secret).", file=sys.stderr)
+    suffix = f"&key={key}" if key else ""
     for year, ncol, base in attempts:
-        url = f"{base}?get={ncol},{ncol}_LABEL,RCPTOT,PAYANN,EMP&for=us:*&{ncol}=*"
-        if key:
-            url += f"&key={key}"
-        body = ""
+        fields = f"get={ncol},{ncol}_LABEL,RCPTOT,PAYANN,EMP&{ncol}=*"
         try:
-            with urlopen(url, timeout=120) as r:
-                body = r.read().decode("utf-8", errors="replace")
-            rows = json.loads(body)
+            best = _census_rows(f"{base}?{fields}&for=us:*{suffix}", ncol)
         except Exception as e:  # noqa: BLE001
-            print(f"Census {year} failed: {e}; response starts: {body[:300]!r}", file=sys.stderr)
+            print(f"Census {year} failed: {e}", file=sys.stderr)
             continue
-        header, body = rows[0], rows[1:]
-        idx = {h: i for i, h in enumerate(header)}
-        best = {}
-        for row in body:
-            code = row[idx[ncol]]
-            rcpt, pay, emp = (_num(row[idx[k]]) for k in ("RCPTOT", "PAYANN", "EMP"))
-            if not code.isdigit() or not rcpt or not pay or rcpt <= 0:
-                continue
-            # Several rows per code (tax status splits); the largest is the all-firms total.
-            if code not in best or rcpt > best[code][1]:
-                best[code] = (row[idx[f"{ncol}_LABEL"]], rcpt, pay, emp)
+        local = {}
+        if state in STATE_FIPS:
+            try:
+                local = _census_rows(f"{base}?{fields}&for=state:{STATE_FIPS[state]}{suffix}", ncol)
+            except Exception as e:  # noqa: BLE001
+                print(f"Census {year} {state} figures failed (using national): {e}", file=sys.stderr)
         os.makedirs(DATA_DIR, exist_ok=True)
+        used_local = 0
         with open(BENCH_CSV, "w", newline="") as f:
             w = csv.writer(f)
             w.writerow(["naics_prefix", "label", "payroll_to_revenue",
                         "revenue_per_employee", "ebitda_margin", "source"])
             for code, (label, rcpt, pay, emp) in sorted(best.items()):
+                source = f"US Economic Census {year}"
+                st = local.get(code)
+                if st and st[3] and st[3] >= MIN_STATE_EMPLOYEES:
+                    _, rcpt, pay, emp = st
+                    source = f"US Economic Census {year}, {state}"
+                    used_local += 1
                 rpe = round(rcpt * 1000 / emp) if emp else ""
-                w.writerow([code, label, round(pay / rcpt, 4), rpe, "",
-                            f"US Economic Census {year}"])
-        print(f"Wrote {len(best)} benchmarks from Economic Census {year} to {BENCH_CSV}")
+                w.writerow([code, label, round(pay / rcpt, 4), rpe, "", source])
+        print(f"Wrote {len(best)} benchmarks from Economic Census {year} to {BENCH_CSV} "
+              f"({used_local} using {state} figures)")
         return
     sys.exit("Could not reach the Census API; sector defaults will be used.")
 
@@ -141,7 +169,9 @@ def fetch_census():
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--fetch", action="store_true", help="download Census benchmarks")
-    if ap.parse_args().fetch:
-        fetch_census()
+    ap.add_argument("--state", default="OK", help="prefer this state's figures where reliable")
+    a = ap.parse_args()
+    if a.fetch:
+        fetch_census(a.state.upper())
     else:
         print(json.dumps(load_benchmarks(), indent=1))

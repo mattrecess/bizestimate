@@ -200,7 +200,7 @@ def main():
             "est_revenue_high": round(high), "est_ebitda_low": round(low * margin),
             "est_ebitda_mid": round(mid * margin), "est_ebitda_high": round(high * margin),
             "est_revenue_by_employees": "", "est_revenue_by_payroll": "", "est_method": "industry_average",
-            "est_confidence": "low", "total_ppp_amount": "", "est_ebitda_margin": margin, "website": pick_website(get("websites")) or "",
+            "est_confidence": "low", "total_ppp_amount": "", "est_ebitda_margin": margin if margins.data else "", "website": pick_website(get("websites")) or "",
             "source": "overture",
         })
 
