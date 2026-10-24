@@ -48,8 +48,7 @@ export default function Methodology() {
             individuals and independent contractors are not listed, since their address is often a home.</p>
         </div>
         <p className="disclaimer">Source data: SBA PPP FOIA release and DOL Form 5500 filings (public records). All figures are statistical
-          estimates, not reported financials; PPP-based ones reflect 2019–2020 payroll. Owners can claim a listing to correct it
-          or request removal.</p>
+          estimates, not reported financials; PPP-based ones reflect 2019–2020 payroll.</p>
       </main>
       <Footer />
     </>

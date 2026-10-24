@@ -30,11 +30,6 @@ export default function Terms() {
             business address is often a home address.</p>
         </div>
         <div className="section">
-          <h2>Corrections and removal</h2>
-          <p>If you own or represent a listed business, use the <strong>Own this business?</strong> form on its page
-            to correct the figures or ask for the listing to be removed. We review every request.</p>
-        </div>
-        <div className="section">
           <h2>No warranty</h2>
           <p>The site is provided &quot;as is&quot;, without warranties of any kind. To the fullest extent permitted by
             law, BizEstimate is not liable for any loss arising from use of the site or its estimates.</p>

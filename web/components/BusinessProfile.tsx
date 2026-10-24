@@ -3,7 +3,6 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Business, Comparable, Headcount, Loan } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
-import ClaimForm from "./ClaimForm";
 import HeadcountChart from "./HeadcountChart";
 import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
@@ -37,7 +36,7 @@ const pppYear = (loans: Loan[]) => {
   return d ? new Date(d).getFullYear() : 2020;
 };
 
-type Tab = "overview" | "financials" | "loans" | "comparables" | "claim";
+type Tab = "overview" | "financials" | "loans" | "comparables";
 
 // Shared by the full business page and the explorer's side panel (compact: no mini-map).
 export default function BusinessProfile({ b, compact = false, onSelect }: {
@@ -55,7 +54,6 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
     ["overview", "Overview"], ["financials", "How we estimated"],
     ...(b.loans.length ? [["loans", `PPP loans (${b.loans.length})`] as [Tab, string]] : []),
     ...(b.comps.length ? [["comparables", "Comparables"] as [Tab, string]] : []),
-    ["claim", "Claim"],
   ];
 
   async function share() {
@@ -95,7 +93,6 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <Icon name="linkedin" size={15} />LinkedIn
         </a>
         <button className="btn" onClick={share}><Icon name="share" size={15} />{copied ? "Link copied" : "Share"}</button>
-        <button className="btn" onClick={() => setTab("claim")}><Icon name="flag" size={15} />Claim</button>
       </div>
 
       {b.owner_name && (
@@ -209,7 +206,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <p>This business has no PPP loan on record, so there is no business-specific data. The figures are the
               typical estimated revenue of {b.industry} businesses in our Oklahoma data: the middle value, with the
               range covering the middle half of those businesses. EBITDA applies the industry margin
-              ({pct(b.ebitda_margin)}). Treat these as a rough guide — owners can claim the listing to correct them.</p>
+              ({pct(b.ebitda_margin)}). Treat these as a rough guide.</p>
           )}
           <table><tbody>
             <tr><td>Revenue range</td><td className="num">{moneyRange(b.est_revenue_low, b.est_revenue_high)}</td></tr>
@@ -267,14 +264,6 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {tab === "claim" && (
-        <div className="section">
-          <h2>Own this business?</h2>
-          <p style={{ color: "var(--muted)" }}>Claim this listing to correct the numbers or request removal.</p>
-          <ClaimForm key={b.id} businessId={Number(b.id)} />
         </div>
       )}
     </div>
