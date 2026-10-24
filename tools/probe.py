@@ -54,6 +54,12 @@ def db():
                 "select count(distinct biz_key), count(*) from headcounts").fetchone())
             print("headcounts by year:", conn.execute(
                 "select year, count(*), sum(employees) from headcounts group by year order by year").fetchall())
+            print("estimates by method and listing source:", conn.execute(
+                "select est_method, source, count(*) from businesses group by 1, 2 order by 1, 2").fetchall())
+            for row in conn.execute("""
+                    select id, name, jobs_reported, est_revenue_mid::bigint from businesses
+                    where est_method = 'retirement_plan' order by random() limit 8"""):
+                print("  re-based:", row)
             print("headcounts by listing source:", conn.execute(
                 "select b.source, count(distinct b.biz_key) from headcounts h join businesses b using (biz_key) "
                 "group by 1").fetchall())
