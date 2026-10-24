@@ -22,9 +22,17 @@ from netutil import urlopen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, "..", "data", "cache", "rdap_cache.json")
-RDAP = "https://rdap.org/domain/{domain}"
+# The registries' own RDAP servers (the rdap.org relay rate-limits hard); others via the relay.
+RDAP = {
+    "com": "https://rdap.verisign.com/com/v1/domain/{domain}",
+    "net": "https://rdap.verisign.com/net/v1/domain/{domain}",
+    "org": "https://rdap.publicinterestregistry.org/rdap/domain/{domain}",
+}
+RDAP_OTHER = "https://rdap.org/domain/{domain}"
 MAX_LOOKUPS = int(os.environ.get("RDAP_MAX_LOOKUPS", "4000"))
-WORKERS = 4
+WORKERS = 2
+PAUSE = 0.3   # seconds between a worker's requests
+errors = {}
 EARLIEST = 1900
 
 
@@ -36,14 +44,18 @@ def domain_of(url):
 
 
 def registered_year(domain):
+    url = RDAP.get(domain.rsplit(".", 1)[-1], RDAP_OTHER).format(domain=domain)
+    time.sleep(PAUSE)
     try:
-        with urlopen(RDAP.format(domain=domain), headers={"Accept": "application/rdap+json"}, timeout=30) as r:
+        with urlopen(url, headers={"Accept": "application/rdap+json"}, timeout=30) as r:
             data = json.loads(r.read())
         for ev in data.get("events", []):
             if ev.get("eventAction") == "registration" and ev.get("eventDate", "")[:4].isdigit():
                 return int(ev["eventDate"][:4])
-    except Exception:  # noqa: BLE001  (unknown TLD, rate limit, not found)
-        return None
+    except Exception as e:  # noqa: BLE001  (unknown TLD, rate limit, not found)
+        kind = getattr(e, "code", None) or type(e).__name__
+        errors[kind] = errors.get(kind, 0) + 1
+        return 0 if kind == 404 else None   # 404: domain no longer registered; don't ask again
     return 0   # answered, but no registration date
 
 
@@ -68,6 +80,7 @@ def main():
         with open(CACHE + ".tmp", "w") as f:
             json.dump(cache, f)
         os.replace(CACHE + ".tmp", CACHE)
+        print(f"founded: lookup errors {errors}", flush=True)
         print(f"founded: looked up {len(todo):,} domains in {time.time() - t:,.0f}s; "
               f"{sum(1 for v in cache.values() if v):,} with a registration year cached", flush=True)
 
