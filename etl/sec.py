@@ -19,8 +19,8 @@ from load import database_url
 from matching import match_entities
 from netutil import urlopen
 
-# The SEC asks automated clients to identify themselves.
-UA = os.environ.get("SEC_USER_AGENT") or "BizEstimate data pipeline github.com/mattrecess/bizestimate"
+# The SEC requires a contact email; override with the SEC_USER_AGENT secret.
+UA = os.environ.get("SEC_USER_AGENT") or "BizEstimate mattrecess@users.noreply.github.com"
 LIST = ("https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&State={state}&type=10-K"
         "&dateb=&owner=include&count=100&start={start}")
 FACTS = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
@@ -89,7 +89,7 @@ def main():
             tickers = sub.get("tickers", [])
         except Exception:  # noqa: BLE001
             addr, names, tickers = {}, {name}, []
-        clean = {re.sub(r"/[A-Z]{2}/?$|\\[A-Z]+\b", "", n).strip() for n in names}
+        clean = {re.sub(r"/[A-Z]{2,3}/?$", "", n).strip() for n in names}   # "DEVON ENERGY CORP/DE"
         entities[cik] = {
             "names": clean,
             "places": {((addr.get("street1") or "").strip(), (addr.get("city") or "").strip().upper(),

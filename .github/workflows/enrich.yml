@@ -40,6 +40,7 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
       - if: always()
         run: |
           cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b enrich-logs
