@@ -36,9 +36,16 @@ def resource_urls():
             urls = re.findall(r'href="(https?://[^"]+?\.csv)"', r.read().decode("utf-8", "replace"))
     # The 7(a) file covering 2020 onward, and the 504 file (one file covers all years).
     keep = [u for u in set(urls) if u.lower().endswith(".csv") and
-            (("7a" in u.lower() and re.search(r"fy20(2\d)|2020", u.lower())) or "504" in u.lower())]
+            (("7a" in u.lower() and re.search(r"fy20(2\d)|2020", u.lower()))
+             or ("504" in u.lower() and "fy1991" not in u.lower()))]
     print(f"sba_loans: files {sorted(keep)}", flush=True)
     return sorted(keep)
+
+
+class _Row(dict):
+    """Case-insensitive column access: row.get("BorrState")."""
+    def get(self, key, default=None):
+        return super().get(key.lower(), default)
 
 
 def num(v):
@@ -57,7 +64,12 @@ def main():
         program = "504" if "504" in url.lower() else "7(a)"
         n = 0
         with urlopen(url, timeout=900) as r:
-            for row in csv.DictReader(io.TextIOWrapper(r, encoding="utf-8", errors="replace", newline="")):
+            reader = csv.reader(io.TextIOWrapper(r, encoding="utf-8-sig", errors="replace", newline=""))
+            # Column names vary in case between files ("BorrState" / "borrstate").
+            header = [h.strip().lower() for h in next(reader)]
+            print(f"sba_loans: {program} columns {header}", flush=True)
+            for values in reader:
+                row = _Row(zip(header, values))
                 if (row.get("BorrState") or "").strip().upper() != state:
                     continue
                 fy = num(row.get("ApprovalFiscalYear"))
