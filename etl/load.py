@@ -14,6 +14,7 @@ from urllib.parse import unquote, urlparse
 
 import psycopg
 
+import enrich
 import headcount_estimates
 from benchmarks import load_benchmarks
 
@@ -150,6 +151,12 @@ def main():
                 headcount_estimates.apply(cur, state.upper())
         except psycopg.Error as e:
             print(f"Re-basing on retirement-plan headcounts failed (non-fatal): {e}", flush=True)
+        # Reported figures (SEC, bank call reports, Form 990) beat any estimate.
+        try:
+            with conn.transaction():
+                enrich.apply_reported(cur, state.upper())
+        except psycopg.Error as e:
+            print(f"Applying reported financials failed (non-fatal): {e}", flush=True)
         cur.execute("analyze businesses; analyze ppp_loans;")
 
 

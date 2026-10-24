@@ -110,3 +110,13 @@ create table if not exists headcounts (
   primary key (biz_key, year, source)
 );
 alter table headcounts add column if not exists naics text;   -- industry code on the employer's filing
+
+-- Public records matched to a business, one JSON object per source (SEC filings, Form 990, FDIC,
+-- SBA loans, federal contracts, FMCSA, OSHA, ...). Keyed by biz_key so they survive reloads.
+create table if not exists business_sources (
+  biz_key    text not null,
+  source     text not null,
+  data       jsonb not null,
+  updated_at timestamptz not null default now(),
+  primary key (biz_key, source)
+);

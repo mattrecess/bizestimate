@@ -1,5 +1,6 @@
 """Shared address and business-name normalization for matching records across datasets."""
 import re
+from collections import defaultdict
 
 NAME_NOISE = {"LLC", "L", "C", "INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "PLLC",
               "PC", "LP", "LLP", "PA", "DBA", "THE", "OF", "AND", "OKLAHOMA", "OK", "OKC", "TULSA"}
@@ -64,3 +65,67 @@ def name_score(a, b):
     common = len(a & b)
     score = common / min(len(a), len(b))
     return score if common >= 2 or min(len(a), len(b)) == 1 else score * 0.8
+
+
+LEGAL = {"LLC", "L", "C", "INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "PLLC",
+         "PC", "P", "LP", "LLP", "PA", "THE", "DBA"}
+
+
+def full_name(name):
+    """Every word but legal suffixes: stricter than name_tokens, which also drops words like OKLAHOMA."""
+    words = re.sub(r"[^A-Z0-9 ]", " ", name.upper().replace("&", " AND ")).split()
+    return " ".join(w for w in words if w not in LEGAL)
+
+
+def match_entities(entities, businesses):
+    """Map outside records to listed businesses by name and place, leaving out unsure ones.
+
+    entities: {id: {"names": set of names, "places": set of (address, city, zip)}}
+    businesses: [{"biz_key", "name", "address", "city", "zip"}]   ->   {id: biz_key}
+    """
+    by_token = defaultdict(list)
+    for b in businesses:
+        b["tokens"] = name_tokens(b["name"])
+        b["addr"] = parse_address(b["address"])
+        for t in b["tokens"]:
+            by_token[t].append(b)
+    # How many listed businesses carry each exact name, so a unique name can match on its own.
+    name_count = defaultdict(int)
+    for b in businesses:
+        name_count[b["tokens"]] += 1
+    matches = {}
+    for ein, s in entities.items():
+        addrs = {parse_address(a) for a, _, _ in s["places"]} - {None}
+        cities = {c for _, c, _ in s["places"] if c}
+        zips = {z for _, _, z in s["places"] if z}
+        best = []
+        for name in s["names"]:
+            toks = name_tokens(name)
+            if not toks:
+                continue
+            rare = min(toks, key=lambda t: len(by_token.get(t, ())))
+            for b in by_token.get(rare, ()):
+                common = len(toks & b["tokens"])
+                same_addr = b["addr"] is not None and b["addr"] in addrs
+                same_zip = b["zip"][:5] in zips
+                same_city = b["city"].upper() in cities
+                if toks == b["tokens"] and (same_addr or same_zip or same_city):
+                    score = 3 + same_addr + same_zip   # same name, same place
+                elif (toks == b["tokens"] and len(toks) >= 2 and name_count[toks] == 1
+                      and full_name(name) == full_name(b["name"])):
+                    score = 2                           # same distinctive name, only one in the state
+                                                        # (the filing's address is often the accountant's)
+                elif common >= 2 and common == min(len(toks), len(b["tokens"])) and (same_addr or same_zip):
+                    score = 2 + same_addr               # one name contains the other, same ZIP
+                elif same_addr and common >= 1 and common / min(len(toks), len(b["tokens"])) >= 0.5:
+                    score = 1                           # same street address, similar name
+                else:
+                    continue
+                best.append((score, b["biz_key"]))
+        if not best:
+            continue
+        top = max(score for score, _ in best)
+        keys = {k for score, k in best if score == top}
+        if len(keys) == 1:   # two equally good businesses: ambiguous, skip
+            matches[ein] = keys.pop()
+    return matches

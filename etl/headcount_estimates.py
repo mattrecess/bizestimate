@@ -39,6 +39,7 @@ def apply(cur, state):
                b.est_ebitda_mid, b.industry
         from businesses b join latest l on l.biz_key = b.biz_key
         where b.state = %(state)s and l.employees >= %(min)s
+          and b.est_method is distinct from 'reported'   -- reported figures (SEC, 990, ...) win
           and (b.jobs_reported is null
                or l.employees between 0.5 * b.jobs_reported and %(max_growth)s * b.jobs_reported)""",
                 {"since": since, "state": state, "min": MIN_PARTICIPANTS, "max_growth": MAX_GROWTH})

@@ -1,0 +1,48 @@
+name: Public records
+# Runs just the public-record source steps (also part of the full pipeline) so changes to them
+# show results in minutes rather than after the whole data load.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["etl/enrich.py", "etl/sources.txt", "etl/irs990.py", "etl/sec.py", "etl/banks.py", "etl/sba_loans.py",
+            "etl/contracts.py", "etl/fmcsa.py", "etl/osha.py", "etl/founded.py", "etl/valuation.py",
+            ".github/workflows/enrich.yml"]
+permissions:
+  contents: write
+concurrency:
+  group: enrich
+  cancel-in-progress: true
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: data/cache
+          key: enrich-${{ github.run_id }}
+          restore-keys: enrich-
+      - run: |
+          mkdir -p data/cache
+          python etl/migrate.py
+          python etl/margins.py --fetch || echo "IRS margins unavailable"
+          # One module per line in etl/sources.txt; each is non-fatal.
+          for m in $(grep -v '^#' etl/sources.txt); do
+            echo "=== $m"
+            python "etl/$m.py" --state OK || echo "$m failed (non-fatal)"
+          done 2>&1 | tee "$RUNNER_TEMP/enrich.log"
+        env:
+          PYTHONUNBUFFERED: "1"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b enrich-logs
+          cp "$RUNNER_TEMP/enrich.log" enrich.log 2>/dev/null || echo none > enrich.log
+          git add enrich.log && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" enrich-logs

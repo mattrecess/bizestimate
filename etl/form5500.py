@@ -26,7 +26,7 @@ import psycopg
 import headcount_estimates
 from csvio import write_rows
 from load import database_url
-from matching import name_tokens, parse_address
+from matching import match_entities
 from netutil import urlopen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -193,64 +193,9 @@ def sponsors_by_year(rows):
     return out
 
 
-LEGAL = {"LLC", "L", "C", "INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "PLLC",
-         "PC", "P", "LP", "LLP", "PA", "THE", "DBA"}
-
-
-def full_name(name):
-    """Every word but legal suffixes: stricter than name_tokens, which also drops words like OKLAHOMA."""
-    words = re.sub(r"[^A-Z0-9 ]", " ", name.upper().replace("&", " AND ")).split()
-    return " ".join(w for w in words if w not in LEGAL)
-
-
 def match(sponsors, businesses):
     """Map each sponsor EIN to one listed business, or leave it out when unsure."""
-    by_token = defaultdict(list)
-    for b in businesses:
-        b["tokens"] = name_tokens(b["name"])
-        b["addr"] = parse_address(b["address"])
-        for t in b["tokens"]:
-            by_token[t].append(b)
-    # How many listed businesses carry each exact name, so a unique name can match on its own.
-    name_count = defaultdict(int)
-    for b in businesses:
-        name_count[b["tokens"]] += 1
-    matches = {}
-    for ein, s in sponsors.items():
-        addrs = {parse_address(a) for a, _, _ in s["places"]} - {None}
-        cities = {c for _, c, _ in s["places"] if c}
-        zips = {z for _, _, z in s["places"] if z}
-        best = []
-        for name in s["names"]:
-            toks = name_tokens(name)
-            if not toks:
-                continue
-            rare = min(toks, key=lambda t: len(by_token.get(t, ())))
-            for b in by_token.get(rare, ()):
-                common = len(toks & b["tokens"])
-                same_addr = b["addr"] is not None and b["addr"] in addrs
-                same_zip = b["zip"][:5] in zips
-                same_city = b["city"].upper() in cities
-                if toks == b["tokens"] and (same_addr or same_zip or same_city):
-                    score = 3 + same_addr + same_zip   # same name, same place
-                elif (toks == b["tokens"] and len(toks) >= 2 and name_count[toks] == 1
-                      and full_name(name) == full_name(b["name"])):
-                    score = 2                           # same distinctive name, only one in the state
-                                                        # (the filing's address is often the accountant's)
-                elif common >= 2 and common == min(len(toks), len(b["tokens"])) and (same_addr or same_zip):
-                    score = 2 + same_addr               # one name contains the other, same ZIP
-                elif same_addr and common >= 1 and common / min(len(toks), len(b["tokens"])) >= 0.5:
-                    score = 1                           # same street address, similar name
-                else:
-                    continue
-                best.append((score, b["biz_key"]))
-        if not best:
-            continue
-        top = max(score for score, _ in best)
-        keys = {k for score, k in best if score == top}
-        if len(keys) == 1:   # two equally good businesses: ambiguous, skip
-            matches[ein] = keys.pop()
-    return matches
+    return match_entities(sponsors, businesses)
 
 
 def main():
