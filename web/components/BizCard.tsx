@@ -1,11 +1,13 @@
 import { money } from "@/lib/format";
 import { industryLabel } from "@/lib/industries";
+import { estimateValue } from "@/lib/valuation";
 import Icon, { industryIcon } from "./Icon";
 
 export type Biz = {
   id: number; name: string; city: string; zip: string; industry: string; naics: string | null;
   jobs_reported: number | null; est_revenue_mid: string; est_ebitda_mid: string;
   est_confidence: string; est_method: string; has_owner: boolean; has_website: boolean;
+  is_nonprofit?: boolean; est_ebitda_low?: string; est_ebitda_high?: string;
 };
 
 export default function BizCard({ b, hovered, onOpen, onHover }: {
@@ -15,6 +17,7 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
   onHover: (id: number | null) => void;
 }) {
   const avg = b.est_method === "industry_average";
+  const value = estimateValue(b);
   return (
     <a
       href={`/business/${b.id}`} className={`card ${hovered ? "hovered" : ""}`}
@@ -34,10 +37,12 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
           <div className="rev">{money(b.est_revenue_mid)}</div>
         </div>
         <span className="stat-chip">EBITDA<b>{money(b.est_ebitda_mid)}</b></span>
+        {value && <span className="stat-chip">Value<b>{money(value.mid)}</b></span>}
         {b.jobs_reported ? <span className="stat-chip">Employees<b>{b.jobs_reported}</b></span> : null}
       </div>
       <div className="badges">
         {avg ? <span className="badge">Industry avg</span>
+          : b.est_method === "reported" ? <span className="badge good">Reported</span>
           : b.est_method === "retirement_plan" ? <span className="badge good">401(k) data</span>
           : <span className="badge good">PPP data</span>}
         {b.has_owner && <span className="badge info"><Icon name="user" size={12} />Owner known</span>}

@@ -4,12 +4,14 @@ import Link from "next/link";
 import type { Business, Comparable, Headcount, Loan } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import HeadcountChart from "./HeadcountChart";
+import PublicRecords, { type SourceRecord } from "./PublicRecords";
+import { estimateValue } from "@/lib/valuation";
 import { industryLabel } from "@/lib/industries";
 import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
 import RangeBar from "./RangeBar";
 
-export type Profile = Business & { loans: Loan[]; comps: Comparable[]; headcounts?: Headcount[] };
+export type Profile = Business & { loans: Loan[]; comps: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[] };
 
 // "https://www.blastrac.com/" -> "blastrac.com"
 function siteLabel(url: string) {
@@ -50,6 +52,11 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   const avg = b.est_method === "industry_average";           // no business-specific data at all
   const noLoan = !b.loans.length;
   const fromPlan = b.est_method === "retirement_plan";       // re-based on the newest Form 5500 count
+  const reported = b.est_method === "reported";              // SEC, FDIC or Form 990 figures
+  const src = Object.fromEntries((b.sources ?? []).map((s) => [s.source, s.data as Record<string, any>]));  // eslint-disable-line @typescript-eslint/no-explicit-any
+  const value = estimateValue({ ...b, public_company: !!src.sec || undefined, is_nonprofit: b.is_nonprofit || !!src.irs990 });
+  const founded = src.fdic?.founded ?? src.fmcsa?.registered ?? null;
+  const ownershipChange = src.sba?.ownership_change_year ?? null;
   const latest = b.headcounts?.length ? b.headcounts[b.headcounts.length - 1] : null;
   // The margin actually applied (IRS industry margin adjusted for size) when the data has it.
   const irsMargin = b.est_ebitda_margin != null && b.est_method !== "owner_earnings";
@@ -80,8 +87,13 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <div className="badges">
             <span className="badge info">{industryLabel(b.naics) ?? b.industry}</span>
             {avg ? <span className="badge">Industry avg</span>
+              : reported ? <span className="badge good">Reported financials</span>
               : fromPlan ? <span className="badge good">401(k) plan data</span>
               : <span className="badge good">PPP loan data</span>}
+            {founded && <span className="badge">Since {founded}</span>}
+            {ownershipChange && <span className="badge warn">New owners FY{ownershipChange}</span>}
+            {src.sec && <span className="badge info">Public company</span>}
+            {src.contracts && <span className="badge info">Federal contractor</span>}
             {b.is_nonprofit && <span className="badge">Nonprofit</span>}
           </div>
         </div>
@@ -120,6 +132,18 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
 
       {tab === "overview" && (
         <>
+          {value && (
+            <div className="value-banner">
+              <div>
+                <div className="k">Estimated business value</div>
+                <div className="v">{money(value.mid)}</div>
+              </div>
+              <div className="value-meta">
+                <span>{moneyRange(value.low, value.high)}</span>
+                <span>about {value.multiple}× EBITDA</span>
+              </div>
+            </div>
+          )}
           <div className="tiles">
             <div className="tile">
               <div className="k">Est. revenue</div>
@@ -160,6 +184,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <HeadcountChart
             ppp={b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null}
             plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
+          <PublicRecords sources={b.sources ?? []} />
           {!compact && b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
         </>
       )}
@@ -190,6 +215,18 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <p>This looks like a one-person business with no employee count. Its PPP loan was sized on owner earnings
               rather than payroll, so we treat the annualized amount as owner earnings (≈ EBITDA) and assume a 30% net
               margin to estimate revenue. Treat these numbers as rough.</p>
+          )}
+          {reported && (
+            <p>These are the business&apos;s own reported figures, from {src.sec ? "its SEC annual report (10-K)"
+              : src.fdic ? "its FDIC call report" : "its IRS Form 990 filing"}, not an estimate.
+              {!src.sec && !src.fdic && " EBITDA applies the industry margin to reported revenue."}</p>
+          )}
+          {value && (
+            <table><tbody>
+              <tr><td>Estimated value = EBITDA × typical sale multiple</td><td className="num">{money(value.mid)}</td></tr>
+              <tr><td>Multiple for this size and industry</td><td className="num">{value.multiple}×</td></tr>
+              <tr><td>Value range</td><td className="num">{moneyRange(value.low, value.high)}</td></tr>
+            </tbody></table>
           )}
           {fromPlan && latest && (
             <table><tbody>

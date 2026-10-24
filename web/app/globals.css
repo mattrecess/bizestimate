@@ -294,3 +294,22 @@ footer.foot nav { display: flex; gap: 16px; }
   display: inline-block; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+/* Estimated value + public records */
+.value-banner { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+  margin: 16px 0 10px; padding: 14px 16px; border-radius: var(--radius); background: var(--accent-soft); border: 1px solid var(--border); }
+.value-banner .k { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.value-banner .v { font-size: 28px; font-weight: 750; letter-spacing: -.01em; color: var(--text); }
+.value-meta { display: grid; justify-items: end; gap: 2px; font-size: 13px; color: var(--muted); }
+.records { margin-top: 18px; }
+.record-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.record { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--panel); }
+.record-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.record-title { font-weight: 650; }
+.record-sub { color: var(--muted); font-size: 12px; margin-top: 1px; }
+.record-head a { color: var(--muted); }
+.fact { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
+.fact span { color: var(--muted); }
+.fact b { font-weight: 600; text-align: right; }
+table.mini { font-size: 12.5px; margin: 0 0 4px; }
+table.mini td { padding: 3px 4px; }

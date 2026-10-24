@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   // off an index instead of sorting every matching business.
   const [rows, [{ count }]] = await Promise.all([
     sql`
-      select id, name, ${publicAddress}, city, state, zip, naics, industry, jobs_reported,
+      select id, name, ${publicAddress}, city, state, zip, naics, industry, jobs_reported, is_nonprofit,
              est_revenue_low, est_revenue_mid, est_revenue_high,
              est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
              coalesce(owner_name, '') <> '' as has_owner,

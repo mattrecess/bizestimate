@@ -46,13 +46,20 @@ export async function getBusinessRow(id: string): Promise<Business | null> {
 export async function getProfile(id: string) {
   const biz = await getBusinessRow(id);
   if (!biz) return null;
-  const [loans, headcounts, comps] = await Promise.all([getLoans(id), getHeadcounts(id), getComparables(biz)]);
-  return { ...biz, loans, headcounts, comps };
+  const [loans, headcounts, comps, sources] = await Promise.all([
+    getLoans(id), getHeadcounts(id), getComparables(biz), getSources(id)]);
+  return { ...biz, loans, headcounts, comps, sources };
 }
 
 const getLoans = (id: string) => sql<Loan[]>`
   select loan_number, draw, date_approved, amount, forgiveness_amount, loan_status, lender, jobs_reported
   from ppp_loans where business_id = ${id} order by date_approved`;
+
+// Public records matched to the business (SEC, Form 990, FDIC, SBA loans, contracts, DOT, OSHA).
+export type SourceRecord = { source: string; data: Record<string, unknown> };
+const getSources = (id: string) => sql<SourceRecord[]>`
+  select s.source, s.data from business_sources s join businesses b on b.biz_key = s.biz_key
+  where b.id = ${id} order by s.source`.catch(() => [] as SourceRecord[]);
 
 // Retirement-plan participants by year (Form 5500); empty until that table has been loaded.
 const getHeadcounts = (id: string) => sql<Headcount[]>`
