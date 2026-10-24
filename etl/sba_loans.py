@@ -2,7 +2,7 @@
 
     DATABASE_URL=... python etl/sba_loans.py --state OK
 
-From the SBA's public FOIA files (data.sba.gov, dataset 7-a-504-foia). Each loan's "business age"
+From the SBA's public FOIA files (data.sba.gov, dataset 7a-504-foia). Each loan's "business age"
 says whether it financed a change of ownership, which flags businesses that were bought.
 """
 import argparse
@@ -19,8 +19,8 @@ from load import database_url
 from matching import match_entities, name_tokens
 from netutil import urlopen
 
-CKAN = "https://data.sba.gov/api/3/action/package_show?id=7-a-504-foia"
-DATASET_PAGE = "https://data.sba.gov/dataset/7-a-504-foia"
+CKAN = "https://data.sba.gov/api/3/action/package_show?id=7a-504-foia"
+DATASET_PAGE = "https://data.sba.gov/dataset/7a-504-foia"
 FIRST_FY = 2020
 
 csv.field_size_limit(10_000_000)
