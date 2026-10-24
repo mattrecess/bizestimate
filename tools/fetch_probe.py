@@ -16,5 +16,4 @@ for url in ["https://enforcedata.dol.gov/views/data_catalogs.php", "https://enfo
     for m in sorted(set(re.findall(r'(?:href|src|data-[a-z]+)="([^"]+)"', html))):
         if "osha" in m.lower() or "zip" in m.lower() or "csv" in m.lower():
             print("  ", m)
-    i = html.lower().find("osha")
-    print(html[i - 500:i + 1500] if i >= 0 else "no osha mention")
+    print(re.sub(r"\s+", " ", html)[-6000:])
