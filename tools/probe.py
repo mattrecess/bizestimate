@@ -56,6 +56,17 @@ def db():
                                 "order by age desc nulls last limit 15"):
             print("activity:", row)
         print("rows:", conn.execute("select count(*), pg_size_pretty(pg_total_relation_size('businesses')) from businesses").fetchone())
+        top = "(select * from businesses order by est_revenue_mid desc nulls last limit 1000) t"
+        print("top1000 by city:", conn.execute(f"select city, count(*) from {top} group by 1 order by 2 desc limit 15").fetchall())
+        print("all by city:", conn.execute("select city, count(*) from businesses group by 1 order by 2 desc limit 8").fetchall())
+        print("top1000 by method:", conn.execute(f"select est_method, source, count(*) from {top} group by 1, 2 order by 3 desc").fetchall())
+        print("top1000 by sector:", conn.execute(f"select left(naics, 2), count(*), round(avg(est_revenue_mid)) from {top} group by 1 order by 2 desc limit 12").fetchall())
+        print("top1000 east/west of -96.5:", conn.execute(f"select lon > -96.5, count(*) from {top} group by 1").fetchall())
+        print("top1000 jobs stats:", conn.execute(f"select percentile_cont(array[0.1,0.5,0.9]) within group (order by jobs_reported), count(jobs_reported) from {top}").fetchone())
+        for row in conn.execute(f"select id, name, city, naics, jobs_reported, est_method, est_revenue_mid::bigint from {top} order by random() limit 25"):
+            print("  top:", row)
+        for row in conn.execute(f"select id, name, city, naics, jobs_reported, est_method, est_revenue_mid::bigint from {top} order by est_revenue_mid desc limit 15"):
+            print("  first:", row)
         if conn.execute("select to_regclass('headcounts')").fetchone()[0]:
             print("headcounts: businesses, rows =", conn.execute(
                 "select count(distinct biz_key), count(*) from headcounts").fetchone())
