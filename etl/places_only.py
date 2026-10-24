@@ -73,12 +73,16 @@ CATEGORY_NAICS = {
     "b2b_energy_and_utility_service": "21", "specialty_school": "6116", "preschool": "6244",
 }
 # Finer Overture categories that pin down the industry better than the basic category.
+# Checked in order, so the more specific words come first.
 DETAIL_NAICS = [
-    (("janitorial", "office_cleaning", "cleaning_service", "industrial_cleaning", "home_cleaning",
-      "carpet_cleaning", "air_duct_cleaning", "window_washing", "pest_control", "landscap", "lawn"), "5617"),
-    (("dry_cleaning",), "8123"), (("veterinar",), "5419"), (("insurance",), "5242"),
-    (("accountant", "tax_preparation", "bookkeep"), "5412"), (("plumb", "hvac", "electrician", "heating"), "2382"),
-    (("roof",), "2381"), (("child_care", "day_care"), "6244"),
+    (("dry_cleaning",), "812320"), (("carpet_cleaning", "upholstery"), "561740"),
+    (("pest_control", "exterminat"), "561710"), (("landscap", "lawn", "tree_service", "gardener"), "561730"),
+    (("window_washing", "air_duct_cleaning", "pressure_washing", "power_washing"), "561790"),
+    (("janitorial", "office_cleaning", "commercial_cleaning", "cleaning_service", "industrial_cleaning",
+      "home_cleaning", "house_cleaning", "maid"), "561720"),
+    (("veterinar",), "541940"), (("insurance",), "5242"),
+    (("accountant", "tax_preparation", "bookkeep"), "5412"), (("plumb", "hvac", "heating"), "238220"),
+    (("electrician",), "238210"), (("roof",), "238160"), (("child_care", "day_care"), "624410"),
 ]
 
 

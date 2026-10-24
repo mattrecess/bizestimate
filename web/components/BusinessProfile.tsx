@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Business, Comparable, Headcount, Loan } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import HeadcountChart from "./HeadcountChart";
+import { industryLabel } from "@/lib/industries";
 import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
 import RangeBar from "./RangeBar";
@@ -77,7 +78,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             {[b.address, b.city, `OK ${b.zip}`].filter(Boolean).join(", ")}
           </div>
           <div className="badges">
-            <span className="badge info">{b.industry}</span>
+            <span className="badge info">{industryLabel(b.naics) ?? b.industry}</span>
             {avg ? <span className="badge">Industry avg</span>
               : fromPlan ? <span className="badge good">401(k) plan data</span>
               : <span className="badge good">PPP loan data</span>}

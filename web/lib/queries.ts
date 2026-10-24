@@ -1,4 +1,5 @@
 import { sql } from "./db";
+import { matchIndustry } from "./industries";
 import { SECTORS } from "./sectors";
 
 export type Filters = {
@@ -33,8 +34,12 @@ export function where(f: Filters) {
     const allWords = words.length ? words.map(wordMatch).reduce((a, b) => sql`${a} and ${b}`) : sql`false`;
     // Each branch is index-backed (tsvector, name_norm trigrams, name trigrams via <%) so a search
     // touches only candidate rows instead of scanning every business.
-    conds.push(sql`(search @@ websearch_to_tsquery('simple', ${f.q}) or (${allWords})
-      or (${f.q} <% name and word_similarity(${f.q}, name) >= 0.8))`);
+    const byName = sql`search @@ websearch_to_tsquery('simple', ${f.q}) or (${allWords})
+      or (${f.q} <% name and word_similarity(${f.q}, name) >= 0.8)`;
+    // "commercial cleaning", "plumbers in tulsa": every business in that industry (and place) too.
+    const m = matchIndustry(f.q);
+    conds.push(m ? sql`(${byName} or (${industryMatch(m.industry.naics)} ${m.rest
+      ? sql`and search @@ websearch_to_tsquery('simple', ${m.rest})` : sql``}))` : sql`(${byName})`);
   }
   if (prefixes) conds.push(sql`left(naics, 2) in ${sql(prefixes)}`);
   if (f.city) conds.push(sql`lower(city) = lower(${f.city})`);
@@ -45,6 +50,14 @@ export function where(f: Filters) {
     conds.push(sql`lat between ${s} and ${n} and lon between ${w} and ${e}`);
   }
   return conds.reduce((acc, c) => sql`${acc} and ${c}`);
+}
+
+// A business is in the industry when its NAICS code starts with one of the industry's codes, or
+// (map listings with only a coarse code, e.g. 5617) when its code starts one of them.
+function industryMatch(codes: string[]) {
+  return codes
+    .map((c) => sql`(naics like ${c + "%"} or (length(naics) between 4 and 5 and ${c} like naics || '%'))`)
+    .reduce((a, b) => sql`${a} or ${b}`);
 }
 
 // Same normalisation as the name_norm column: upper case, punctuation out, single letters joined.

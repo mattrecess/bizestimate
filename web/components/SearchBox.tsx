@@ -11,7 +11,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions }: {
   value: string;
   onChange: (q: string) => void;
   onPick: (id: number) => void;
-  suggestions: { q: string; items: Suggestion[] } | null;
+  suggestions: { q: string; items: Suggestion[]; industry?: string | null; total?: number } | null;
 }) {
   const [text, setText] = useState(value);
   const [open, setOpen] = useState(false);
@@ -21,7 +21,9 @@ export default function SearchBox({ value, onChange, onPick, suggestions }: {
   useEffect(() => setText(value), [value]);
 
   // Only results for what's in the box (not a previous query) are offered.
-  const items = text.trim().length >= 2 && suggestions && suggestions.q === text ? suggestions.items : [];
+  const current = text.trim().length >= 2 && suggestions && suggestions.q === text ? suggestions : null;
+  const items = current?.items ?? [];
+  const industry = current?.industry;
   useEffect(() => setActive(-1), [suggestions]);
 
   useEffect(() => {
@@ -54,8 +56,17 @@ export default function SearchBox({ value, onChange, onPick, suggestions }: {
           <Icon name="x" size={16} />
         </button>
       )}
-      {open && items.length > 0 && (
+      {open && (items.length > 0 || industry) && (
         <ul className="suggestions" role="listbox">
+          {/* Read as an industry: the list already shows them all, so this just closes the menu. */}
+          {industry && (
+            <li>
+              <button className="s-industry" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen(false)}>
+                <span className="s-name"><Icon name="search" size={14} />All {industry.toLowerCase()} businesses</span>
+                <span className="s-meta">{current?.total?.toLocaleString()} found</span>
+              </button>
+            </li>
+          )}
           {items.map((s, i) => (
             <li key={s.id}>
               <button role="option" aria-selected={i === active} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(s)}>

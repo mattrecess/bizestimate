@@ -284,3 +284,7 @@ footer.foot nav { display: flex; gap: 16px; }
 .hc-key-dot { width: 9px; height: 9px; border: 2px solid var(--accent); border-radius: 50%; display: inline-block; }
 .hc-table { margin-top: 8px; font-size: 13px; }
 .hc-table summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.suggestions .s-industry { color: var(--accent); }
+.suggestions .s-industry .s-name { color: var(--accent); font-weight: 650; display: inline-flex; align-items: center; gap: 6px; }
+.suggestions .s-industry svg { flex: none; }
+.list-head .sub strong { color: var(--text); font-weight: 600; }

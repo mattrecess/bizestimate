@@ -32,7 +32,7 @@ export default function Home() {
   const [filters, setFilters] = useState<FilterState>(NO_FILTERS);
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
   const [offset, setOffset] = useState(0);
-  const [data, setData] = useState<{ total: number; results: Biz[]; q: string } | null>(null);
+  const [data, setData] = useState<{ total: number; results: Biz[]; q: string; industry?: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -195,7 +195,8 @@ export default function Home() {
       <div className="toolbar">
         {/* Suggestions are the top of the list query, so typing costs one request, not two. */}
         <SearchBox value={q} onChange={setQ} onPick={openBusiness}
-          suggestions={data && data.q && offset === 0 ? { q: data.q, items: data.results.slice(0, 6) } : null} />
+          suggestions={data && data.q && offset === 0
+            ? { q: data.q, items: data.results.slice(0, 6), industry: data.industry, total: data.total } : null} />
         <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
       </div>
       <div className="explorer" data-view={view}>
@@ -225,7 +226,9 @@ export default function Home() {
               <span className="count">
                 {failed ? "Couldn't load businesses" : data ? `${total.toLocaleString()} ${total === 1 ? "business" : "businesses"}` : "Loading…"}
               </span>
-              <span className="sub">{fitKey ? "matching your search" : "in map view"} · estimates</span>
+              <span className="sub">
+                {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : "in map view"} · estimates
+              </span>
             </div>
             {failed && (
               <div className="empty">

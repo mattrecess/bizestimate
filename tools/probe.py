@@ -2,6 +2,7 @@
 
     SITE=https://... DATABASE_URL=... python tools/probe.py
 """
+import json
 import os
 import re
 import time
@@ -14,7 +15,9 @@ SITE = os.environ.get("SITE", "https://bizestimate-six.vercel.app")
 BBOX = "-98.6,34.9,-96.4,36.1"
 PATHS = ["/api/cities", "/api/businesses?sort=revenue_desc&limit=50&offset=0",
          f"/api/businesses?bbox={BBOX}&sort=revenue_desc&limit=50&offset=0",
-         "/api/points", f"/api/points?bbox={BBOX}", "/api/businesses?q=septic&limit=6", "/"]
+         "/api/points", f"/api/points?bbox={BBOX}", "/api/businesses?q=septic&limit=6", "/",
+         "/api/businesses?q=commercial%20cleaning&limit=8", "/api/businesses?q=janitorial%20tulsa&limit=8",
+         "/api/businesses?q=plumbers%20okc&limit=8"]
 
 LIST = """select id, name, est_revenue_mid, coalesce(owner_name, '') <> '' as has_owner,
   coalesce(website, '') <> '' as has_website, count(*) over ()::int as total
@@ -38,6 +41,10 @@ def http():
                 body = r.read()
                 cache = r.headers.get("x-vercel-cache", "-")
                 print(f"{r.status} {time.time() - t:6.2f}s {len(body):>9,}B cdn={cache} {p} {body[:120]!r}", flush=True)
+                if "q=" in p and "limit=8" in p:
+                    d = json.loads(body)
+                    print(f"      total={d['total']} industry={d.get('industry')!r} "
+                          f"{[(x['name'], x['naics'], x['city']) for x in d['results']]}", flush=True)
         except Exception as e:  # noqa: BLE001
             print(f"ERR {time.time() - t:6.2f}s {p} {e!r} {getattr(e, 'read', lambda: b'')()[:300]!r}", flush=True)
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { matchIndustry } from "@/lib/industries";
 import { CACHE, parseFilters, publicAddress, relevance, where } from "@/lib/queries";
 
 const SORTS = {
@@ -31,5 +32,11 @@ export async function GET(req: NextRequest) {
     sql`select count(*)::int as count from businesses where ${w}`,
   ]);
   // Let Vercel's CDN answer repeat requests (the default view especially) without the database.
-  return NextResponse.json({ total: count, results: rows }, { headers: { "Cache-Control": CACHE } });
+  // Tell the page when a search reads as an industry ("janitorial", "janitorial tulsa"), so it can
+  // say so; not when the other words are a name ("Triple Bar Ranch" is a ranch, not a bar).
+  const m = f.q ? matchIndustry(f.q) : null;
+  const industry = !m ? null
+    : !m.rest || (await sql`select 1 from businesses where lower(city) = ${m.rest} limit 1`).length
+      ? m.industry.label : null;
+  return NextResponse.json({ total: count, results: rows, industry }, { headers: { "Cache-Control": CACHE } });
 }

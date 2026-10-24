@@ -1,4 +1,5 @@
 import { money } from "@/lib/format";
+import { industryLabel } from "@/lib/industries";
 import Icon, { industryIcon } from "./Icon";
 
 export type Biz = {
@@ -24,7 +25,7 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
         <div className="ind-icon"><Icon name={industryIcon(b.naics)} /></div>
         <div style={{ minWidth: 0 }}>
           <div className="name">{b.name}</div>
-          <div className="sub">{b.industry} · {b.city}, OK {b.zip}</div>
+          <div className="sub">{industryLabel(b.naics) ?? b.industry} · {b.city}, OK {b.zip}</div>
         </div>
       </div>
       <div className="card-figures">
