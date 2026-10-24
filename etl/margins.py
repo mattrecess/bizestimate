@@ -164,6 +164,11 @@ def _items(rows, first, col):
         for key, prefix in ITEMS.items():
             if key not in found and label.startswith(prefix):
                 found[key] = _num(r[col]) if col < len(r) else None
+    # Depletion and amortization are small for most industries; when the IRS suppresses them
+    # ("d", to protect a few filers) count them as zero rather than lose the whole industry.
+    for minor in ("depletion", "amortization"):
+        if found.get(minor) is None:
+            found[minor] = 0.0
     if any(found.get(k) is None for k in ITEMS) or not found["receipts"]:
         return None
     return found

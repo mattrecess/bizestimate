@@ -16,6 +16,7 @@ import statistics
 from collections import defaultdict
 
 from benchmarks import load_benchmarks, lookup
+from margins import Margins
 from matching import name_score, name_tokens
 from overture import _meters, load_layers, pick_website
 from csvio import write_rows
@@ -145,13 +146,15 @@ def main():
         reader = csv.DictReader(f)
         fields = list(reader.fieldnames)
         rows = [r for r in reader if r.get("source") != "overture"]   # rebuilt each run
-    if "source" not in fields:
-        fields.append("source")
+    for extra in ("source", "est_ebitda_margin"):
+        if extra not in fields:
+            fields.append(extra)
     for r in rows:
         r["source"] = "ppp"
 
     averages = industry_averages(rows)
     benchmarks = load_benchmarks()
+    margins = Margins()
     borrowers = BorrowerIndex(rows)
     _, _, _, places = load_layers(state)
     cols = {c: places.column(c).to_pylist() for c in places.column_names}
@@ -186,7 +189,7 @@ def main():
             continue
         _, bench = lookup(benchmarks, code)
         low, mid, high = avg
-        margin = bench["ebitda_margin"]
+        margin = margins.margin(code, mid)   # industry margin at the typical size
         seen[key] = len(added)
         added.append({
             "biz_key": f"OV|{get('id')}", "name": name, "address": (get("street") or "").strip(),
@@ -197,7 +200,7 @@ def main():
             "est_revenue_high": round(high), "est_ebitda_low": round(low * margin),
             "est_ebitda_mid": round(mid * margin), "est_ebitda_high": round(high * margin),
             "est_revenue_by_employees": "", "est_revenue_by_payroll": "", "est_method": "industry_average",
-            "est_confidence": "low", "total_ppp_amount": "", "website": pick_website(get("websites")) or "",
+            "est_confidence": "low", "total_ppp_amount": "", "est_ebitda_margin": margin, "website": pick_website(get("websites")) or "",
             "source": "overture",
         })
 
