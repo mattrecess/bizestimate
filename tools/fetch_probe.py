@@ -1,38 +1,33 @@
-"""Find the newest IRS Corporation Source Book flat files and show their layout (run on GitHub)."""
-import io
+"""List recent data files on IRS SOI business-statistics pages (run on GitHub)."""
+import re
 import sys
-import zipfile
 
 sys.path.insert(0, "etl")
 from netutil import urlopen  # noqa: E402
 
-BASE = "https://www.irs.gov/pub/irs-soi/"
-found = []
-for yy in range(13, 25):
-    for name in (f"{yy}sbfltfile.zip", f"{yy}sbflatfile.zip", f"{yy}sbfltfile.csv"):
-        try:
-            with urlopen(BASE + name, timeout=60) as r:
-                data = r.read()
-            print(f"OK {name} {len(data):,} bytes", flush=True)
-            found.append((name, data))
-            break
-        except Exception as e:  # noqa: BLE001
-            print(f"-- {name}: {e}", flush=True)
-
-for name, data in found[-1:] + found[:1]:
-    print(f"\n===== {name}")
-    if name.endswith(".zip"):
-        z = zipfile.ZipFile(io.BytesIO(data))
-        for info in z.infolist():
-            print("  member:", info.filename, f"{info.file_size:,}")
-        for info in z.infolist():
-            raw = z.read(info.filename)
-            text = raw.decode("latin-1")
-            lines = text.splitlines()
-            print(f"--- {info.filename}: {len(lines):,} lines; first 25:")
-            for l in lines[:25]:
-                print("   ", l[:400])
-            if len(lines) > 25:
-                print("   ...")
-                for l in lines[1000:1006]:
-                    print("   ", l[:400])
+PAGES = [
+    "https://www.irs.gov/statistics/soi-tax-stats-corporation-complete-report",
+    "https://www.irs.gov/statistics/soi-tax-stats-s-corporation-statistics",
+    "https://www.irs.gov/statistics/soi-tax-stats-integrated-business-data",
+    "https://www.irs.gov/statistics/soi-tax-stats-table-5-returns-of-active-corporations",
+    "https://www.irs.gov/statistics/soi-tax-stats-table-6-returns-of-active-corporations",
+    "https://www.irs.gov/statistics/soi-tax-stats-table-7-returns-of-active-corporations",
+    "https://www.irs.gov/statistics/soi-tax-stats-corporation-tax-statistics",
+    "https://www.irs.gov/statistics/soi-tax-stats-partnership-statistics-by-sector-or-industry",
+    "https://www.irs.gov/statistics/soi-tax-stats-nonfarm-sole-proprietorship-statistics",
+]
+for url in PAGES:
+    try:
+        with urlopen(url, timeout=60) as r:
+            html = r.read().decode("utf-8", "replace")
+    except Exception as e:  # noqa: BLE001
+        print(f"FAIL {url}: {e!r}")
+        continue
+    # Link text helps tell the tables apart.
+    links = re.findall(r'<a[^>]+href="([^"]+\.(?:zip|xlsx?|csv))"[^>]*>(.*?)</a>', html, re.I | re.S)
+    recent = [(h, re.sub(r"<[^>]+>|\s+", " ", t).strip()) for h, t in links if re.search(r"/(19|2[0-9])[a-z]", h)]
+    print(f"== {url}: {len(links)} files, {len(recent)} from 2019+")
+    for h, t in recent[:80]:
+        print(f"   {h}  | {t[:110]}")
+    titles = re.findall(r"<h[234][^>]*>(.*?)</h[234]>", html, re.S)
+    print("   headings:", [re.sub(r"<[^>]+>|\s+", " ", x).strip()[:80] for x in titles[:25]])
