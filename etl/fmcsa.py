@@ -58,6 +58,11 @@ def main():
         status = (pick(r, "status_code", "carrier_status") or "A").upper()
         if status not in ("A", "ACTIVE"):
             continue
+        drivers = num(pick(r, "driver_total", "total_drivers", "tot_drs"))
+        # Self-reported; some entries are typos ("115000 trucks, 2 drivers"). Drop fleets that are
+        # implausibly large for the driver count rather than show them.
+        if units > 100 and units > 5 * max(drivers or 0, 1):
+            continue
         dot = str(pick(r, "dot_number", "usdot_number"))
         added = str(pick(r, "add_date", "added_date") or "")
         names = {n.strip() for n in (pick(r, "legal_name"), pick(r, "dba_name")) if n and n.strip()}
@@ -67,7 +72,7 @@ def main():
                         str(pick(r, "phy_zip") or "")[:5])},
             "data": {
                 "dot": dot, "name": pick(r, "legal_name"), "power_units": units,
-                "drivers": num(pick(r, "driver_total", "total_drivers", "tot_drs")),
+                "drivers": drivers,
                 "miles": num(pick(r, "mcs150_mileage", "mileage")),
                 "miles_year": pick(r, "mcs150_mileage_year", "mileage_year"),
                 "operation": pick(r, "carrier_operation", "carrier_operation_desc"),

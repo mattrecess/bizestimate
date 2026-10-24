@@ -1,12 +1,11 @@
-"""Find the SBA 7(a)/504 FOIA dataset and its CSV links (run on GitHub)."""
+"""Show the links on the DOL enforcement data catalog (run on GitHub)."""
 import re
 import sys
 
 sys.path.insert(0, "etl")
 from netutil import urlopen  # noqa: E402
 
-for url in [f"https://data.sba.gov/dataset/?page={n}" for n in range(1, 7)] + [
-        "https://www.sba.gov/about-sba/sba-performance/open-government/foia/frequently-requested-records/sba-7a-504-loan-data-reports"]:
+for url in ["https://enforcedata.dol.gov/views/data_catalogs.php", "https://enforcedata.dol.gov/views/data_summary.php"]:
     try:
         with urlopen(url, timeout=60) as r:
             html = r.read().decode("utf-8", "replace")
@@ -14,5 +13,8 @@ for url in [f"https://data.sba.gov/dataset/?page={n}" for n in range(1, 7)] + [
         print("FAIL", url, e)
         continue
     print("==", url, len(html))
-    for m in sorted(set(re.findall(r'(?:href="|"url": ")([^"]*(?:dataset/[a-z0-9-]+|\.csv))"', html)))[:60]:
-        print("  ", m)
+    for m in sorted(set(re.findall(r'(?:href|src|data-[a-z]+)="([^"]+)"', html))):
+        if "osha" in m.lower() or "zip" in m.lower() or "csv" in m.lower():
+            print("  ", m)
+    i = html.lower().find("osha")
+    print(html[i - 500:i + 1500] if i >= 0 else "no osha mention")
