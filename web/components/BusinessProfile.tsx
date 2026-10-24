@@ -55,7 +55,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   const reported = b.est_method === "reported";              // SEC, FDIC or Form 990 figures
   const src = Object.fromEntries((b.sources ?? []).map((s) => [s.source, s.data as Record<string, any>]));  // eslint-disable-line @typescript-eslint/no-explicit-any
   const value = estimateValue({ ...b, public_company: !!src.sec || undefined, is_nonprofit: b.is_nonprofit || !!src.irs990 });
-  const founded = src.fdic?.founded ?? src.fmcsa?.registered ?? null;
+  const founded = src.founded?.year ?? src.fdic?.founded ?? src.fmcsa?.registered ?? null;
   const ownershipChange = src.sba?.ownership_change_year ?? null;
   const latest = b.headcounts?.length ? b.headcounts[b.headcounts.length - 1] : null;
   // The margin actually applied (IRS industry margin adjusted for size) when the data has it.
@@ -90,7 +90,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               : reported ? <span className="badge good">Reported financials</span>
               : fromPlan ? <span className="badge good">401(k) plan data</span>
               : <span className="badge good">PPP loan data</span>}
-            {founded && <span className="badge">Since {founded}</span>}
+            {founded && <span className="badge" title={src.founded ? `Earliest record: ${src.founded.basis}` : undefined}>Since {founded}</span>}
             {ownershipChange && <span className="badge warn">New owners FY{ownershipChange}</span>}
             {src.sec && <span className="badge info">Public company</span>}
             {src.contracts && <span className="badge info">Federal contractor</span>}
