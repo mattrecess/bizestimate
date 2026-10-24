@@ -56,9 +56,12 @@ def db():
                 "select year, count(*), sum(employees) from headcounts group by year order by year").fetchall())
             print("estimates by method and listing source:", conn.execute(
                 "select est_method, source, count(*) from businesses group by 1, 2 order by 1, 2").fetchall())
+            print("IRS margins applied (method, count with margin, avg margin):", conn.execute(
+                "select est_method, count(est_ebitda_margin), round(avg(est_ebitda_margin), 4) from businesses "
+                "group by 1 order by 1").fetchall())
             for row in conn.execute("""
-                    select id, name, jobs_reported, est_revenue_mid::bigint from businesses
-                    where est_method = 'retirement_plan' order by random() limit 8"""):
+                    select id, name, naics, est_revenue_mid::bigint, est_ebitda_mid::bigint, est_ebitda_margin
+                    from businesses where est_method = 'retirement_plan' order by random() limit 8"""):
                 print("  re-based:", row)
             print("headcounts by listing source:", conn.execute(
                 "select b.source, count(distinct b.biz_key) from headcounts h join businesses b using (biz_key) "
