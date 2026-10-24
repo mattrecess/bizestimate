@@ -31,8 +31,8 @@ export default function Methodology() {
             chart the yearly count on each profile. When a business has a count from the last two plan years, its
             headline estimate uses that newer figure in place of the 2020 PPP headcount, marked <strong>401(k)
             data</strong>. We keep the older estimate when the plan looks partial: fewer than 3 participants (often
-            an owners-only plan) or under half the PPP headcount, since plans can leave out part-timers and new
-            hires.</p>
+            an owners-only plan), under half the PPP headcount (plans can leave out part-timers and new hires),
+            or more than four times it (more often a mismatch or a parent company&apos;s plan).</p>
         </div>
         <div className="section">
           <h2>Businesses without a PPP loan</h2>
