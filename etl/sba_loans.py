@@ -72,7 +72,7 @@ def main():
                 row = _Row(zip(header, values))
                 if (row.get("BorrState") or "").strip().upper() != state:
                     continue
-                fy = num(row.get("ApprovalFiscalYear"))
+                fy = num(row.get("ApprovalFY") or row.get("ApprovalFiscalYear"))
                 if not fy or fy < FIRST_FY:
                     continue
                 name = (row.get("BorrName") or "").strip()
@@ -91,6 +91,7 @@ def main():
                     "jobs": num(row.get("JobsSupported")),
                     "business_age": (row.get("BusinessAge") or "").strip(),
                     "status": (row.get("LoanStatus") or "").strip(),
+                    "franchise": (row.get("FranchiseName") or "").strip() or None,
                 })
                 n += 1
         print(f"sba_loans: {n:,} {state} {program} loans since FY{FIRST_FY} in {url.rsplit('/', 1)[-1]}", flush=True)
@@ -108,6 +109,7 @@ def main():
             out[key] = {
                 "loans": loans, "total": sum(l["amount"] or 0 for l in loans),
                 "ownership_change_year": max(ownership) if ownership else None,
+                "franchise": next((l["franchise"] for l in loans if l["franchise"]), None),
             }
         names = {b["biz_key"]: b["name"] for b in biz}
         print(f"sba_loans: {len(borrowers):,} borrowers; matched {len(matches):,} to {len(out):,} businesses; "
