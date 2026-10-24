@@ -100,3 +100,4 @@ if __name__ == "__main__":
     http()
     db()
     http()  # second pass: warm instances
+# re-run
