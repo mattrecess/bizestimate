@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["tools/probe.py", ".github/workflows/probe.yml"]
+    paths: ["tools/probe.py", "tools/browser_probe.mjs", ".github/workflows/probe.yml"]
 permissions:
   contents: write
 jobs:
@@ -16,6 +16,11 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install "psycopg[binary]"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
+      - run: node tools/browser_probe.mjs 2>&1 | tee "$RUNNER_TEMP/browser.log"
       - run: python tools/probe.py 2>&1 | tee "$RUNNER_TEMP/probe.log"
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -23,6 +28,6 @@ jobs:
       - if: always()
         run: |
           cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b probe-logs
-          cp "$RUNNER_TEMP/probe.log" probe.log 2>/dev/null || echo none > probe.log
+          cat "$RUNNER_TEMP/browser.log" "$RUNNER_TEMP/probe.log" > probe.log 2>/dev/null || echo none > probe.log
           git add probe.log && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" probe-logs
