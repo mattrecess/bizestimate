@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["tools/fetch_probe.py", ".github/workflows/fetch-probe.yml"]
+    paths: ["tools/fetch_probe.py", "etl/margins.py", ".github/workflows/fetch-probe.yml"]
 permissions:
   contents: write
 jobs:
@@ -15,8 +15,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: pip install openpyxl==3.1.5
-      - run: python tools/fetch_probe.py 2>&1 | tee "$RUNNER_TEMP/fetch.log"
+      - run: pip install -r etl/requirements.txt
+      - run: python etl/margins.py --fetch --force 2>&1 | tee "$RUNNER_TEMP/fetch.log"
       - if: always()
         run: |
           cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b fetch-logs
