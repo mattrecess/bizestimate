@@ -1,6 +1,7 @@
 # Public-record source steps, run in order by etl/run.sh and the Public records workflow.
 # founded uses the others' records, so it runs last.
 irs990
+irs990_people
 banks
 sec
 sba_loans
