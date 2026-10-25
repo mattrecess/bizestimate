@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["tools/fetch_probe.py", "etl/margins.py", ".github/workflows/fetch-probe.yml"]
+    paths: ["tools/fetch_probe.py", "etl/margins.py", "etl/adjust.py", ".github/workflows/fetch-probe.yml"]
 permissions:
   contents: write
 jobs:
@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r etl/requirements.txt
-      - run: python tools/fetch_probe.py 2>&1 | tee "$RUNNER_TEMP/fetch.log"
+      - run: python etl/adjust.py --fetch 2>&1 | tee "$RUNNER_TEMP/fetch.log"
       - if: always()
         run: |
           cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b fetch-logs
