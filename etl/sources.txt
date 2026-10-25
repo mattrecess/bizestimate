@@ -1,4 +1,5 @@
 # Public-record source steps, run in order by etl/run.sh and the Public records workflow.
+# Lines marked paid cost money per lookup: they run only in the Public records workflow.
 # founded uses the others' records, so it runs last.
 irs990
 irs990_people
@@ -7,5 +8,6 @@ sec
 sba_loans
 contracts
 fmcsa
+website_profile paid   (AI reads company websites; runs in the Public records workflow only)
 founded
 # osha  (needs a free DOL API key; the old bulk download site is retired)

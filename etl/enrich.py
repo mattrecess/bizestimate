@@ -63,5 +63,19 @@ def apply_reported(cur, state):
     print(f"Reported financials applied: {len(updates):,} updated", flush=True)
 
 
+def state_get(cur, key, default):
+    cur.execute("select value from etl_state where key = %s", (key,))
+    row = cur.fetchone()
+    return row[0] if row else default
+
+
+def state_set(cur, key, value):
+    """Saved and committed at once, so an interrupted run never loses it (e.g. paid-for results)."""
+    cur.execute("insert into etl_state (key, value, updated_at) values (%s, %s, now()) "
+                "on conflict (key) do update set value = excluded.value, updated_at = now()",
+                (key, json.dumps(value, default=str)))
+    cur.connection.commit()
+
+
 def label(naics):
     return lookup(load_benchmarks(), naics or "")[1]["label"]

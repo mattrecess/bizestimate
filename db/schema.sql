@@ -120,3 +120,22 @@ create table if not exists business_sources (
   updated_at timestamptz not null default now(),
   primary key (biz_key, source)
 );
+
+-- Small pieces of pipeline state that must survive cancelled runs (e.g. AI batches in flight,
+-- per-site lookup results that cost money), kept in the database rather than a CI cache.
+create table if not exists etl_state (
+  key        text primary key,
+  value      jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+-- Page text sent with AI batches still in flight, compressed, so results can be verified against
+-- it when collected (by a later run if need be). Rows are deleted as their results are collected.
+create table if not exists ai_pending (
+  job       text not null,
+  batch_id  text not null,
+  custom_id text not null,
+  site      text not null,
+  pages     bytea not null,
+  primary key (batch_id, custom_id)
+);

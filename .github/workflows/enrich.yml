@@ -3,6 +3,8 @@ name: Public records
 # show results in minutes rather than after the whole data load.
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "41 11 * * *"   # daily: paid steps continue (within their caps) and collect AI batches
   push:
     branches: [main]
     paths: ["etl/enrich.py", "etl/sources.txt", "etl/sources_quick.txt", "etl/irs990.py", "etl/irs990_people.py", "etl/website_profile.py", "etl/people_search.py", "etl/sec.py", "etl/banks.py", "etl/sba_loans.py",
@@ -16,7 +18,7 @@ concurrency:
 jobs:
   enrich:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -34,7 +36,11 @@ jobs:
           python etl/margins.py --fetch || echo "IRS margins unavailable"
           # One module per line in etl/sources.txt (or just those in etl/sources_quick.txt while
           # developing one); each is non-fatal.
-          list=etl/sources.txt; [ -s etl/sources_quick.txt ] && list=etl/sources_quick.txt
+          list=etl/sources.txt
+          if [ -s etl/sources_quick.txt ]; then
+            list=etl/sources_quick.txt
+            export WEBSITE_PROFILE_LIMIT=${WEBSITE_PROFILE_LIMIT:-300}   # quick runs are small pilots
+          fi
           for m in $(grep -v '^#' "$list" | awk '{print $1}'); do
             echo "=== $m"
             python "etl/$m.py" --state OK || echo "$m failed (non-fatal)"
@@ -43,6 +49,8 @@ jobs:
           PYTHONUNBUFFERED: "1"
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
       - if: always()
         run: |
           cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b enrich-logs
