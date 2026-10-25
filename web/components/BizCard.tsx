@@ -7,7 +7,7 @@ export type Biz = {
   id: number; name: string; city: string; zip: string; industry: string; naics: string | null;
   jobs_reported: number | null; est_revenue_mid: string; est_ebitda_mid: string;
   est_confidence: string; est_method: string; has_owner: boolean; has_website: boolean;
-  is_nonprofit?: boolean; est_ebitda_low?: string; est_ebitda_high?: string;
+  is_nonprofit?: boolean; est_ebitda_low?: string; est_ebitda_high?: string; parent_name?: string | null;
 };
 
 export default function BizCard({ b, hovered, onOpen, onHover }: {
@@ -31,7 +31,9 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
           <div className="sub">{industryLabel(b.naics) ?? b.industry} · {b.city}, OK {b.zip}</div>
         </div>
       </div>
-      <div className="card-figures">
+      {b.est_method === "branch" ? (
+        <div className="card-figures"><span className="sub">Location of <b>{b.parent_name}</b></span></div>
+      ) : <div className="card-figures">
         <div>
           <div className="rev-label">Est. revenue</div>
           <div className="rev">{money(b.est_revenue_mid)}</div>
@@ -39,9 +41,11 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
         <span className="stat-chip">EBITDA<b>{money(b.est_ebitda_mid)}</b></span>
         {value && <span className="stat-chip">Value<b>{money(value.mid)}</b></span>}
         {b.jobs_reported ? <span className="stat-chip">Employees<b>{b.jobs_reported}</b></span> : null}
-      </div>
+      </div>}
       <div className="badges">
-        {avg ? <span className="badge">Industry avg</span>
+        {b.est_method === "branch" ? <span className="badge">Branch location</span>
+          : avg ? <span className="badge">Industry avg</span>
+          : b.est_method === "verified" ? <span className="badge good">Verified</span>
           : b.est_method === "reported" ? <span className="badge good">Reported</span>
           : b.est_method === "retirement_plan" ? <span className="badge good">401(k) data</span>
           : <span className="badge good">PPP data</span>}

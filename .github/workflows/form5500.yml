@@ -26,12 +26,14 @@ jobs:
           path: |
             data/cache/form5500
             data/cache/irs_margins.json
+            data/cache/adjust.json
           key: form5500-${{ github.run_id }}
           restore-keys: form5500-
       - run: |
           set -o pipefail
           python etl/migrate.py
           python etl/margins.py --fetch || echo "IRS margins unavailable"
+          python etl/adjust.py --fetch || echo "Inflation/growth figures unavailable"
           python etl/form5500.py --state OK 2>&1 | tee "$RUNNER_TEMP/form5500.log"
         env:
           PYTHONUNBUFFERED: "1"

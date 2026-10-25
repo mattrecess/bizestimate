@@ -18,6 +18,7 @@ data, since the revenue per employee and margin depend on it.
 from datetime import date
 
 from benchmarks import load_benchmarks, lookup
+from adjust import Adjust
 from margins import Margins
 
 MIN_PARTICIPANTS = 3
@@ -39,11 +40,11 @@ def apply(cur, state):
                b.est_ebitda_mid, b.industry
         from businesses b join latest l on l.biz_key = b.biz_key
         where b.state = %(state)s and l.employees >= %(min)s
-          and b.est_method is distinct from 'reported'   -- reported figures (SEC, 990, ...) win
+          and coalesce(b.est_method, '') not in ('reported', 'verified', 'branch')   -- actual figures win
           and (b.jobs_reported is null
                or l.employees between 0.5 * b.jobs_reported and %(max_growth)s * b.jobs_reported)""",
                 {"since": since, "state": state, "min": MIN_PARTICIPANTS, "max_growth": MAX_GROWTH})
-    margins, bench = Margins(), load_benchmarks()
+    margins, bench, adjust = Margins(), load_benchmarks(), Adjust()
     lo, hi = RANGE
     updates, staffing = [], 0
     for key, naics, source, filed_naics, employees, method, cur_rev, cur_ebitda, cur_industry in cur.fetchall():
@@ -56,7 +57,9 @@ def apply(cur, state):
         _, b = lookup(bench, naics)
         if not b.get("revenue_per_employee"):
             continue
-        revenue = float(employees) * b["revenue_per_employee"]
+        # Recent headcount, so only prices need bringing up to date (benchmark year -> now).
+        inflation = adjust.inflation(b.get("year"))
+        revenue = float(employees) * b["revenue_per_employee"] * inflation
         margin = margins.margin(naics, revenue)
         ebitda = revenue * margin
         if method == "retirement_plan" and cur_rev is not None and round(revenue) == round(float(cur_rev)) \
@@ -64,11 +67,12 @@ def apply(cur, state):
             continue   # already current: don't rewrite the row
         updates.append((round(revenue * lo), round(revenue), round(revenue * hi),
                         round(ebitda * lo), round(ebitda), round(ebitda * hi),
-                        margin if margins.data else None, naics, b["label"], key))
+                        margin if margins.data else None, naics, b["label"], inflation, key))
     cur.executemany("""
         update businesses set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
             est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_ebitda_margin = %s,
-            naics = %s, industry = %s, est_method = 'retirement_plan', est_confidence = 'medium'
+            naics = %s, industry = %s, est_inflation = %s, est_growth = 1,
+            est_method = 'retirement_plan', est_confidence = 'medium'
         where biz_key = %s""", updates)
     print(f"Estimates re-based on recent retirement-plan headcounts: {len(updates):,} updated "
           f"({staffing:,} staffing firms/PEOs skipped)", flush=True)

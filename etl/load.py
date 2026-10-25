@@ -28,7 +28,7 @@ BIZ_COLS = [
     "geo_precision", "est_payroll", "est_revenue_low", "est_revenue_mid", "est_revenue_high",
     "est_ebitda_low", "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees", "est_revenue_by_payroll",
     "est_method", "est_confidence", "total_ppp_amount", "website", "owner_name", "owner_title", "owner_source",
-    "source", "est_ebitda_margin",
+    "source", "est_ebitda_margin", "est_inflation", "est_growth", "parent_key", "parent_name",
 ]
 LOAN_COLS = ["loan_number", "biz_key", "draw", "date_approved", "amount", "payroll_proceed",
              "forgiveness_amount", "loan_status", "lender", "jobs_reported"]
@@ -157,6 +157,11 @@ def main():
                 enrich.apply_reported(cur, state.upper())
         except psycopg.Error as e:
             print(f"Applying reported financials failed (non-fatal): {e}", flush=True)
+        try:
+            with conn.transaction():
+                enrich.apply_known(cur, state.upper())
+        except psycopg.Error as e:
+            print(f"Applying verified figures failed (non-fatal): {e}", flush=True)
         try:
             with conn.transaction():
                 enrich.apply_owners(cur, state.upper())

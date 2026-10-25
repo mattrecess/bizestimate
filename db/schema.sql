@@ -55,6 +55,10 @@ alter table businesses add column if not exists owner_title text;
 alter table businesses add column if not exists owner_source text;   -- page the name was found on
 alter table businesses add column if not exists source text;         -- 'ppp' (loan data) | 'overture' (places only)
 alter table businesses add column if not exists est_ebitda_margin numeric;   -- EBITDA margin applied (IRS, size-adjusted)
+alter table businesses add column if not exists est_inflation numeric;   -- price change applied (benchmark year -> now)
+alter table businesses add column if not exists est_growth numeric;      -- industry job growth applied (2020 -> now)
+alter table businesses add column if not exists parent_key text;         -- a location of this listed company (est_method 'branch')
+alter table businesses add column if not exists parent_name text;
 -- Search form of the name: upper case, punctuation dropped, single letters joined ("J & K" -> "JK").
 alter table businesses add column if not exists name_norm text generated always as (
   regexp_replace(regexp_replace(upper(name), '[^A-Z0-9]+', ' ', 'g'), '\m([A-Z0-9]) (?=[A-Z0-9]\M)', '\1', 'g')
@@ -138,4 +142,16 @@ create table if not exists ai_pending (
   site      text not null,
   pages     bytea not null,
   primary key (batch_id, custom_id)
+);
+
+-- Actual figures we've been told (owners, people who know the business). Private unless is_public:
+-- used to measure and tune estimate accuracy; public ones replace the estimate on the site.
+create table if not exists known_financials (
+  biz_key    text primary key,
+  revenue    numeric,
+  ebitda     numeric,
+  year       int,
+  note       text,
+  is_public  boolean not null default false,
+  updated_at timestamptz not null default now()
 );

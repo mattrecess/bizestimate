@@ -13,6 +13,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 
 from netutil import urlopen
@@ -50,13 +51,14 @@ SECTOR_DEFAULTS = {
 }
 FALLBACK = ("Unclassified", 0.25, 150_000, 0.10)
 DEFAULT_SOURCE = "approximate sector default"
+DEFAULT_YEAR = 2019   # the dollars the sector defaults approximate
 
 
 def load_benchmarks():
     """Return {prefix: dict} combining defaults with data/benchmarks.csv if present."""
     out = {
         p: {"label": l, "payroll_to_revenue": r, "revenue_per_employee": e,
-            "ebitda_margin": m, "source": DEFAULT_SOURCE}
+            "ebitda_margin": m, "source": DEFAULT_SOURCE, "year": DEFAULT_YEAR}
         for p, (l, r, e, m) in SECTOR_DEFAULTS.items()
     }
     if os.path.exists(BENCH_CSV):
@@ -71,6 +73,8 @@ def load_benchmarks():
                     "ebitda_margin": float(row.get("ebitda_margin") or 0)
                     or sector.get("ebitda_margin", FALLBACK[3]),
                     "source": row["source"],
+                    # "US Economic Census 2022" -> figures in 2022 dollars.
+                    "year": int(re.search(r"(19|20)\d\d", row["source"]).group()) if re.search(r"(19|20)\d\d", row["source"]) else DEFAULT_YEAR,
                 }
     return out
 
@@ -84,7 +88,7 @@ def lookup(benchmarks, naics):
             return naics[:n], b
     l, r, e, m = FALLBACK
     return None, {"label": l, "payroll_to_revenue": r, "revenue_per_employee": e,
-                  "ebitda_margin": m, "source": DEFAULT_SOURCE}
+                  "ebitda_margin": m, "source": DEFAULT_SOURCE, "year": DEFAULT_YEAR}
 
 
 def _num(v):

@@ -1,0 +1,153 @@
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { sql } from "@/lib/db";
+import { money } from "@/lib/format";
+import { adminConfigured, isAdmin, signIn, signOut } from "@/lib/admin";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Admin | BizEstimate", robots: { index: false, follow: false } };
+
+type Row = {
+  id: string; name: string; city: string; revenue: string | null; ebitda: string | null; year: number | null;
+  note: string | null; is_public: boolean; est_revenue_mid: string | null; est_ebitda_mid: string | null; est_method: string;
+};
+
+// "https://.../business/1316278", "?id=1316278" or "1316278" -> "1316278".
+function businessId(input: string) {
+  const s = input.trim();
+  return s.match(/\/business\/(\d+)/)?.[1] ?? s.match(/[?&]id=(\d+)/)?.[1] ?? s.match(/^(\d+)$/)?.[1] ?? null;
+}
+
+const dollars = (v: FormDataEntryValue | null) => {
+  const s = String(v ?? "").trim().toLowerCase().replace(/[$,\s]/g, "");
+  const m = s.match(/^([\d.]+)([km]?)$/);
+  if (!m) return null;
+  return Number(m[1]) * (m[2] === "m" ? 1e6 : m[2] === "k" ? 1e3 : 1);
+};
+
+async function login(form: FormData) {
+  "use server";
+  await signIn(String(form.get("password") ?? ""));
+  redirect("/admin");
+}
+
+async function logout() {
+  "use server";
+  await signOut();
+  redirect("/admin");
+}
+
+async function save(form: FormData) {
+  "use server";
+  if (!(await isAdmin())) redirect("/admin");
+  const id = businessId(String(form.get("business") ?? ""));
+  if (!id) redirect("/admin?error=business");
+  const [b] = await sql`select biz_key from businesses where id = ${id}`;
+  if (!b) redirect("/admin?error=business");
+  const revenue = dollars(form.get("revenue"));
+  const ebitda = dollars(form.get("ebitda"));
+  const year = Number(form.get("year")) || null;
+  const isPublic = form.get("is_public") === "on";
+  await sql`
+    insert into known_financials (biz_key, revenue, ebitda, year, note, is_public, updated_at)
+    values (${b.biz_key}, ${revenue}, ${ebitda}, ${year}, ${String(form.get("note") ?? "") || null}, ${isPublic}, now())
+    on conflict (biz_key) do update set revenue = excluded.revenue, ebitda = excluded.ebitda, year = excluded.year,
+      note = excluded.note, is_public = excluded.is_public, updated_at = now()`;
+  revalidatePath("/admin");
+  redirect("/admin?saved=1");
+}
+
+async function remove(form: FormData) {
+  "use server";
+  if (!(await isAdmin())) redirect("/admin");
+  const id = businessId(String(form.get("id") ?? ""));
+  if (id) await sql`delete from known_financials where biz_key = (select biz_key from businesses where id = ${id})`;
+  redirect("/admin");
+}
+
+const ratio = (est: string | null, actual: string | null) =>
+  est && actual && Number(actual) > 0 ? Number(est) / Number(actual) : null;
+
+function median(xs: number[]) {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : null;
+}
+
+export default async function Admin({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  const params = await searchParams;
+  if (!adminConfigured()) {
+    return <main className="page"><h1>Admin</h1><p>Set an <code>ADMIN_PASSWORD</code> environment variable in Vercel to enable this page.</p></main>;
+  }
+  if (!(await isAdmin())) {
+    return (
+      <main className="page">
+        <h1>Admin</h1>
+        <form action={login} className="admin-form">
+          <input type="password" name="password" placeholder="Password" autoFocus required />
+          <button className="btn primary">Sign in</button>
+        </form>
+      </main>
+    );
+  }
+  const rows = await sql<Row[]>`
+    select b.id, b.name, b.city, k.revenue, k.ebitda, k.year, k.note, k.is_public,
+           b.est_revenue_mid, b.est_ebitda_mid, b.est_method
+    from known_financials k join businesses b on b.biz_key = k.biz_key order by k.updated_at desc`.catch(() => [] as Row[]);
+  // Accuracy of what the site would show without these figures (private rows only: public ones
+  // already replace the estimate).
+  const rev = rows.filter((r) => !r.is_public).map((r) => ratio(r.est_revenue_mid, r.revenue)).filter((x): x is number => x != null);
+  const ebi = rows.filter((r) => !r.is_public).map((r) => ratio(r.est_ebitda_mid, r.ebitda)).filter((x): x is number => x != null);
+  const off = (xs: number[]) => median(xs.map((x) => Math.abs(Math.log(x))));
+  // Typical miss as a factor: 1.5× means the estimate is usually within 1.5× of the actual, either way.
+  const factor = (x: number | null) => (x == null ? "—" : `${Math.exp(x).toFixed(1)}×`);
+  const bias = (xs: number[]) => { const m = median(xs); return m == null ? "—" : `${m >= 1 ? "+" : ""}${Math.round((m - 1) * 100)}%`; };
+
+  return (
+    <main className="page admin">
+      <div className="admin-head">
+        <h1>Verified figures</h1>
+        <form action={logout}><button className="link-btn">Sign out</button></form>
+      </div>
+      <p className="disclaimer">Actual revenue and EBITDA you know for a business. Private by default: they&apos;re used only
+        to measure and tune the estimates. Tick &ldquo;show publicly&rdquo; only when the figures may appear on the site.</p>
+      {params.saved && <p className="badge good">Saved</p>}
+      {params.error && <p className="badge warn">Couldn&apos;t find that business. Paste its page link or number.</p>}
+      <form action={save} className="admin-form">
+        <input name="business" placeholder="Business link or number (…/business/1316278)" required />
+        <input name="revenue" placeholder="Revenue (e.g. 15M)" />
+        <input name="ebitda" placeholder="EBITDA (e.g. 2M)" />
+        <input name="year" placeholder="Year (optional)" inputMode="numeric" />
+        <input name="note" placeholder="Note (private)" />
+        <label className="check"><input type="checkbox" name="is_public" /> Show publicly</label>
+        <button className="btn primary">Save</button>
+      </form>
+
+      {rows.length > 0 && (
+        <>
+          <div className="tiles admin-stats">
+            <div className="tile"><div className="k">Businesses</div><div className="v">{rows.length}</div></div>
+            <div className="tile"><div className="k">Revenue: typically off by</div><div className="v">{factor(off(rev))}</div><div className="r">typically {bias(rev)} vs actual</div></div>
+            <div className="tile"><div className="k">EBITDA: typically off by</div><div className="v">{factor(off(ebi))}</div><div className="r">typically {bias(ebi)} vs actual</div></div>
+          </div>
+          <table>
+            <thead><tr><th>Business</th><th className="num">Revenue (est / actual)</th><th className="num">EBITDA (est / actual)</th><th>Shown</th><th /></tr></thead>
+            <tbody>
+              {rows.map((r) => {
+                const rr = ratio(r.est_revenue_mid, r.revenue), er = ratio(r.est_ebitda_mid, r.ebitda);
+                return (
+                  <tr key={r.id}>
+                    <td><a href={`/business/${r.id}`}>{r.name}</a><div className="disclaimer" style={{ margin: 0 }}>{r.city}{r.year ? ` · ${r.year}` : ""}{r.note ? ` · ${r.note}` : ""}</div></td>
+                    <td className="num">{r.is_public ? "—" : money(r.est_revenue_mid)} / {money(r.revenue)}{rr && !r.is_public ? <div className="disclaimer" style={{ margin: 0 }}>{rr.toFixed(2)}×</div> : null}</td>
+                    <td className="num">{r.is_public ? "—" : money(r.est_ebitda_mid)} / {money(r.ebitda)}{er && !r.is_public ? <div className="disclaimer" style={{ margin: 0 }}>{er.toFixed(2)}×</div> : null}</td>
+                    <td>{r.is_public ? "Public" : "Private"}</td>
+                    <td><form action={remove}><input type="hidden" name="id" value={r.id} /><button className="link-btn">Remove</button></form></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </>
+      )}
+    </main>
+  );
+}

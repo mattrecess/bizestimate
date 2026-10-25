@@ -38,6 +38,7 @@ def apply_reported(cur, state):
         select distinct on (s.biz_key) s.biz_key, s.source, s.data, b.naics, b.est_method, b.est_revenue_mid
         from business_sources s join businesses b on b.biz_key = s.biz_key
         where b.state = %s and s.source = any(%s) and (s.data ->> 'revenue') is not null
+          and coalesce(b.est_method, '') <> 'verified'   -- figures we've been told and may show win
         order by s.biz_key, array_position(%s, s.source)""", (state, REPORTED, REPORTED))
     margins, bench = Margins(), load_benchmarks()
     lo, hi = REPORTED_RANGE
@@ -61,6 +62,21 @@ def apply_reported(cur, state):
             est_method = 'reported', est_confidence = 'high'
         where biz_key = %s""", updates)
     print(f"Reported financials applied: {len(updates):,} updated", flush=True)
+
+
+def apply_known(cur, state):
+    """Figures we've been told and may show (known_financials.is_public) replace the estimate.
+    Private ones change nothing on the site; they're only used to measure accuracy."""
+    cur.execute("""
+        update businesses b set
+            est_revenue_low = k.revenue, est_revenue_mid = k.revenue, est_revenue_high = k.revenue,
+            est_ebitda_low = k.ebitda, est_ebitda_mid = k.ebitda, est_ebitda_high = k.ebitda,
+            est_ebitda_margin = case when k.revenue > 0 then round(k.ebitda / k.revenue, 4) end,
+            est_method = 'verified', est_confidence = 'high'
+        from known_financials k
+        where k.biz_key = b.biz_key and k.is_public and k.revenue is not null and k.ebitda is not null
+          and b.state = %s""", (state,))
+    print(f"Verified figures applied: {cur.rowcount:,}", flush=True)
 
 
 # Roles that make someone the owner for our purposes, best first.

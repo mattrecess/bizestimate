@@ -330,3 +330,17 @@ table.mini td { padding: 3px 4px; }
 .advisor-list li { display: grid; grid-template-columns: 96px 1fr; column-gap: 10px; align-items: baseline; }
 .advisor-list .kind { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
 .advisor-list .src { grid-column: 2; }
+
+.branch-note { display: flex; gap: 12px; align-items: center; margin: 16px 0; padding: 14px 16px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--panel-2); flex-wrap: wrap; }
+.branch-note > div { flex: 1; min-width: 180px; }
+.branch-note .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+/* Admin */
+.admin-head { display: flex; justify-content: space-between; align-items: center; }
+.admin-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 20px; }
+.admin-form input:not([type="checkbox"]) { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); padding: 9px 11px; min-width: 150px; flex: 1 1 150px; }
+.admin-form input[name="business"] { flex: 2 1 300px; }
+.admin-form .check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
+.admin-stats { grid-template-columns: repeat(3, 1fr); margin-bottom: 14px; }

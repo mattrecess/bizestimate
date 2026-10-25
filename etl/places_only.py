@@ -17,7 +17,7 @@ from collections import defaultdict
 
 from benchmarks import load_benchmarks, lookup
 from margins import Margins
-from matching import name_score, name_tokens
+from matching import name_score, name_tokens, full_name
 from overture import _meters, load_layers, pick_website
 from csvio import write_rows
 
@@ -138,6 +138,28 @@ class BorrowerIndex:
         return False
 
 
+# Restaurants, hotels, salons, gas stations and convenience stores are mostly franchises or
+# separately owned stores, so a shared name doesn't make them one company.
+FRANCHISE_HEAVY = ("72", "8121", "447", "457", "4451", "445")
+MAX_BRANCHES = 25          # more same-name places than this is a brand or chain, not one local company
+
+
+def branch_row(get, name, code, bench, state, zip5, lat, lon, parent):
+    """A location of a listed company: no estimate of its own; the profile points to the parent."""
+    blank = {k: "" for k in ("est_payroll", "est_revenue_low", "est_revenue_mid", "est_revenue_high", "est_ebitda_low",
+                             "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees", "est_revenue_by_payroll",
+                             "total_ppp_amount", "est_ebitda_margin", "jobs_reported")}
+    return {
+        **blank, "biz_key": f"OV|{get('id')}", "name": name, "address": (get("street") or "").strip(),
+        "city": (get("locality") or "").strip().title(), "state": state, "zip": zip5, "county": "",
+        "naics": parent.get("naics") or code, "industry": parent.get("industry") or bench["label"],
+        "business_type": "", "is_individual": "False", "is_nonprofit": "False",
+        "lat": lat, "lon": lon, "geo_precision": "place", "est_method": "branch", "est_confidence": "",
+        "website": pick_website(get("websites")) or "", "source": "overture",
+        "parent_key": parent["biz_key"], "parent_name": parent["name"],
+    }
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--state", default="OK")
@@ -150,7 +172,7 @@ def main():
         reader = csv.DictReader(f)
         fields = list(reader.fieldnames)
         rows = [r for r in reader if r.get("source") != "overture"]   # rebuilt each run
-    for extra in ("source", "est_ebitda_margin"):
+    for extra in ("source", "est_ebitda_margin", "est_inflation", "est_growth", "parent_key", "parent_name"):
         if extra not in fields:
             fields.append(extra)
     for r in rows:
@@ -160,8 +182,17 @@ def main():
     benchmarks = load_benchmarks()
     margins = Margins()
     borrowers = BorrowerIndex(rows)
+    # Listed PPP companies by full name, to recognise their other locations ("Minick Materials" in
+    # Norman is a branch of MINICK MATERIALS COMPANY in Oklahoma City, not a separate business).
+    by_full = defaultdict(list)
+    for r in rows:
+        if r.get("geo_precision") in LISTED and r.get("est_revenue_mid"):
+            by_full[full_name(r["name"])].append(r)
     _, _, _, places = load_layers(state)
     cols = {c: places.column(c).to_pylist() for c in places.column_names}
+    name_counts = defaultdict(int)
+    for n in cols["name"]:
+        name_counts[full_name(n or "")] += 1
 
     added, skipped = [], defaultdict(int)
     seen = {}   # (name tokens, ~100 m cell) -> index in added, to drop duplicate Overture records
@@ -192,6 +223,14 @@ def main():
             skipped["duplicate place"] += 1
             continue
         _, bench = lookup(benchmarks, code)
+        parents = by_full.get(full_name(name), [])
+        if (len(parents) == 1 and len(tokens) >= 2 and not code.startswith(FRANCHISE_HEAVY)
+                and name_counts[full_name(name)] <= MAX_BRANCHES):
+            p = parents[0]
+            seen[key] = len(added)
+            added.append(branch_row(get, name, code, bench, state, zip5, lat, lon, p))
+            skipped["branch of a listed company (kept as a location)"] += 1
+            continue
         low, mid, high = avg
         margin = margins.margin(code, mid)   # industry margin at the typical size
         seen[key] = len(added)

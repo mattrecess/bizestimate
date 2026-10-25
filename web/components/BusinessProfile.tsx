@@ -89,7 +89,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           </div>
           <div className="badges">
             <span className="badge info">{industryLabel(b.naics) ?? b.industry}</span>
-            {avg ? <span className="badge">Industry avg</span>
+            {b.est_method === "branch" ? <span className="badge">Branch location</span>
+              : avg ? <span className="badge">Industry avg</span>
+              : b.est_method === "verified" ? <span className="badge good">Verified financials</span>
               : reported ? <span className="badge good">Reported financials</span>
               : fromPlan ? <span className="badge good">401(k) plan data</span>
               : <span className="badge good">PPP loan data</span>}
@@ -136,7 +138,20 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         ))}
       </div>
 
-      {tab === "overview" && (
+      {tab === "overview" && b.est_method === "branch" && (
+        <div className="branch-note">
+          <Icon name="map" size={18} />
+          <div>
+            <b>A location of {b.parent_name}</b>
+            <div className="sub">Revenue, EBITDA and value are for the whole company, on its profile.</div>
+          </div>
+          {b.parent_id && (onSelect
+            ? <a className="btn primary" href={`/business/${b.parent_id}`} onClick={(e) => { e.preventDefault(); onSelect(Number(b.parent_id)); }}>View company</a>
+            : <Link className="btn primary" href={`/business/${b.parent_id}`}>View company</Link>)}
+        </div>
+      )}
+
+      {tab === "overview" && b.est_method !== "branch" && (
         <>
           {value && (
             <div className="value-banner">
@@ -210,6 +225,14 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               <tr><td>Cross-check: revenue implied by PPP payroll</td><td className="num">{money(b.est_revenue_by_payroll)}</td></tr>
             </tbody></table>
           )}
+          {(Number(b.est_inflation) > 1.001 || Math.abs(Number(b.est_growth || 1) - 1) > 0.001) && (
+            <p className="disclaimer">Brought up to date: {Number(b.est_inflation) > 1.001 && <>
+              prices are {Math.round((Number(b.est_inflation) - 1) * 100)}% higher than in the benchmark&apos;s year</>}
+              {Number(b.est_inflation) > 1.001 && Math.abs(Number(b.est_growth || 1) - 1) > 0.001 && " and "}
+              {Math.abs(Number(b.est_growth || 1) - 1) > 0.001 && <>Oklahoma employment in this industry has
+                {Number(b.est_growth) >= 1 ? " grown " : " fallen "}{Math.abs(Math.round((Number(b.est_growth) - 1) * 100))}% since 2020</>}
+              , both included above.</p>
+          )}
           {b.est_method === "payroll" && (
             <table><tbody>
               <tr><td colSpan={2}>No employee count was reported, so this uses the PPP loan instead.</td></tr>
@@ -223,6 +246,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <p>This looks like a one-person business with no employee count. Its PPP loan was sized on owner earnings
               rather than payroll, so we treat the annualized amount as owner earnings (≈ EBITDA) and assume a 30% net
               margin to estimate revenue. Treat these numbers as rough.</p>
+          )}
+          {b.est_method === "verified" && (
+            <p>These are the business&apos;s actual figures, provided to BizEstimate, not an estimate.</p>
           )}
           {reported && (
             <p>These are the business&apos;s own reported figures, from {src.sec ? "its SEC annual report (10-K)"

@@ -36,6 +36,7 @@ jobs:
           mkdir -p data/cache
           python etl/migrate.py
           python etl/margins.py --fetch || echo "IRS margins unavailable"
+          python etl/adjust.py --fetch || echo "Inflation/growth figures unavailable"
           # One module per line in etl/sources.txt (or just those in etl/sources_quick.txt while
           # developing one); each is non-fatal.
           list=etl/sources.txt
@@ -51,6 +52,7 @@ jobs:
           PYTHONUNBUFFERED: "1"
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
           SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}

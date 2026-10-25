@@ -19,7 +19,8 @@ export async function GET(req: NextRequest) {
       geometry: { type: "Point", coordinates: [r.lon, r.lat] },
       properties: {
         id: Number(r.id), name: r.name, rev: Number(r.est_revenue_mid),
-        label: shortMoney(Number(r.est_revenue_mid)), avg: r.est_method === "industry_average" ? 1 : 0,
+        label: Number(r.est_revenue_mid) > 0 ? shortMoney(Number(r.est_revenue_mid)) : undefined,
+        avg: r.est_method === "industry_average" ? 1 : 0,
       },
     })),
   }, { headers: { "Cache-Control": CACHE } });
