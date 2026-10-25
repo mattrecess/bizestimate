@@ -56,6 +56,18 @@ def db():
                                 "order by age desc nulls last limit 15"):
             print("activity:", row)
         print("rows:", conn.execute("select count(*), pg_size_pretty(pg_total_relation_size('businesses')) from businesses").fetchone())
+        for row in conn.execute("""select id, name, city, website, owner_name, owner_source, est_method, source,
+                                          est_revenue_mid::bigint from businesses where name ilike '%hunter mechanical%'"""):
+            print("  hunter:", row)
+        print("owners coverage:", conn.execute("""select count(*), count(nullif(owner_name, '')),
+            count(*) filter (where coalesce(website, '') <> ''),
+            count(*) filter (where coalesce(website, '') = '' and coalesce(owner_name, '') = ''),
+            count(*) filter (where coalesce(owner_name, '') = '' and est_revenue_mid >= 1000000)
+            from businesses""").fetchone())
+        print("team titles with owner roles but no owner:", conn.execute("""select count(distinct b.biz_key) from businesses b
+            join business_sources s on s.biz_key = b.biz_key and s.source = 'website_profile',
+            jsonb_array_elements(coalesce(s.data -> 'team', '[]')) p
+            where coalesce(b.owner_name, '') = '' and p ->> 'title' ~* '(owner|founder|president|ceo|principal)'""").fetchone())
         top = "(select * from businesses order by est_revenue_mid desc nulls last limit 1000) t"
         print("top1000 by city:", conn.execute(f"select city, count(*) from {top} group by 1 order by 2 desc limit 15").fetchall())
         print("all by city:", conn.execute("select city, count(*) from businesses group by 1 order by 2 desc limit 8").fetchall())
