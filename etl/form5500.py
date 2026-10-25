@@ -12,6 +12,7 @@ years are re-downloaded monthly because late filings keep arriving.
 import argparse
 import csv
 import io
+import json
 import os
 import re
 import sys
@@ -23,6 +24,7 @@ from datetime import date
 
 import psycopg
 
+import enrich
 import headcount_estimates
 from csvio import write_rows
 from load import database_url
@@ -35,14 +37,16 @@ BASE = os.environ.get("FORM5500_URL") or "https://askebsa.dol.gov/FOIA%20Files/{
 FORMS = ["F_5500", "F_5500_SF"]
 FIRST_YEAR = 2020
 REFRESH_DAYS = 30
-CACHE_VERSION = 3   # bump when the row filter changes: the cache only holds rows that passed it
+CACHE_VERSION = 4   # bump when the row filter changes: the cache only holds rows that passed it
 # Staffing firms report every temp worker they've placed nationwide (hundreds of thousands); those
 # aren't the business's own employees.
 MAX_PARTICIPANTS = 25_000
 # Plan-entity code meaning "single employer" differs by form: 2 on the 5500 (1 = multiemployer,
 # 3 = multiple-employer), 1 on the 5500-SF (2 = multiple-employer).
 SINGLE_EMPLOYER = {"F_5500": ("", "2"), "F_5500_SF": ("", "1")}
-CACHE_COLS = ["year", "form", "ein", "plan_num", "name", "dba", "address", "city", "zip", "naics", "active"]
+CACHE_COLS = ["year", "form", "ein", "plan_num", "name", "dba", "address", "city", "zip", "naics", "active",
+              "ack_id", "signer"]
+SCH_H = "https://askebsa.dol.gov/FOIA%20Files/{year}/Latest/F_SCH_H_{year}_Latest.zip"
 
 csv.field_size_limit(sys.maxsize)
 
@@ -62,6 +66,9 @@ FIELDS = {
     "loc_state": [r"^(SF_)?SPONS(_DFE)?_LOC_US_STATE$"],
     "loc_zip": [r"^(SF_)?SPONS(_DFE)?_LOC_US_ZIP$"],
     "naics": [r"^(SF_)?BUSINESS_CODE$"],
+    "ack_id": [r"^ACK_ID$"],
+    # Who signed the filing for the employer (often the owner, CFO or head of HR).
+    "signer": [r"^SPONS_SIGNED_NAME$", r"^SF_SPONS_SIGNED_NAME$"],
     # Active participants at year end; the 5500-SF only has it on newer layouts, else total at year end.
     "active": [r"^TOT_ACTIVE_PARTCP_CNT$", r"^SF_TOT_ACT_PARTCP_EOY_CNT$", r"^SF_TOT_PARTCP_EOY_CNT$"],
     "pension": [r"^(SF_)?TYPE_PENSION_BNFT_CODE$"],
@@ -146,7 +153,7 @@ def read_csv(f, year, form, state):
             "year": year, "form": form, "ein": get(r, "ein"), "plan_num": get(r, "plan_num"),
             "name": get(r, "name"), "dba": get(r, "dba"), "address": get(r, pre + "address"),
             "city": get(r, pre + "city"), "zip": get(r, pre + "zip")[:5], "naics": get(r, "naics"),
-            "active": active,
+            "active": active, "ack_id": get(r, "ack_id"), "signer": get(r, "signer"),
         })
     print(f"Form 5500: {form} {year}: {kept:,} {state} retirement plans of {seen:,} filings; "
           f"in-state filings by type: {dict(why.most_common(8))}", flush=True)
@@ -190,6 +197,58 @@ def sponsors_by_year(rows):
             if n:
                 s["names"].add(n.upper())
         s["places"].add((r["address"].upper(), r["city"].upper(), r["zip"]))
+        s.setdefault("filings", []).append((r["year"], r.get("ack_id") or "", (r.get("signer") or "").strip()))
+    return out
+
+
+def load_auditors(years, ack_ids):
+    """{ack_id: audit firm} from Schedule H (plans with 100+ participants must be audited by an
+    independent accountant, usually the employer's CPA firm). Cached per year."""
+    out = {}
+    for year in years:
+        path = os.path.join(CACHE_DIR, f"auditors_{year}_v1.json")
+        recent = year >= date.today().year - 2
+        if os.path.exists(path) and not (recent and time.time() - os.path.getmtime(path) > REFRESH_DAYS * 86400):
+            with open(path) as f:
+                out.update(json.load(f))
+            continue
+        found = {}
+        try:
+            with tempfile.TemporaryFile() as tmp:
+                with urlopen(SCH_H.format(year=year), timeout=900) as r:
+                    while chunk := r.read(1 << 20):
+                        tmp.write(chunk)
+                tmp.seek(0)
+                with zipfile.ZipFile(tmp) as z:
+                    name = next(n for n in z.namelist() if n.lower().endswith(".csv"))
+                    with z.open(name) as f:
+                        reader = csv.reader(io.TextIOWrapper(f, encoding="latin-1", newline=""))
+                        header = [h.strip().upper() for h in next(reader)]
+                        ia, ifirm = header.index("ACK_ID"), next(i for i, h in enumerate(header) if h.endswith("ACCOUNTANT_FIRM_NAME"))
+                        for row in reader:
+                            if len(row) > ifirm and row[ia] in ack_ids and row[ifirm].strip():
+                                found[row[ia]] = row[ifirm].strip()
+        except Exception as e:  # noqa: BLE001
+            print(f"Form 5500: Schedule H {year} unavailable ({e!r})", flush=True)
+            continue
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(found, f)
+        out.update(found)
+        print(f"Form 5500: Schedule H {year}: audit firms for {len(found):,} {len(ack_ids):,}-filing plans", flush=True)
+    return out
+
+
+def people(sponsor, auditors):
+    """Newest signer and audit firm for one sponsor's filings."""
+    filings = sorted(sponsor.get("filings", []), reverse=True)
+    signer = next(((y, n) for y, _, n in filings if n and len(n.split()) >= 2), None)
+    auditor = next(((y, auditors[a]) for y, a, _ in filings if a in auditors), None)
+    out = {}
+    if signer:
+        out["signer"] = {"name": signer[1].title() if signer[1].isupper() else signer[1], "year": signer[0]}
+    if auditor:
+        out["auditor"] = {"firm": auditor[1], "year": auditor[0]}
     return out
 
 
@@ -241,6 +300,17 @@ def main():
                 for year, (n, ein) in years.items():
                     cp.write_row((key, year, n, "form5500", ein, sponsors[ein]["naics"]))
         cur.execute("analyze headcounts")
+        # People on the filings: who signed for the employer, and the plan's audit firm.
+        ack_ids = {a for e in matches for _, a, _ in sponsors[e].get("filings", []) if a}
+        auditors = load_auditors(range(FIRST_YEAR, date.today().year + 1), ack_ids)
+        found = {}
+        for ein, key in matches.items():
+            p = people(sponsors[ein], auditors)
+            if p and (key not in found or len(p) > len(found[key])):
+                found[key] = p
+        enrich.save(cur, state, "form5500_people", found)
+        print(f"Form 5500: signers for {sum(1 for p in found.values() if 'signer' in p):,} businesses, "
+              f"audit firms for {sum(1 for p in found.values() if 'auditor' in p):,}", flush=True)
         headcount_estimates.apply(cur, state)
     print("Form 5500: headcounts saved", flush=True)
 
