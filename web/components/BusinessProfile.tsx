@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Business, Comparable, Headcount, Loan } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import HeadcountChart from "./HeadcountChart";
+import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
 import { estimateValue } from "@/lib/valuation";
 import { industryLabel } from "@/lib/industries";
@@ -55,7 +56,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   const reported = b.est_method === "reported";              // SEC, FDIC or Form 990 figures
   const src = Object.fromEntries((b.sources ?? []).map((s) => [s.source, s.data as Record<string, any>]));  // eslint-disable-line @typescript-eslint/no-explicit-any
   const value = estimateValue({ ...b, public_company: !!src.sec || undefined, is_nonprofit: b.is_nonprofit || !!src.irs990 });
-  const founded = src.founded?.year ?? src.fdic?.founded ?? src.fmcsa?.registered ?? null;
+  // Earliest of the record-based year and the founding year the company's own site states.
+  const founded = [src.founded?.year, src.fdic?.founded, src.fmcsa?.registered, src.website_profile?.founded_year]
+    .filter((y): y is number => typeof y === "number").sort((a, b) => a - b)[0] ?? null;
   const ownershipChange = src.sba?.ownership_change_year ?? null;
   const latest = b.headcounts?.length ? b.headcounts[b.headcounts.length - 1] : null;
   // The margin actually applied (IRS industry margin adjusted for size) when the data has it.
@@ -90,6 +93,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               : reported ? <span className="badge good">Reported financials</span>
               : fromPlan ? <span className="badge good">401(k) plan data</span>
               : <span className="badge good">PPP loan data</span>}
+            {src.website_profile?.family_owned && (
+              <span className="badge good">Family-owned{src.website_profile.generation ? ` · gen ${src.website_profile.generation}` : ""}</span>
+            )}
             {founded && <span className="badge" title={src.founded ? `Earliest record: ${src.founded.basis}` : undefined}>Since {founded}</span>}
             {ownershipChange && <span className="badge warn">New owners FY{ownershipChange}</span>}
             {src.sec && <span className="badge info">Public company</span>}
@@ -184,6 +190,8 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <HeadcountChart
             ppp={b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null}
             plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
+          <PeopleAdvisors sources={b.sources ?? []} owner={b.owner_name}
+            lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
           <PublicRecords sources={b.sources ?? []} />
           {!compact && b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
         </>

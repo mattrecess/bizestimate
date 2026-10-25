@@ -313,3 +313,20 @@ footer.foot nav { display: flex; gap: 16px; }
 .fact b { font-weight: 600; text-align: right; }
 table.mini { font-size: 12.5px; margin: 0 0 4px; }
 table.mini td { padding: 3px 4px; }
+
+/* People & advisors */
+.people { margin-top: 18px; }
+.people h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 16px 0 8px; }
+.history { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; }
+.history-facts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: 600; }
+.history blockquote { margin: 8px 0 0; color: var(--muted); font-style: italic; }
+.history blockquote a { margin-left: 6px; color: var(--muted); }
+.people-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.people-list li { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel); }
+.people-list .who { font-weight: 600; }
+.people-list .src, .advisor-list .src { color: var(--muted); font-size: 12px; }
+.avatar.sm { width: 32px; height: 32px; font-size: 12px; flex: none; }
+.advisor-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.advisor-list li { display: grid; grid-template-columns: 96px 1fr; column-gap: 10px; align-items: baseline; }
+.advisor-list .kind { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.advisor-list .src { grid-column: 2; }
