@@ -76,6 +76,13 @@ def norm(s):
     return re.sub(r"\s+", " ", s or "").strip().lower()
 
 
+def own_staff(title):
+    """False for "Maintenance Manager, BP Cherry Point Refinery" or "Director at Acme": someone at
+    another company (usually a customer testimonial), not this business's staff."""
+    elsewhere = re.search(r"\bat\b|,\s*\S+(\s+\S+){2,}", title)
+    return not elsewhere or bool(re.search(r",\s*(CPA|PE|PhD|MD|DDS|Esq|Jr|Sr|LLC|Inc)\b", title))
+
+
 def verify(data, pages):
     """Keep only what appears verbatim on the cited page."""
     texts = [norm(t) for _, t in pages]
@@ -99,11 +106,7 @@ def verify(data, pages):
     team, seen = [], set()
     for p in data.get("team") or []:
         name, title = (p.get("name") or "").strip(), (p.get("title") or "").strip()
-        # "Maintenance Manager, BP Cherry Point Refinery" / "Director at Acme": someone at another
-        # company (usually a customer testimonial), not this business's staff.
-        elsewhere = re.search(r"\bat\b|,\s*\S+(\s+\S+){2,}", title) and not re.search(r",\s*(CPA|PE|PhD|MD|DDS|Esq|Jr|Sr|LLC|Inc)\b", title)
-        if (len(name.split()) >= 2 and title and not elsewhere and on(name, p.get("page") or 0)
-                and norm(name) not in seen):
+        if len(name.split()) >= 2 and title and own_staff(title) and on(name, p.get("page") or 0) and norm(name) not in seen:
             seen.add(norm(name))
             team.append({"name": name, "title": title[:60], "url": pages[p["page"] - 1][0]})
     if team:
@@ -222,7 +225,11 @@ def main():
             print("website_profile: no ANTHROPIC_API_KEY; saving cached results only", flush=True)
         out = {}
         for r in rows:
-            hit = cache.get(r["website"].strip())
+            hit = dict(cache.get(r["website"].strip()) or {})
+            if hit.get("team"):   # also filters results cached before a rule was added
+                hit["team"] = [p for p in hit["team"] if own_staff(p["title"])] or None
+                if not hit["team"]:
+                    hit.pop("team")
             if hit:
                 out[r["biz_key"]] = hit
         fam = sum(1 for d in out.values() if d.get("family_owned"))
