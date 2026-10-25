@@ -57,6 +57,10 @@ alter table businesses add column if not exists source text;         -- 'ppp' (l
 alter table businesses add column if not exists est_ebitda_margin numeric;   -- EBITDA margin applied (IRS, size-adjusted)
 alter table businesses add column if not exists est_inflation numeric;   -- price change applied (benchmark year -> now)
 alter table businesses add column if not exists est_growth numeric;      -- industry job growth applied (2020 -> now)
+alter table businesses add column if not exists phone text;          -- listed number (Overture places)
+alter table businesses add column if not exists site_phone text;     -- from the business's own website (etl/owners.py)
+alter table businesses add column if not exists site_email text;     -- company address on its own website
+alter table businesses add column if not exists contact_page text;   -- page the website contact was found on
 alter table businesses add column if not exists parent_key text;         -- a location of this listed company (est_method 'branch')
 alter table businesses add column if not exists parent_name text;
 -- Search form of the name: upper case, punctuation dropped, single letters joined ("J & K" -> "JK").
@@ -154,4 +158,36 @@ create table if not exists known_financials (
   note       text,
   is_public  boolean not null default false,
   updated_at timestamptz not null default now()
+);
+
+-- Contact details: people asking for theirs to be removed or corrected (reviewed in /admin), and
+-- businesses whose contact details are hidden as a result.
+create table if not exists contact_requests (
+  id         bigserial primary key,
+  biz_key    text,
+  kind       text not null,             -- 'remove' | 'correct' | 'other'
+  name       text,
+  email      text,
+  message    text,
+  status     text not null default 'open',   -- 'open' | 'done' | 'dismissed'
+  created_at timestamptz not null default now()
+);
+create table if not exists contact_optouts (
+  biz_key    text primary key,
+  created_at timestamptz not null default now()
+);
+
+-- Owner contact lookups made from /admin with a paid contact-data account (RocketReach). Private:
+-- licensed for the account holder's own use, never shown on public pages.
+create table if not exists contact_lookups (
+  id          bigserial primary key,
+  biz_key     text not null,
+  provider    text not null,
+  person_name text not null,
+  provider_id text,
+  status      text,
+  data        jsonb,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (biz_key, provider, person_name)
 );

@@ -18,7 +18,7 @@ from collections import defaultdict
 from benchmarks import load_benchmarks, lookup
 from margins import Margins
 from matching import name_score, name_tokens, full_name
-from overture import _meters, load_layers, pick_website
+from overture import _meters, load_layers, pick_phone, pick_website
 from csvio import write_rows
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -156,6 +156,7 @@ def branch_row(get, name, code, bench, state, zip5, lat, lon, parent):
         "business_type": "", "is_individual": "False", "is_nonprofit": "False",
         "lat": lat, "lon": lon, "geo_precision": "place", "est_method": "branch", "est_confidence": "",
         "website": pick_website(get("websites")) or "", "source": "overture",
+        "phone": pick_phone(get("phones")) or "",
         "parent_key": parent["biz_key"], "parent_name": parent["name"],
     }
 
@@ -172,7 +173,7 @@ def main():
         reader = csv.DictReader(f)
         fields = list(reader.fieldnames)
         rows = [r for r in reader if r.get("source") != "overture"]   # rebuilt each run
-    for extra in ("source", "est_ebitda_margin", "est_inflation", "est_growth", "parent_key", "parent_name"):
+    for extra in ("source", "est_ebitda_margin", "est_inflation", "est_growth", "parent_key", "parent_name", "phone"):
         if extra not in fields:
             fields.append(extra)
     for r in rows:
@@ -197,7 +198,7 @@ def main():
     added, skipped = [], defaultdict(int)
     seen = {}   # (name tokens, ~100 m cell) -> index in added, to drop duplicate Overture records
     for i in range(places.num_rows):
-        get = lambda c: cols[c][i]  # noqa: E731
+        get = lambda c: cols[c][i] if c in cols else None  # noqa: E731
         name, lat, lon = (get("name") or "").strip(), get("lat"), get("lon")
         zip5 = (get("postcode") or "")[:5]
         region = (get("region") or "").upper()
@@ -244,7 +245,7 @@ def main():
             "est_ebitda_mid": round(mid * margin), "est_ebitda_high": round(high * margin),
             "est_revenue_by_employees": "", "est_revenue_by_payroll": "", "est_method": "industry_average",
             "est_confidence": "low", "total_ppp_amount": "", "est_ebitda_margin": margin if margins.data else "", "website": pick_website(get("websites")) or "",
-            "source": "overture",
+            "phone": pick_phone(get("phones")) or "", "source": "overture",
         })
 
     write_rows(BIZ_CSV, fields, rows + added)

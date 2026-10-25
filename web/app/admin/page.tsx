@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sql } from "@/lib/db";
 import { money } from "@/lib/format";
-import { adminConfigured, isAdmin, signIn, signOut } from "@/lib/admin";
+import { adminConfigured, businessId, isAdmin, signIn, signOut } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin | BizEstimate", robots: { index: false, follow: false } };
@@ -11,12 +11,6 @@ type Row = {
   id: string; name: string; city: string; revenue: string | null; ebitda: string | null; year: number | null;
   note: string | null; is_public: boolean; est_revenue_mid: string | null; est_ebitda_mid: string | null; est_method: string;
 };
-
-// "https://.../business/1316278", "?id=1316278" or "1316278" -> "1316278".
-function businessId(input: string) {
-  const s = input.trim();
-  return s.match(/\/business\/(\d+)/)?.[1] ?? s.match(/[?&]id=(\d+)/)?.[1] ?? s.match(/^(\d+)$/)?.[1] ?? null;
-}
 
 const dollars = (v: FormDataEntryValue | null) => {
   const s = String(v ?? "").trim().toLowerCase().replace(/[$,\s]/g, "");
@@ -106,7 +100,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
     <main className="page admin">
       <div className="admin-head">
         <h1>Verified figures</h1>
-        <form action={logout}><button className="link-btn">Sign out</button></form>
+        <div className="admin-nav"><a href="/admin/contacts">Contacts &amp; requests</a><form action={logout}><button className="link-btn">Sign out</button></form></div>
       </div>
       <p className="disclaimer">Actual revenue and EBITDA you know for a business. Private by default: they&apos;re used only
         to measure and tune the estimates. Tick &ldquo;show publicly&rdquo; only when the figures may appear on the site.</p>

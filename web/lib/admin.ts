@@ -35,3 +35,9 @@ export async function signIn(attempt: string) {
 export async function signOut() {
   (await cookies()).delete({ name: COOKIE, path: "/admin" });
 }
+
+// "https://.../business/1316278", "?id=1316278" or "1316278" -> "1316278".
+export function businessId(input: string) {
+  const s = input.trim();
+  return s.match(/\/business\/(\d+)/)?.[1] ?? s.match(/[?&]id=(\d+)/)?.[1] ?? s.match(/^(\d+)$/)?.[1] ?? null;
+}

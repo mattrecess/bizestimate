@@ -78,12 +78,12 @@ def load_layers(state):
             "ymin": pc.field("bbox", "ymin"), "ymax": pc.field("bbox", "ymax"),
         }, bounds)
         pq.write_table(t, bld_path)
-    places_path = os.path.join(DATA_DIR, f"overture_{state.lower()}_places_v4_{release}.parquet")
+    places_path = os.path.join(DATA_DIR, f"overture_{state.lower()}_places_v5_{release}.parquet")
     if not os.path.exists(places_path):
         print(f"Overture {release}: downloading {state} places…", flush=True)
         t = _fetch(fs, release, "places", "place", {
             "name": pc.field("names", "primary"), "confidence": pc.field("confidence"),
-            "websites": pc.field("websites"),
+            "websites": pc.field("websites"), "phones": pc.field("phones"),
             "postcode": pc.struct_field(pc.list_element(pc.field("addresses"), 0), "postcode"),
             # used by places_only.py to list businesses that aren't in the loan data
             "id": pc.field("id"),
@@ -191,12 +191,24 @@ def pick_website(urls):
     return (own or good or [None])[0]
 
 
+def pick_phone(numbers):
+    """The first listed number as (405) 555-0123, or None if it isn't a US 10-digit number."""
+    for n in numbers or []:
+        digits = re.sub(r"\D", "", n or "")
+        if len(digits) == 11 and digits[0] == "1":
+            digits = digits[1:]
+        if len(digits) == 10 and digits[0] not in "01":
+            return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+    return None
+
+
 class PlaceIndex:
     CELL = 0.01  # degrees, ~1 km
 
     def __init__(self, table):
         self.cells = defaultdict(list)
         websites = table.column("websites").to_pylist() if "websites" in table.column_names else None
+        phones = table.column("phones").to_pylist() if "phones" in table.column_names else None
         postcodes = table.column("postcode").to_pylist() if "postcode" in table.column_names else None
         rows = zip(*(table.column(c).to_pylist() for c in ("name", "confidence", "lat", "lon")))
         n = 0
@@ -206,12 +218,13 @@ class PlaceIndex:
                 continue
             site = pick_website(websites[idx]) if websites else None
             zip5 = ((postcodes[idx] if postcodes else None) or "")[:5]
-            self.cells[(int(lon // self.CELL), int(lat // self.CELL))].append((tokens, lat, lon, site, zip5))
+            phone = pick_phone(phones[idx]) if phones else None
+            self.cells[(int(lon // self.CELL), int(lat // self.CELL))].append((tokens, lat, lon, site, zip5, phone))
             n += 1
         print(f"Indexed {n:,} Overture places", flush=True)
 
     def find(self, name, lat, lon, zip5=None):
-        """Best same-name place near (lat, lon) as (lat, lon, website), or None.
+        """Best same-name place near (lat, lon) as (lat, lon, website, phone), or None.
 
         With zip5 (the business's location is only known to ZIP level) the search covers the whole
         ZIP area but only accepts near-exact names on places listed in that same ZIP.
@@ -226,7 +239,7 @@ class PlaceIndex:
         best, best_key = None, None
         for i in range(cx - reach, cx + reach + 1):
             for j in range(cy - reach, cy + reach + 1):
-                for p_tokens, p_lat, p_lon, p_site, p_zip in self.cells.get((i, j), ()):
+                for p_tokens, p_lat, p_lon, p_site, p_zip, p_phone in self.cells.get((i, j), ()):
                     score = name_score(tokens, p_tokens)
                     if score < PLACE_MIN_SCORE:
                         continue
@@ -235,14 +248,15 @@ class PlaceIndex:
                     d = math.hypot((p_lon - lon) * mx, (p_lat - lat) * my)
                     if d > radius:
                         continue
-                    key = (score, p_site is not None, -d)
+                    key = (score, p_site is not None, p_phone is not None, -d)
                     if best_key is None or key > best_key:
-                        best, best_key = (p_lat, p_lon, p_site), key
+                        best, best_key = (p_lat, p_lon, p_site, p_phone), key
         return best
 
 
 def place(state, rows):
-    """rows: [(biz_key, name, address, zip5, lat, lon, street_level)] -> {biz_key: (lat, lon, precision, website)}
+    """rows: [(biz_key, name, address, zip5, lat, lon, street_level)]
+    -> {biz_key: (lat, lon, precision, website, phone)}
 
     lat/lon is the Census street-level point (street_level=True), or the ZIP centre when the Census
     had no match; the ZIP centre is only used to search for same-name places nearby.
@@ -256,14 +270,14 @@ def place(state, rows):
             hit = addresses.find(parsed[0], parsed[1], zip5)
             if hit:
                 snapped = buildings.snap(*hit, max_m=15) or hit
-                out[biz_key] = (snapped[0], snapped[1], "rooftop", None)
+                out[biz_key] = (snapped[0], snapped[1], "rooftop", None, None)
                 counts["exact address point"] += 1
                 continue
         if s_lat is not None:
             hit = places.find(name, s_lat, s_lon, None if street_level else zip5)
             if hit:
                 snapped = buildings.snap(hit[0], hit[1], max_m=20) or hit
-                out[biz_key] = (snapped[0], snapped[1], "place", hit[2])
+                out[biz_key] = (snapped[0], snapped[1], "place", hit[2], hit[3])
                 counts["business name match"] += 1
                 continue
         if parsed:
@@ -271,23 +285,24 @@ def place(state, rows):
             if guess:
                 snapped = buildings.snap(*guess)
                 if snapped:
-                    out[biz_key] = (snapped[0], snapped[1], "building", None)
+                    out[biz_key] = (snapped[0], snapped[1], "building", None, None)
                     counts["neighbours + building"] += 1
                     continue
         if s_lat is not None and street_level:
             snapped = buildings.snap(s_lat, s_lon)
             if snapped:
-                out[biz_key] = (snapped[0], snapped[1], "building", None)
+                out[biz_key] = (snapped[0], snapped[1], "building", None, None)
                 counts["street point + building"] += 1
                 continue
         counts["no building found"] += 1
-    # Websites: for businesses not placed via a place match, look for a same-name place near the pin.
+    # Website and phone: for businesses not placed via a place match, look for a same-name place near the pin.
     names = {r[0]: r[1] for r in rows}
-    for biz_key, (lat, lon, precision, site) in out.items():
+    for biz_key, (lat, lon, precision, site, phone) in out.items():
         if site is None and precision != "place":
             hit = places.find(names[biz_key], lat, lon)
-            if hit and hit[2]:
-                out[biz_key] = (lat, lon, precision, hit[2])
+            if hit and (hit[2] or hit[3]):
+                out[biz_key] = (lat, lon, precision, hit[2], hit[3])
     with_site = sum(1 for v in out.values() if v[3])
-    print(f"Overture {release} placement: {dict(counts)}; websites found: {with_site:,}", flush=True)
+    with_phone = sum(1 for v in out.values() if v[4])
+    print(f"Overture {release} placement: {dict(counts)}; websites found: {with_site:,}; phones: {with_phone:,}", flush=True)
     return out

@@ -8,6 +8,10 @@ About/Team/Leadership pages, then looks for schema.org founder data and phrases 
 Results (including misses) are cached per website in data/owners_cache.csv and rechecked
 after RECHECK_DAYS, so daily runs only visit new sites. Adds owner_name, owner_title and
 owner_source columns to data/businesses.csv.
+
+The same pages (plus a Contact page) give the contact details the business publishes about itself:
+site_phone (tel: links first), site_email (up to three addresses, its own domain first; web
+designers' and platform addresses are dropped) and contact_page.
 """
 import csv
 import html
@@ -35,6 +39,16 @@ MAX_BYTES = 1_000_000
 MAX_EXTRA_PAGES = 3
 RECHECK_DAYS = 90
 SOCIAL = ("facebook.com", "instagram.com", "twitter.com", "x.com", "linkedin.com", "yelp.com", "tiktok.com")
+CONTACT_LINK = re.compile(r"contact|reach-us|get-in-touch|locations?\b", re.I)
+CONTACTS_VERSION = "1"     # cached sites scanned before contacts were collected are rescanned
+MAX_EMAILS = 3
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+PHONE_RE = re.compile(r"(?<![\d-])(?:\+?1[\s.\-]?)?\(?([2-9]\d{2})\)?[\s.\-]?([2-9]\d{2})[\s.\-]?(\d{4})(?![\d-])")
+FREE_MAIL = ("gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "aol.com", "icloud.com", "sbcglobal.net",
+             "att.net", "cox.net", "live.com", "msn.com", "me.com", "windstream.net", "swbell.net")
+# Addresses on pages that aren't the business's own (site builders, error trackers, placeholders).
+JUNK_MAIL = ("example.", "domain.com", "yourdomain", "email.com", "sentry", "wixpress", "wix.com", "godaddy",
+             "squarespace", "wordpress", "schema.org", "w3.org", "mysite", "yoursite", "company.com", "test.com")
 ABOUT_LINK = re.compile(r"about|team|our-story|story|leadership|staff|who-we-are|meet|people|owner|history", re.I)
 
 # Titles we accept, strongest first.
@@ -161,7 +175,14 @@ def collect_pages(site):
             continue
         if same_host and ABOUT_LINK.search(href) and url not in links:
             links.append(url)
-    for url in links[:MAX_EXTRA_PAGES]:
+    contact = next((urllib.parse.urljoin(final, h) for h in re.findall(r'(?i)<a[^>]+href=["\']([^"\'#]+)', raw)
+                    if CONTACT_LINK.search(h) and not h.lower().startswith(("mailto:", "tel:"))), None)
+    try:
+        if contact and urllib.parse.urlparse(contact).netloc == host and contact not in links[:MAX_EXTRA_PAGES]:
+            links = links[:MAX_EXTRA_PAGES] + [contact]
+    except ValueError:
+        pass
+    for url in links[:MAX_EXTRA_PAGES + 1]:
         if _allowed(robots, url):
             page, page_url = _fetch(url)
             if page:
@@ -169,23 +190,78 @@ def collect_pages(site):
     return pages
 
 
+def _host(url):
+    host = (urllib.parse.urlparse(url).netloc or "").lower().split(":")[0]
+    return host[4:] if host.startswith("www.") else host
+
+
+def _base(domain):
+    """'mail.acme-co.com' -> 'acme-co.com' (good enough for .com/.net/.org/.us sites)."""
+    return ".".join(domain.split(".")[-2:])
+
+
+def format_phone(number):
+    digits = re.sub(r"\D", "", number or "")
+    if len(digits) == 11 and digits[0] == "1":
+        digits = digits[1:]
+    if len(digits) != 10 or digits[0] in "01" or digits[3] in "01" or digits[3:6] == "555":
+        return None
+    return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+
+
+def contacts(pages):
+    """(phone, [emails], page_url) the business publishes on its own site."""
+    if not pages:
+        return None, [], ""
+    own = _base(_host(pages[0][0]))
+    phone = phone_page = None
+    emails = {}   # address -> (rank, page)
+    for url, raw in pages:
+        hrefs = re.findall(r'(?i)href=["\'](?:mailto|tel):([^"\'?]+)', raw)
+        text = _text(raw)
+        found = [urllib.parse.unquote(h).strip() for h in hrefs] + EMAIL_RE.findall(text)
+        for e in found:
+            e = e.lower().strip(".")
+            if not EMAIL_RE.fullmatch(e) or any(j in e for j in JUNK_MAIL) or e.endswith((".png", ".jpg", ".gif", ".webp", ".svg")):
+                continue
+            domain = e.split("@")[1]
+            # Its own domain, or a free mailbox it lists; another company's domain is usually the web designer.
+            rank = 0 if _base(domain) == own else 1 if domain in FREE_MAIL else None
+            if rank is not None and (e not in emails or rank < emails[e][0]):
+                emails[e] = (rank, url)
+        if phone is None:
+            tel = [format_phone(h) for h in hrefs if not EMAIL_RE.fullmatch(h.strip())]
+            text_phones = [format_phone("".join(m)) for m in PHONE_RE.findall(text)]
+            hit = next((p for p in tel + text_phones if p), None)
+            if hit:
+                phone, phone_page = hit, url
+    best = sorted(emails, key=lambda e: emails[e][0])[:MAX_EMAILS]
+    page = phone_page or (emails[best[0]][1] if best else "")
+    return phone, best, page
+
+
 def scan(site, business_name):
-    """Best (name, title, source_url) on a business website, or None (also on any error, so one
-    malformed site can't stop the scan)."""
+    """(best (name, title, source_url) or None, (phone, emails, page)) for a business website
+    (empty on any error, so one malformed site can't stop the scan)."""
     try:
         return _scan(site, business_name)
     except Exception as e:  # noqa: BLE001
         print(f"Owners: skipped {site}: {e!r}", flush=True)
-        return None
+        return None, (None, [], "")
 
 
 def _scan(site, business_name):
     best = None
-    for url, page in collect_pages(site):
+    pages = collect_pages(site)
+    for url, page in pages:
         hit = extract(page, business_name)
         if hit and (best is None or _title_rank(hit[1]) < _title_rank(best[1])):
             best = (*hit, url)
-    return best
+    return best, contacts(pages)
+
+
+CACHE_FIELDS = ["website", "owner_name", "owner_title", "owner_source", "checked",
+                "site_phone", "site_email", "contact_page", "contacts_version"]
 
 
 def load_cache():
@@ -197,7 +273,7 @@ def load_cache():
 
 def save_cache(cache):
     with open(CACHE_CSV, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["website", "owner_name", "owner_title", "owner_source", "checked"])
+        w = csv.DictWriter(f, fieldnames=CACHE_FIELDS)
         w.writeheader()
         w.writerows(cache.values())
 
@@ -207,7 +283,7 @@ def main():
         reader = csv.DictReader(f)
         fields = reader.fieldnames
         rows = list(reader)
-    for extra in ("owner_name", "owner_title", "owner_source"):
+    for extra in ("owner_name", "owner_title", "owner_source", "site_phone", "site_email", "contact_page"):
         if extra not in fields:
             fields.append(extra)
 
@@ -219,7 +295,8 @@ def main():
         if (site and r.get("geo_precision") in LISTED and r.get("is_individual") != "True"
                 and not any(d in site.lower() for d in SOCIAL)):
             sites.setdefault(site, r["name"])
-    todo = [(s, n) for s, n in sites.items() if s not in cache or float(cache[s]["checked"] or 0) < cutoff]
+    todo = [(s, n) for s, n in sites.items() if s not in cache or float(cache[s]["checked"] or 0) < cutoff
+            or cache[s].get("contacts_version") != CONTACTS_VERSION]
     print(f"Owners: {len(sites):,} websites, {len(todo):,} to scan", flush=True)
 
     deadline = time.time() + TIME_BUDGET_MIN * 60
@@ -229,10 +306,12 @@ def main():
                 print(f"Owners: time budget used; {len(todo) - start:,} sites left for the next run", flush=True)
                 break
             chunk = todo[start:start + CHUNK]
-            for (site, _), result in zip(chunk, pool.map(lambda t: scan(*t), chunk)):
-                name, title, source = result or ("", "", "")
+            for (site, _), (owner, (phone, emails, page)) in zip(chunk, pool.map(lambda t: scan(*t), chunk)):
+                name, title, source = owner or ("", "", "")
                 cache[site] = {"website": site, "owner_name": name, "owner_title": title,
-                               "owner_source": source, "checked": f"{time.time():.0f}"}
+                               "owner_source": source, "checked": f"{time.time():.0f}",
+                               "site_phone": phone or "", "site_email": "; ".join(emails), "contact_page": page,
+                               "contacts_version": CONTACTS_VERSION}
             save_cache(cache)
             print(f"Owners: scanned {start + len(chunk):,}/{len(todo):,}", flush=True)
 
@@ -244,7 +323,12 @@ def main():
         r["owner_name"], r["owner_title"], r["owner_source"] = (
             (hit["owner_name"], hit["owner_title"], hit["owner_source"]) if good else ("", "", ""))
         found += bool(r["owner_name"])
+        r["site_phone"], r["site_email"], r["contact_page"] = (
+            (hit.get("site_phone") or "", hit.get("site_email") or "", hit.get("contact_page") or "") if hit else ("", "", ""))
     write_rows(BIZ_CSV, fields, rows)
+    with_phone = sum(bool(r["site_phone"]) for r in rows)
+    with_email = sum(bool(r["site_email"]) for r in rows)
+    print(f"Owners: website contacts: {with_phone:,} phones, {with_email:,} with email", flush=True)
     print(f"Owners: found a name for {found:,} businesses ({found / max(len(sites), 1):.0%} of scanned websites)",
           flush=True)
     # A fixed sample in the log, so results can be spot-checked without database access.

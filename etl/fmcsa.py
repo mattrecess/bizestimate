@@ -7,6 +7,7 @@ Company Census File). Power units and drivers are a direct measure of a carrier'
 """
 import argparse
 import json
+import re
 import urllib.parse
 
 import psycopg
@@ -19,6 +20,17 @@ from netutil import urlopen
 URL = "https://data.transportation.gov/resource/az4n-8mr2.json?"
 PAGE = 50_000
 MIN_POWER_UNITS = 2     # one-truck owner-operators are mostly individuals, not listed businesses
+
+
+def format_phone(number):
+    digits = re.sub(r"\D", "", str(number or ""))
+    digits = digits[1:] if len(digits) == 11 and digits[0] == "1" else digits
+    return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}" if len(digits) == 10 and digits[0] not in "01" else None
+
+
+def clean_email(value):
+    e = str(value or "").strip().lower()
+    return e if re.fullmatch(r"[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}", e) else None
 
 
 def pick(row, *names):
@@ -78,6 +90,8 @@ def main():
                 "operation": pick(r, "carrier_operation", "carrier_operation_desc"),
                 "hazmat": (pick(r, "hm_flag", "hm_ind") or "").upper() == "Y",
                 "registered": int(added[:4]) if added[:4].isdigit() else None,
+                "phone": format_phone(pick(r, "phone", "telephone")),
+                "email": clean_email(pick(r, "email_address", "email")),
                 "url": f"https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string={dot}",
             },
         }

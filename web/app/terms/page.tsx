@@ -28,6 +28,11 @@ export default function Terms() {
           <h2>Privacy</h2>
           <p>Sole proprietors, self-employed individuals and independent contractors are not listed, since their
             business address is often a home address.</p>
+          <p>Contact details shown for a business are ones it publishes itself: on its own website, its map
+            listing, or its federal motor-carrier registration. They load only when a visitor asks for them. A
+            business can <Link href="/contact-request">ask for its contact details to be removed or corrected</Link>.
+            Contact details must not be used for unsolicited bulk email, robocalls or texts, or anything that breaks
+            the CAN-SPAM Act, the Telephone Consumer Protection Act or the National Do Not Call Registry rules.</p>
         </div>
         <div className="section">
           <h2>No warranty</h2>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Business, Comparable, Headcount, Loan } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
+import ContactCard from "./ContactCard";
 import HeadcountChart from "./HeadcountChart";
 import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
@@ -131,6 +132,8 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           </div>
         </div>
       )}
+
+      <ContactCard id={String(b.id)} name={b.name} owner={b.owner_name} />
 
       <div className="tabs" role="tablist">
         {tabs.map(([key, label]) => (

@@ -62,7 +62,8 @@ const getLoans = (id: string) => sql<Loan[]>`
 // Public records matched to the business (SEC, Form 990, FDIC, SBA loans, contracts, DOT, OSHA).
 export type SourceRecord = { source: string; data: Record<string, unknown> };
 const getSources = (id: string) => sql<SourceRecord[]>`
-  select s.source, s.data from business_sources s join businesses b on b.biz_key = s.biz_key
+  -- Contact details stay out of the profile; they load on request from /api/contact.
+  select s.source, s.data - 'phone' - 'email' as data from business_sources s join businesses b on b.biz_key = s.biz_key
   where b.id = ${id} order by s.source`.catch(() => [] as SourceRecord[]);
 
 // Retirement-plan participants by year (Form 5500); empty until that table has been loaded.

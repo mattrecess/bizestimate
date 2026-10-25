@@ -344,3 +344,18 @@ table.mini td { padding: 3px 4px; }
 .admin-form input[name="business"] { flex: 2 1 300px; }
 .admin-form .check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
 .admin-stats { grid-template-columns: repeat(3, 1fr); margin-bottom: 14px; }
+.contact-card { margin-top: 14px; padding: 12px 14px; border-radius: var(--radius); background: var(--panel-2); border: 1px solid var(--border); }
+.contact-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.contact-head .btn { height: 30px; font-size: 13px; padding: 0 12px; }
+.contact-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.contact-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; }
+.contact-list li > a { font-weight: 600; overflow-wrap: anywhere; }
+.contact-list .src, .contact-foot { font-size: 12px; color: var(--muted); }
+.contact-list .src a, .contact-foot a { color: var(--muted); }
+.contact-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; margin-top: 10px; }
+.contact-form { display: grid; gap: 10px; max-width: 520px; margin: 16px 0; }
+.contact-form input, .contact-form select, .contact-form textarea { font: inherit; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 11px; }
+.admin-nav { display: flex; gap: 14px; align-items: center; }
+.admin h2 { margin-top: 28px; }
+.admin td ul { margin: 0; padding-left: 16px; }

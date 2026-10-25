@@ -29,6 +29,7 @@ BIZ_COLS = [
     "est_ebitda_low", "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees", "est_revenue_by_payroll",
     "est_method", "est_confidence", "total_ppp_amount", "website", "owner_name", "owner_title", "owner_source",
     "source", "est_ebitda_margin", "est_inflation", "est_growth", "parent_key", "parent_name",
+    "phone", "site_phone", "site_email", "contact_page",
 ]
 LOAN_COLS = ["loan_number", "biz_key", "draw", "date_approved", "amount", "payroll_proceed",
              "forgiveness_amount", "loan_status", "lender", "jobs_reported"]
