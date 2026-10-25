@@ -140,8 +140,17 @@ def main():
             by_batch.setdefault((row["_year"], row["XML_BATCH_ID"]), []).append((ein, row["OBJECT_ID"]))
         out, failed = {}, 0
         for (year, batch), items in sorted(by_batch.items()):
+            z = None
+            # Archive names in the index don't always match the file's case ("..._04a" vs "..._04A").
+            for name in dict.fromkeys([batch, batch.upper(), batch[:-1] + batch[-1].upper(), batch.lower()]):
+                try:
+                    z = zipfile.ZipFile(RemoteFile(BASE.format(year=year) + f"{name}.zip"))
+                    break
+                except Exception:  # noqa: BLE001
+                    continue
             try:
-                z = zipfile.ZipFile(RemoteFile(BASE.format(year=year) + f"{batch}.zip"))
+                if z is None:
+                    raise FileNotFoundError(batch)
                 names = {n.rsplit("/", 1)[-1].split("_")[0]: n for n in z.namelist()}
             except Exception as e:  # noqa: BLE001
                 print(f"irs990_people: batch {batch} unreadable ({e!r})", flush=True)
