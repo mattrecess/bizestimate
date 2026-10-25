@@ -1,16 +1,20 @@
-"""Check FRED series for CPI and Oklahoma employment by supersector (run on GitHub)."""
+"""Check whether candidate .com names are registered (Verisign RDAP: 404 = available)."""
 import urllib.error
 import urllib.request
 
-IDS = ["CPIAUCSL", "OKCONS", "OKMFG", "OKTRAD", "OKTRADE", "OKTTU", "OKINFO", "OKFIRE", "OKPBSV", "OKEDUH", "OKLEIH",
-       "OKSRVO", "OKNRMN", "OKMINE", "OKGOVT", "OKNA"]
-for i in IDS:
-    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={i}"
+NAMES = """nosyneighbor nosyneighbors nosybiz bizsnoop snoopabiz peekabiz napkinmath backofthenapkin napkinnumbers
+ballparkbiz ballparkit ballparked roughnumbers cashcowmap cashcowfinder fatcatfinder fatcatmap doughraymi doughrayme
+howmuchtheymake whatstheyworth whatsitworth mompopmoney momandpopmoney mainstreetsnoop mainstreetgossip bizgossip
+dollarsniffer moneysniffer profitpeek peekonomics nosynumbers buttinsky buttinskybiz snoopyneighbor bizzillow
+gutcheckbiz guesstimizer moolahmap moolahmeter moolamap bigwigmap okiedokiebiz soonerorlaterbiz cowtipperbiz
+lemonadestandindex lemonademath bizbrag humblebrag ledgerlurker lurkledger taxman wallflowerbiz curtaintwitcher
+whosrich richbizpoorbiz dealsniffer bizsleuth sherlockbiz nosyparkerbiz peepingtom""".split()
+for n in NAMES:
+    url = f"https://rdap.verisign.com/com/v1/domain/{n}.com"
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}), timeout=60) as r:
-            lines = r.read().decode().strip().splitlines()
-            print("OK ", i, len(lines), lines[0], lines[-1])
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"Accept": "application/rdap+json"}), timeout=20):
+            print(f"taken     {n}.com")
     except urllib.error.HTTPError as e:
-        print("ERR", e.code, i)
+        print(f"{'AVAILABLE' if e.code == 404 else 'error ' + str(e.code)} {n}.com")
     except Exception as e:  # noqa: BLE001
-        print("ERR", type(e).__name__, i)
+        print(f"error     {n}.com {type(e).__name__}")
