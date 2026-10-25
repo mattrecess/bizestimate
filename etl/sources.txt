@@ -9,5 +9,6 @@ sba_loans
 contracts
 fmcsa
 website_profile paid   (AI reads company websites; runs in the Public records workflow only)
+people_search paid   (web search for CFOs and outside counsel; runs in the Public records workflow only)
 founded
 # osha  (needs a free DOL API key; the old bulk download site is retired)
