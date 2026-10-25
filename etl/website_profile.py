@@ -99,7 +99,11 @@ def verify(data, pages):
     team, seen = [], set()
     for p in data.get("team") or []:
         name, title = (p.get("name") or "").strip(), (p.get("title") or "").strip()
-        if len(name.split()) >= 2 and title and on(name, p.get("page") or 0) and norm(name) not in seen:
+        # "Maintenance Manager, BP Cherry Point Refinery" / "Director at Acme": someone at another
+        # company (usually a customer testimonial), not this business's staff.
+        elsewhere = re.search(r"\bat\b|,\s*\S+(\s+\S+){1,}", title) and not re.search(r",\s*(CPA|PE|PhD|MD|DDS|Esq|Jr|Sr|LLC|Inc)\b", title)
+        if (len(name.split()) >= 2 and title and not elsewhere and on(name, p.get("page") or 0)
+                and norm(name) not in seen):
             seen.add(norm(name))
             team.append({"name": name, "title": title[:60], "url": pages[p["page"] - 1][0]})
     if team:
