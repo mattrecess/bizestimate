@@ -63,6 +63,38 @@ def apply_reported(cur, state):
     print(f"Reported financials applied: {len(updates):,} updated", flush=True)
 
 
+# Roles that make someone the owner for our purposes, best first.
+OWNER_ROLES = ["owner", "co-owner", "founder", "co-founder", "president", "ceo", "chief executive", "principal", "managing partner"]
+
+
+def _owner_rank(title):
+    t = (title or "").lower()
+    return next((i for i, r in enumerate(OWNER_ROLES) if r in t), None)
+
+
+def apply_owners(cur, state):
+    """Fill in owners we don't have from people found since the load: the company's own website
+    (website_profile team) and Google search results (owner_search). Never overwrites an owner."""
+    cur.execute("""
+        select b.biz_key, s.source, s.data from businesses b
+        join business_sources s on s.biz_key = b.biz_key and s.source in ('owner_search', 'website_profile', 'people_search')
+        where b.state = %s and coalesce(b.owner_name, '') = ''""", (state,))
+    best = {}
+    for key, source, data in cur.fetchall():
+        if source == "owner_search" and data.get("name"):
+            cands = [(-1, data["name"], data.get("title") or "Owner", data.get("url"))]   # asked for the owner directly
+        else:
+            people = data.get("team") or data.get("people") or []
+            cands = [(r, p["name"], p["title"], p.get("url")) for p in people
+                     if (r := _owner_rank(p.get("title"))) is not None]
+        for c in cands:
+            if key not in best or c[0] < best[key][0]:
+                best[key] = c
+    cur.executemany("update businesses set owner_name = %s, owner_title = %s, owner_source = %s where biz_key = %s",
+                    [(name, title[:60], url, key) for key, (_, name, title, url) in best.items()])
+    print(f"Owners filled from websites and search results: {len(best):,}", flush=True)
+
+
 def state_get(cur, key, default):
     cur.execute("select value from etl_state where key = %s", (key,))
     row = cur.fetchone()

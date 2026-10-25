@@ -239,6 +239,7 @@ def main():
         for k, d in list(out.items())[:8]:
             print(f"  sample: {d}"[:300], flush=True)
         enrich.save(cur, state, "website_profile", out)
+        enrich.apply_owners(cur, state)
 
 
 if __name__ == "__main__":
