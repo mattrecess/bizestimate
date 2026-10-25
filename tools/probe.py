@@ -56,9 +56,16 @@ def db():
                                 "order by age desc nulls last limit 15"):
             print("activity:", row)
         print("rows:", conn.execute("select count(*), pg_size_pretty(pg_total_relation_size('businesses')) from businesses").fetchone())
-        for row in conn.execute("""select id, name, city, website, owner_name, owner_source, est_method, source,
-                                          est_revenue_mid::bigint from businesses where name ilike '%hunter mechanical%'"""):
-            print("  hunter:", row)
+        for row in conn.execute("""
+                select b.id, b.name, b.city, b.naics, b.industry, b.jobs_reported, b.est_method, b.source,
+                       b.est_revenue_mid::bigint, b.est_ebitda_mid::bigint, b.est_ebitda_margin, b.total_ppp_amount::bigint,
+                       (select string_agg(h.year || ':' || h.employees, ' ' order by h.year) from headcounts h where h.biz_key = b.biz_key),
+                       ib.revenue_per_employee, ib.source
+                from businesses b
+                left join lateral (select * from industry_benchmarks where b.naics like naics_prefix || '%%'
+                                   order by length(naics_prefix) desc limit 1) ib on true
+                where b.name ~* '(minick|aaa landscap|red dirt septic|vantage point)' order by b.name"""):
+            print("  known:", row)
         print("owners coverage:", conn.execute("""select count(*), count(nullif(owner_name, '')),
             count(*) filter (where coalesce(website, '') <> ''),
             count(*) filter (where coalesce(website, '') = '' and coalesce(owner_name, '') = ''),
