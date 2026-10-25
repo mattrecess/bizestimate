@@ -101,7 +101,7 @@ def verify(data, pages):
         name, title = (p.get("name") or "").strip(), (p.get("title") or "").strip()
         # "Maintenance Manager, BP Cherry Point Refinery" / "Director at Acme": someone at another
         # company (usually a customer testimonial), not this business's staff.
-        elsewhere = re.search(r"\bat\b|,\s*\S+(\s+\S+){1,}", title) and not re.search(r",\s*(CPA|PE|PhD|MD|DDS|Esq|Jr|Sr|LLC|Inc)\b", title)
+        elsewhere = re.search(r"\bat\b|,\s*\S+(\s+\S+){2,}", title) and not re.search(r",\s*(CPA|PE|PhD|MD|DDS|Esq|Jr|Sr|LLC|Inc)\b", title)
         if (len(name.split()) >= 2 and title and not elsewhere and on(name, p.get("page") or 0)
                 and norm(name) not in seen):
             seen.add(norm(name))
