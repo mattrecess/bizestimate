@@ -71,6 +71,9 @@ def main():
     state = ap.parse_args().state.upper()
 
     with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
+        # The database's default statement limit is sized for page requests; a load that touches
+        # every row (e.g. after new columns are added) needs longer. Readers aren't blocked meanwhile.
+        cur.execute("set statement_timeout = '45min'")
         with open(os.path.join(ROOT, "db", "schema.sql")) as f:
             cur.execute(f.read())
 
