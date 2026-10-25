@@ -12,9 +12,11 @@ on:
             ".github/workflows/enrich.yml"]
 permissions:
   contents: write
+# A new run waits for the current one rather than cancelling it: paid steps (AI, web search) may be
+# mid-way, and their results are only saved as each batch completes.
 concurrency:
   group: enrich
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   enrich:
     runs-on: ubuntu-latest
