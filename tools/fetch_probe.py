@@ -1,15 +1,17 @@
-"""Peek at Census SUSB 2022 state x 6-digit NAICS x enterprise size (receipts by size)."""
+"""Look up businesses on the live site and print what we know about their owners."""
+import json
+import urllib.parse
 import urllib.request
 
-URL = "https://www2.census.gov/programs-surveys/susb/tables/2022/us_state_6digitnaics_2022.txt"
-with urllib.request.urlopen(URL, timeout=300) as r:
-    head = r.readline().decode("latin-1")
-    print(head.strip())
-    n, shown = 0, 0
-    for raw in r:
-        line = raw.decode("latin-1")
-        n += 1
-        if n <= 3 or (("423320" in line or "561730" in line) and shown < 24):
-            shown += n > 3
-            print(line.strip()[:300])
-    print("rows:", n)
+SITE = "https://bizestimate-six.vercel.app"
+for q in ("lavicky",):
+    with urllib.request.urlopen(f"{SITE}/api/businesses?limit=8&q=" + urllib.parse.quote(q), timeout=60) as r:
+        data = json.loads(r.read())
+    print(f"== {q}: {data['total']} found")
+    for b in data["results"][:8]:
+        with urllib.request.urlopen(f"{SITE}/api/businesses/{b['id']}", timeout=60) as r2:
+            p = json.loads(r2.read())
+        print(f"   {b['name']} ({b['city']}) id {b['id']} naics {b['naics']} rev {float(b['est_revenue_mid'] or 0):,.0f} "
+              f"jobs {b.get('jobs_reported')} | owner: {p.get('owner_name')} ({p.get('owner_title')}) src {p.get('owner_source')} | web {p.get('website')}")
+        for s in p.get("sources") or []:
+            print(f"     {s['source']}: {json.dumps(s['data'])[:400]}")
