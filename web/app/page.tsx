@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import BusinessProfile, { type Profile } from "@/components/BusinessProfile";
 import BizCard, { type Biz } from "@/components/BizCard";
 import FilterBar, { type FilterState } from "@/components/FilterBar";
+import { saveSearch } from "@/lib/saved";
 import Icon from "@/components/Icon";
 import SearchBox from "@/components/SearchBox";
 
@@ -27,6 +28,7 @@ const URL_KEYS = ["q", "sector", "city", "min_rev", "max_rev", "sort", "id"] as 
 export default function Home() {
   const [ready, setReady] = useState(false);
   const [cities, setCities] = useState<{ city: string; count: number }[]>([]);
+  const [savedNote, setSavedNote] = useState(false);
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [filters, setFilters] = useState<FilterState>(NO_FILTERS);
@@ -247,6 +249,14 @@ export default function Home() {
               </span>
               <span className="sub">
                 {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : "in map view"} · estimates
+              </span>
+              <span className="list-actions">
+                <a href={`/api/export?${params}&sort=${sort}`} download>Export CSV</a>
+                <button className="link-btn" onClick={() => {
+                  const label = [debouncedQ, sector, city].filter(Boolean).join(" · ") || "All businesses";
+                  saveSearch({ label, query: new URLSearchParams(filterParams + (sort !== "revenue_desc" ? `&sort=${sort}` : "")).toString() });
+                  setSavedNote(true); setTimeout(() => setSavedNote(false), 2000);
+                }}>{savedNote ? "Saved ✓" : "Save search"}</button>
               </span>
             </div>
             {failed && !data?.results.length && (

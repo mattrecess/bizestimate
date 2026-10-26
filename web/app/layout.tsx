@@ -37,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Link href="/" className="brand"><BrandMark />BizEstimate</Link>
           <span className="state-chip">Oklahoma</span>
           <nav>
+            <Link href="/saved">Saved</Link>
             <Link href="/methodology"><span className="hide-sm">How estimates work</span><span className="show-sm">Methodology</span></Link>
             <Link href="/terms" className="hide-sm">Terms</Link>
           </nav>

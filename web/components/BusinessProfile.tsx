@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Business, Comparable, Headcount, Loan } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import ContactCard from "./ContactCard";
+import SaveButton from "./SaveButton";
 import HeadcountChart from "./HeadcountChart";
 import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
@@ -121,6 +122,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         <a className="btn" href={src.linkedin?.company_url || linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer">
           <Icon name="linkedin" size={15} />LinkedIn
         </a>
+        <SaveButton id={String(b.id)} name={b.name} city={b.city} />
         <button className="btn" onClick={share}><Icon name="share" size={15} />{copied ? "Link copied" : "Share"}</button>
       </div>
 
