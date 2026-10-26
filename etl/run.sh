@@ -8,6 +8,7 @@ mkdir -p data/cache   # cached between runs by the workflow
 "$PY" etl/migrate.py
 "$PY" etl/margins.py --fetch || echo "IRS margins unavailable; using the last saved ones or sector defaults"
 "$PY" etl/adjust.py --fetch --state "$STATE" || echo "Inflation/growth figures unavailable; using built-in CPI"
+"$PY" etl/size_factors.py --fetch || echo "Size figures unavailable; using industry averages"
 # Early: it only needs businesses already in the database, so headcounts land within minutes.
 "$PY" etl/form5500.py --state "$STATE" || echo "Form 5500 step failed (non-fatal)"
 # Public records (nonprofits, banks, SEC, SBA loans, contracts, DOT, years in business); each non-fatal.

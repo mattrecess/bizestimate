@@ -20,6 +20,7 @@ from datetime import date
 from benchmarks import load_benchmarks, lookup
 from adjust import Adjust
 from margins import Margins
+from size_factors import SizeFactors
 
 MIN_PARTICIPANTS = 3
 MAX_GROWTH = 4           # more than 4x the PPP headcount is more often a mismatched or company-wide plan
@@ -44,7 +45,7 @@ def apply(cur, state):
           and (b.jobs_reported is null
                or l.employees between 0.5 * b.jobs_reported and %(max_growth)s * b.jobs_reported)""",
                 {"since": since, "state": state, "min": MIN_PARTICIPANTS, "max_growth": MAX_GROWTH})
-    margins, bench, adjust = Margins(), load_benchmarks(), Adjust()
+    margins, bench, adjust, sizes = Margins(), load_benchmarks(), Adjust(), SizeFactors()
     lo, hi = RANGE
     updates, staffing = [], 0
     for key, naics, source, filed_naics, employees, method, cur_rev, cur_ebitda, cur_industry in cur.fetchall():
@@ -59,7 +60,7 @@ def apply(cur, state):
             continue
         # Recent headcount, so only prices need bringing up to date (benchmark year -> now).
         inflation = adjust.inflation(b.get("year"))
-        revenue = float(employees) * b["revenue_per_employee"] * inflation
+        revenue = float(employees) * sizes.rpe(naics, employees, b["revenue_per_employee"]) * inflation
         margin = margins.margin(naics, revenue)
         ebitda = revenue * margin
         if method == "retirement_plan" and cur_rev is not None and round(revenue) == round(float(cur_rev)) \

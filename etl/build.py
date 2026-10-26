@@ -27,6 +27,7 @@ from datetime import datetime
 from benchmarks import load_benchmarks, lookup
 from adjust import Adjust
 from margins import Margins
+from size_factors import SizeFactors
 from matching import name_score, name_tokens, parse_address
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -62,7 +63,7 @@ def date(v):
     return None
 
 
-def estimate(loan_amount, draw, naics, jobs, business_type, bench, margins, adjust):
+def estimate(loan_amount, draw, naics, jobs, business_type, bench, margins, adjust, sizes=None):
     multiplier = 3.5 if draw == "second" and (naics or "").startswith("72") else 2.5
     annual = loan_amount / multiplier * 12
     individual = (business_type or "").strip().lower() in INDIVIDUAL_TYPES
@@ -86,9 +87,11 @@ def estimate(loan_amount, draw, naics, jobs, business_type, bench, margins, adju
         "est_revenue_by_employees": None,
     }
 
-    # Primary method: reported employees x the industry's revenue per employee.
+    # Primary method: reported employees x revenue per employee for companies of that size in the
+    # industry (size_factors.py).
     if jobs and jobs > 0 and bench.get("revenue_per_employee"):
-        revenue = jobs * bench["revenue_per_employee"] * emp_factor
+        rpe = sizes.rpe(naics, jobs, bench["revenue_per_employee"]) if sizes else bench["revenue_per_employee"]
+        revenue = jobs * rpe * emp_factor
         ebitda = revenue * margins.margin(naics, revenue)   # industry margin, adjusted for size
         lo, hi = EMPLOYEE_RANGE
         # When the two methods disagree by more than 2x, flag the estimate as shaky.
@@ -178,6 +181,7 @@ def main():
     bench_all = load_benchmarks()
     margins = Margins()
     adjust = Adjust()
+    sizes = SizeFactors()
 
     loans_by_biz = defaultdict(list)
     with open(src, newline="") as f:
@@ -219,7 +223,7 @@ def main():
             jobs = max((l["jobs_reported"] or 0) for l in loans) or None
             btype = (r.get("BusinessType") or "").strip()
             _, bench = lookup(bench_all, naics)
-            est = estimate(primary["amount"], primary["draw"], naics, jobs, btype, bench, margins, adjust)
+            est = estimate(primary["amount"], primary["draw"], naics, jobs, btype, bench, margins, adjust, sizes)
             bw.writerow({
                 "biz_key": key,
                 "name": r["BorrowerName"].strip(),
