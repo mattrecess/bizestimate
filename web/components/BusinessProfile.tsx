@@ -56,6 +56,8 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   const fromPlan = b.est_method === "retirement_plan";       // re-based on the newest Form 5500 count
   const reported = b.est_method === "reported";              // SEC, FDIC or Form 990 figures
   const src = Object.fromEntries((b.sources ?? []).map((s) => [s.source, s.data as Record<string, any>]));  // eslint-disable-line @typescript-eslint/no-explicit-any
+  // The owner's own profile, only while it's for the owner we show (it was found for a name).
+  const ownerLinkedIn = src.linkedin?.owner_url && src.linkedin.owner_name === b.owner_name ? src.linkedin.owner_url : null;
   const value = estimateValue({ ...b, public_company: !!src.sec || undefined, is_nonprofit: b.is_nonprofit || !!src.irs990 });
   // Earliest of the record-based year and the founding year the company's own site states.
   const founded = [src.founded?.year, src.fdic?.founded, src.fmcsa?.registered, src.website_profile?.founded_year]
@@ -114,7 +116,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <Icon name="globe" size={15} />{siteLabel(b.website)}
           </a>
         )}
-        <a className="btn" href={linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer">
+        <a className="btn" href={src.linkedin?.company_url || linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer">
           <Icon name="linkedin" size={15} />LinkedIn
         </a>
         <button className="btn" onClick={share}><Icon name="share" size={15} />{copied ? "Link copied" : "Share"}</button>
@@ -128,6 +130,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <div className="src">
               {b.owner_title || "Owner"}
               {b.owner_source && <> · <a href={b.owner_source} target="_blank" rel="nofollow noopener noreferrer">source</a></>}
+              {ownerLinkedIn && <> · <a href={ownerLinkedIn} target="_blank" rel="nofollow noopener noreferrer">LinkedIn</a></>}
             </div>
           </div>
         </div>

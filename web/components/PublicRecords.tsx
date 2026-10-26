@@ -55,6 +55,12 @@ export default function PublicRecords({ sources }: { sources: SourceRecord[] }) 
             {by.sba.franchise && <Fact k="Franchise" v={by.sba.franchise} />}
           </Record>
         )}
+        {by.linkedin?.company_url && (
+          <Record title="LinkedIn company page" sub="Size as the company lists it" url={by.linkedin.company_url}>
+            <Fact k="Employees" v={by.linkedin.size_min == null ? "—" : by.linkedin.size_max
+              ? `${count(by.linkedin.size_min)}–${count(by.linkedin.size_max)}` : `${count(by.linkedin.size_min)}+`} />
+          </Record>
+        )}
         {by.contracts && (
           <Record title="Federal contracts" sub={(by.contracts.business_types || []).filter(niceType).slice(0, 3).map(typeLabel).join(" · ") || "USAspending.gov"} url={by.contracts.url}>
             <Fact k="Total, recent years" v={money(by.contracts.total)} />

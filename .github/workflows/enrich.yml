@@ -7,7 +7,7 @@ on:
     - cron: "41 11 * * *"   # daily: paid steps continue (within their caps) and collect AI batches
   push:
     branches: [main]
-    paths: ["etl/enrich.py", "etl/sources.txt", "etl/sources_quick.txt", "etl/irs990.py", "etl/irs990_people.py", "etl/website_profile.py", "etl/people_search.py", "etl/owner_search.py", "etl/sec.py", "etl/banks.py", "etl/sba_loans.py",
+    paths: ["etl/enrich.py", "etl/sources.txt", "etl/sources_quick.txt", "etl/irs990.py", "etl/irs990_people.py", "etl/website_profile.py", "etl/people_search.py", "etl/owner_search.py", "etl/linkedin.py", "etl/sec.py", "etl/banks.py", "etl/sba_loans.py",
             "etl/contracts.py", "etl/fmcsa.py", "etl/osha.py", "etl/founded.py", "etl/valuation.py",
             ".github/workflows/enrich.yml"]
 permissions:
@@ -57,6 +57,7 @@ jobs:
           BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
           SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
           OWNER_SEARCH_MAX_TOTAL: ${{ vars.OWNER_SEARCH_MAX_TOTAL }}
+          LINKEDIN_MAX_TOTAL: ${{ vars.LINKEDIN_MAX_TOTAL }}
       - if: always()
         run: |
           cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b enrich-logs
