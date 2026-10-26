@@ -7,7 +7,7 @@ export type Biz = {
   id: number; name: string; city: string; zip: string; industry: string; naics: string | null;
   jobs_reported: number | null; est_revenue_mid: string; est_ebitda_mid: string;
   est_confidence: string; est_method: string; has_owner: boolean; has_website: boolean;
-  is_nonprofit?: boolean; est_ebitda_low?: string; est_ebitda_high?: string; parent_name?: string | null;
+  is_nonprofit?: boolean; est_ebitda_low?: string; est_ebitda_high?: string; parent_name?: string | null; sell_score?: string | null;
 };
 
 export default function BizCard({ b, hovered, onOpen, onHover }: {
@@ -49,6 +49,7 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
           : b.est_method === "reported" ? <span className="badge good">Reported</span>
           : b.est_method === "retirement_plan" ? <span className="badge good">401(k) data</span>
           : <span className="badge good">PPP data</span>}
+        {Number(b.sell_score) >= 40 && <span className="badge warn">Likely to sell</span>}
         {b.has_owner && <span className="badge info"><Icon name="user" size={12} />Owner known</span>}
         {b.has_website && <span className="badge"><Icon name="globe" size={12} />Website</span>}
         {!avg && b.est_confidence === "low" && <span className="badge warn">Low confidence</span>}

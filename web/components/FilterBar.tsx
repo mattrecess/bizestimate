@@ -10,7 +10,7 @@ const MIN_REV = [250e3, 500e3, 1e6, 2e6, 5e6, 10e6, 25e6];
 const MAX_REV = [500e3, 1e6, 2e6, 5e6, 10e6, 25e6, 50e6];
 const SORTS: [string, string][] = [
   ["revenue_desc", "Revenue: high to low"], ["revenue_asc", "Revenue: low to high"],
-  ["ebitda_desc", "EBITDA: high to low"], ["jobs_desc", "Most employees"], ["name", "Name A–Z"],
+  ["ebitda_desc", "EBITDA: high to low"], ["jobs_desc", "Most employees"], ["sell_desc", "Likely to sell"], ["name", "Name A–Z"],
 ];
 
 function revenueLabel(min: string, max: string) {

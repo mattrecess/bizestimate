@@ -11,6 +11,7 @@ const SORTS = {
   ebitda_desc: sql`est_ebitda_mid desc nulls last, id`,
   jobs_desc: sql`jobs_reported desc nulls last, id`,
   name: sql`name asc, id`,
+  sell_desc: sql`sell_score desc nulls last, est_revenue_mid desc nulls last, id`,
 };
 
 export async function GET(req: NextRequest) {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
              est_revenue_low, est_revenue_mid, est_revenue_high,
              est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
              coalesce(owner_name, '') <> '' as has_owner,
-             coalesce(website, '') <> '' as has_website
+             coalesce(website, '') <> '' as has_website, to_jsonb(businesses) ->> 'sell_score' as sell_score
       from businesses where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
     sql`select count(*)::int as count from businesses where ${w}`,
   ]);

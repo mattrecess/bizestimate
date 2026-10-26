@@ -13,4 +13,5 @@ owner_search paid   (Google results via Serper for owners we lack; Public record
 linkedin paid   (LinkedIn links and company size via Google/Serper; Public records workflow only)
 people_search paid   (web search for CFOs and outside counsel; runs in the Public records workflow only)
 founded
+signals   (likely-to-sell score from the records above; runs after them)
 # osha  (needs a free DOL API key; the old bulk download site is retired)

@@ -146,6 +146,18 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         ))}
       </div>
 
+      {tab === "overview" && b.sell_score != null && b.sell_signals?.length ? (
+        <div className="sell-card">
+          <div className="sell-head">
+            <b>Likelihood to sell</b>
+            <span className={`badge ${b.sell_score >= 40 ? "warn" : ""}`}>{b.sell_score >= 60 ? "High" : b.sell_score >= 40 ? "Elevated" : b.sell_score >= 20 ? "Some signs" : "Low"}</span>
+          </div>
+          <div className="sell-bar"><span style={{ width: `${b.sell_score}%` }} /></div>
+          <ul>{b.sell_signals.map((s) => <li key={s}>{s}</li>)}</ul>
+          <div className="sub">Signals from public records and the company&apos;s website, not a statement that it&apos;s for sale.</div>
+        </div>
+      ) : null}
+
       {tab === "overview" && b.est_method === "branch" && (
         <div className="branch-note">
           <Icon name="map" size={18} />

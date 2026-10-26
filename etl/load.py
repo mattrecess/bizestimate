@@ -185,6 +185,11 @@ def main():
                 enrich.apply_owners(cur, state.upper())
         except psycopg.Error as e:
             print(f"Filling owners failed (non-fatal): {e}", flush=True)
+        try:
+            with conn.transaction():
+                enrich.apply_signals(cur, state.upper())
+        except psycopg.Error as e:
+            print(f"Sell signals failed (non-fatal): {e}", flush=True)
         cur.execute("analyze businesses; analyze ppp_loans;")
 
 

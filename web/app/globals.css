@@ -366,3 +366,9 @@ table.mini td { padding: 3px 4px; }
 .link-grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; }
 .link-grid span { color: var(--muted); font-size: 12px; }
 @media (max-width: 640px) { .landing-tiles { grid-template-columns: 1fr 1fr; } }
+.sell-card { margin: 16px 0; padding: 14px 16px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--border); }
+.sell-head { display: flex; justify-content: space-between; align-items: center; }
+.sell-bar { height: 6px; border-radius: 99px; background: var(--panel-2); margin: 10px 0; overflow: hidden; }
+.sell-bar span { display: block; height: 100%; background: var(--warn); border-radius: 99px; }
+.sell-card ul { margin: 0; padding-left: 18px; }
+.sell-card .sub { color: var(--muted); font-size: 12px; margin-top: 8px; }

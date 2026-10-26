@@ -13,6 +13,7 @@ export type Business = {
   owner_source: string | null; payroll_to_revenue: Num; revenue_per_employee: Num; ebitda_margin: Num; benchmark_source: string | null;
   est_ebitda_margin: Num; est_inflation: Num; est_growth: Num;
   parent_name: string | null; parent_id: string | null;
+  sell_score: number | null; sell_signals: string[] | null;
 };
 export type Loan = {
   loan_number: string; draw: string; date_approved: Date | null; amount: Num;
@@ -35,6 +36,7 @@ export async function getBusinessRow(id: string): Promise<Business | null> {
            to_jsonb(b) ->> 'est_ebitda_margin' as est_ebitda_margin,
            to_jsonb(b) ->> 'est_inflation' as est_inflation, to_jsonb(b) ->> 'est_growth' as est_growth,
            to_jsonb(b) ->> 'parent_name' as parent_name,
+           (to_jsonb(b) ->> 'sell_score')::int as sell_score, to_jsonb(b) -> 'sell_signals' as sell_signals,
            (select p.id from businesses p where p.biz_key = to_jsonb(b) ->> 'parent_key') as parent_id,
            ib.payroll_to_revenue, ib.revenue_per_employee, ib.ebitda_margin, ib.source as benchmark_source
     from businesses b

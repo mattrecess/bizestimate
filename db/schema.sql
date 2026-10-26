@@ -191,3 +191,9 @@ create table if not exists contact_lookups (
   updated_at  timestamptz not null default now(),
   unique (biz_key, provider, person_name)
 );
+
+-- "Likely to sell" score (0-100) and the signals behind it (enrich.apply_signals); null where it
+-- doesn't apply (public companies, banks, nonprofits, branch locations).
+alter table businesses add column if not exists sell_score smallint;
+alter table businesses add column if not exists sell_signals jsonb;
+create index if not exists businesses_sell_idx on businesses (sell_score desc nulls last, id);
