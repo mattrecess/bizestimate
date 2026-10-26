@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import re
+import urllib.error
 from concurrent.futures import ThreadPoolExecutor
 
 import psycopg
@@ -34,8 +35,11 @@ SUFFIX = re.compile(r",?\s+(LLC|L\.L\.C\.|INC\.?|CORP\.?|CORPORATION|CO\.?|COMPA
 
 def google(key, query):
     req = json.dumps({"q": query, "gl": "us", "num": 10}).encode()
-    with urlopen(SERPER, data=req, headers={"X-API-KEY": key, "Content-Type": "application/json"}, timeout=30) as r:
-        return json.loads(r.read()).get("organic") or []
+    try:
+        with urlopen(SERPER, data=req, headers={"X-API-KEY": key, "Content-Type": "application/json"}, timeout=30) as r:
+            return json.loads(r.read()).get("organic") or []
+    except urllib.error.HTTPError as e:   # Serper explains refusals (e.g. out of credits) in the body
+        raise RuntimeError(f"HTTP {e.code}: {e.read()[:200].decode('utf-8', 'replace')}") from None
 
 
 def short_name(name):
@@ -136,7 +140,8 @@ def main():
                     for biz, found, err, n, company in pool.map(work, todo[start:start + 100]):
                         searches += n
                         if found is None:
-                            print(f"linkedin: search failed ({err}); stopping for this run", flush=True)
+                            if not stop:
+                                print(f"linkedin: search failed ({err}); stopping for this run", flush=True)
                             stop = True
                             continue
                         cache[biz["biz_key"]] = found

@@ -9,6 +9,7 @@ FY2026 = July 2025 to June 2026. Only runs for Oklahoma.
 """
 import argparse
 import json
+import re
 import time
 import urllib.parse
 from collections import Counter, defaultdict
@@ -25,6 +26,10 @@ PACKAGE = "state-of-oklahoma-vendor-payments-fiscal-year-{fy}"
 FIELDS = ["VENDOR_NAME", "CITY", "STATE", "POSTAL", "PYMNT_AMT", "AGENCYNAME", "CALENDAR_YEAR", "CALENDAR_MONTH"]
 PAGE = 32_000
 MIN_TOTAL = 10_000          # smaller vendors are mostly one-off purchases and reimbursements
+# The published tables are mostly transfers between public bodies (universities, agencies, counties);
+# those aren't private businesses, and their names match unrelated listings (a campus bookstore).
+PUBLIC = re.compile(r"\b(UNIVERSITY|COLLEGE|SCHOOL|DISTRICT|COMMISSION|DEPARTMENT|AUTHORITY|AGENCY|COUNTY|"
+                    r"CITY OF|TOWN OF|STATE OF|BOARD|TRIBE|NATION|MUNICIPAL|REGENTS|TREASURER|COURT|OFFICE OF)\b")
 
 
 def call(action, **params):
@@ -106,14 +111,14 @@ def main():
         entities = {}
         for key, v in vendors.items():
             total = sum(v["by_year"].values())
-            if total < MIN_TOTAL:
+            if total < MIN_TOTAL or any(PUBLIC.search(n.upper()) for n in v["names"]):
                 continue
             entities[key] = {"names": v["names"], "places": v["places"], "data": {
                 "total": round(total), "by_year": {y: round(a) for y, a in sorted(v["by_year"].items())},
                 "agencies": [a for a, _ in v["agencies"].most_common(3)], "vendor": sorted(v["names"])[0],
                 "url": "https://data.ok.gov/dataset/" + PACKAGE.format(fy=max(keep)),
             }}
-        print(f"state_payments: {len(entities):,} vendors paid ${MIN_TOTAL:,}+ in FY{min(keep)}-FY{max(keep)}", flush=True)
+        print(f"state_payments: {len(entities):,} private vendors paid ${MIN_TOTAL:,}+ in FY{min(keep)}-FY{max(keep)}", flush=True)
         biz = enrich.businesses(cur, state)
         matches = match_entities(entities, biz)
         rows = {}
