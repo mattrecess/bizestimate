@@ -1,31 +1,40 @@
-"""Probe Oklahoma Secretary of State business records access (search page, data portal)."""
+"""Probe sources: NCUA call report zips, Oklahoma open data (state vendor payments / contracts)."""
+import io
+import json
 import re
 import urllib.request
+import zipfile
 
-UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36"}
-URLS = [
-    "https://www.sos.ok.gov/corp/corpInquiryFind.aspx",
-    "https://www.sos.ok.gov/corp/corpInformation.aspx",
-    "https://www.sos.ok.gov/business/default.aspx",
-    "https://data.ok.gov/api/3/action/package_search?q=business%20entity&rows=20",
-    "https://data.ok.gov/api/3/action/package_search?q=secretary%20of%20state&rows=20",
-    "https://api.opencorporates.com/v0.4/companies/search?q=hunter+mechanical&jurisdiction_code=us_ok",
-]
-for url in URLS:
+UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/126 Safari/537.36"}
+
+
+def get(url, n=50_000_000):
+    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r:
+        return r.status, r.read(n)
+
+
+for q in ("vendor payments", "contracts", "purchase card", "expenditures", "license", "contractor"):
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=30) as r:
-            body = r.read(400_000).decode("utf-8", "replace")
-            print(f"== {r.status} {url} ({len(body)} bytes)")
-            print("   captcha:", bool(re.search(r"captcha|turnstile|hcaptcha", body, re.I)),
-                  "| viewstate:", "__VIEWSTATE" in body)
-            title = re.search(r"<title>(.*?)</title>", body, re.S)
-            print("   title:", title.group(1).strip()[:100] if title else "")
-            inputs = re.findall(r'<input[^>]+name="([^"]+)"', body)
-            print("   inputs:", [i for i in inputs if not i.startswith("__")][:15])
-            if "package_search" in url:
-                for m in re.findall(r'"title": "([^"]+)"', body)[:20]:
-                    print("   dataset:", m)
-            if "opencorporates" in url:
-                print("   ", body[:300])
+        _, b = get(f"https://data.ok.gov/api/3/action/package_search?q={q.replace(' ', '%20')}&rows=15")
+        res = json.loads(b)["result"]
+        print(f"== data.ok.gov '{q}': {res['count']} datasets")
+        for p in res["results"]:
+            fmts = sorted({r.get('format') for r in p.get('resources', [])})
+            print(f"   {p['name']} | {p['title'][:70]} | {p.get('metadata_modified', '')[:10]} | {fmts}")
     except Exception as e:  # noqa: BLE001
-        print(f"== ERR {url}: {e!r}")
+        print(f"== data.ok.gov {q}: {e!r}")
+
+for ym in ("2026-06", "2026-03", "2025-12", "2025-09"):
+    url = f"https://www.ncua.gov/files/publications/analysis/call-report-data-{ym}.zip"
+    try:
+        status, b = get(url)
+        z = zipfile.ZipFile(io.BytesIO(b))
+        print(f"== NCUA {ym}: {status}, {len(b):,} bytes, files {[n for n in z.namelist()][:30]}")
+        for name in z.namelist():
+            if name.upper() in ("FOICU.TXT", "FS220.TXT", "FS220A.TXT"):
+                head = z.open(name).read(3000).decode("latin-1").splitlines()
+                print(f"   {name}: {head[0][:1500]}")
+                print(f"   row: {head[1][:400]}")
+        break
+    except Exception as e:  # noqa: BLE001
+        print(f"== NCUA {ym}: {e!r}")
