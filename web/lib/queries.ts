@@ -8,8 +8,12 @@ export type Filters = {
   city?: string;
   minRev?: number;
   maxRev?: number;
+  naics?: string[];    // codes or prefixes ("561720", "2382")
+  lender?: string[];   // business_lenders.lender_key
   bbox?: [number, number, number, number]; // west, south, east, north
 };
+
+const list = (v: string | null) => (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
 export function parseFilters(p: URLSearchParams): Filters {
   const num = (k: string) => (p.get(k) ? Number(p.get(k)) : undefined);
@@ -20,6 +24,8 @@ export function parseFilters(p: URLSearchParams): Filters {
     city: p.get("city")?.trim() || undefined,
     minRev: num("min_rev"),
     maxRev: num("max_rev"),
+    naics: list(p.get("naics")).filter((c) => /^\d{2,6}$/.test(c)).slice(0, 50),
+    lender: list(p.get("lender")).slice(0, 50),
     bbox: bbox?.length === 4 && bbox.every(Number.isFinite) ? (bbox as Filters["bbox"]) : undefined,
   };
 }
@@ -57,6 +63,8 @@ export function where(f: Filters) {
   }
   if (prefixes) conds.push(sql`left(naics, 2) in ${sql(prefixes)}`);
   if (f.city) conds.push(sql`lower(city) = lower(${f.city})`);
+  if (f.naics?.length) conds.push(sql`(${industryMatch(f.naics)})`);
+  if (f.lender?.length) conds.push(sql`id in (select business_id from business_lenders where lender_key in ${sql(f.lender)})`);
   if (f.minRev !== undefined) conds.push(sql`est_revenue_mid >= ${f.minRev}`);
   if (f.maxRev !== undefined) conds.push(sql`est_revenue_mid <= ${f.maxRev}`);
   if (f.bbox) {

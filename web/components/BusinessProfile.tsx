@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import type { Business, Comparable, Headcount, Loan } from "@/lib/business";
+import type { Business, Comparable, Headcount, LenderLink, Loan } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import ContactCard from "./ContactCard";
 import SaveButton from "./SaveButton";
@@ -14,7 +14,7 @@ import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
 import RangeBar from "./RangeBar";
 
-export type Profile = Business & { loans: Loan[]; comps: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[] };
+export type Profile = Business & { loans: Loan[]; comps: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[]; lenders?: LenderLink[] };
 
 // "https://www.blastrac.com/" -> "blastrac.com"
 function siteLabel(url: string) {
@@ -229,6 +229,20 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
           <PeopleAdvisors sources={b.sources ?? []} owner={b.owner_name}
             lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
+          {b.lenders?.length ? (
+            <div className="section">
+              <h2><Icon name="bank" size={16} />Banking relationships</h2>
+              <table><tbody>
+                {b.lenders.map((l) => (
+                  <tr key={l.key}>
+                    <td><b>{l.name}</b><div className="disclaimer" style={{ margin: 0 }}>{l.loans.join(", ")}</div></td>
+                    <td className="num"><a href={`/?lender=${encodeURIComponent(l.key)}`}>{l.borrowers > 1 ? `All ${l.borrowers.toLocaleString()} borrowers` : "View"} →</a></td>
+                  </tr>
+                ))}
+              </tbody></table>
+              <p className="disclaimer">From PPP and SBA loan records, which name the bank but not the individual banker.</p>
+            </div>
+          ) : null}
           <PublicRecords sources={b.sources ?? []} />
           {!compact && b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
         </>

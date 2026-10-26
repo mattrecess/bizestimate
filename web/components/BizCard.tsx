@@ -8,6 +8,7 @@ export type Biz = {
   jobs_reported: number | null; est_revenue_mid: string; est_ebitda_mid: string;
   est_confidence: string; est_method: string; has_owner: boolean; has_website: boolean;
   is_nonprofit?: boolean; est_ebitda_low?: string; est_ebitda_high?: string; parent_name?: string | null; sell_score?: string | null;
+  lenders?: { lender: string; program: string | null; year: number | null }[] | null;
 };
 
 export default function BizCard({ b, hovered, onOpen, onHover }: {
@@ -42,6 +43,14 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
         {value && <span className="stat-chip">Value<b>{money(value.mid)}</b></span>}
         {b.jobs_reported ? <span className="stat-chip">Employees<b>{b.jobs_reported}</b></span> : null}
       </div>}
+      {b.lenders?.length ? (
+        <div className="lender-line"><Icon name="bank" size={13} />
+          {Object.entries(b.lenders.reduce<Record<string, string[]>>((acc, l) => {
+            (acc[l.lender] ??= []).push([l.program, l.year].filter(Boolean).join(" "));
+            return acc;
+          }, {})).map(([name, loans]) => `${name} (${loans.join(", ")})`).join(" · ")}
+        </div>
+      ) : null}
       <div className="badges">
         {b.est_method === "branch" ? <span className="badge">Branch location</span>
           : avg ? <span className="badge">Industry avg</span>

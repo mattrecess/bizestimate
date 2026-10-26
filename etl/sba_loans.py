@@ -119,6 +119,7 @@ def main():
             print(f"  sample: {names[key]}: {len(d['loans'])} loan(s), latest {l['program']} ${l['amount'] or 0:,.0f} "
                   f"{l['date']} via {l['lender']} ({l['business_age']})", flush=True)
         enrich.save(cur, state, "sba", out)
+        enrich.apply_lenders(cur, state)
 
 
 if __name__ == "__main__":

@@ -31,6 +31,9 @@ export async function GET(req: NextRequest) {
              est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
              coalesce(owner_name, '') <> '' as has_owner,
              coalesce(website, '') <> '' as has_website, to_jsonb(businesses) ->> 'sell_score' as sell_score
+             ${f.lender?.length ? sql`, (select json_agg(json_build_object('lender', bl.lender, 'program', bl.program, 'year', bl.year)
+                 order by bl.year desc nulls last) from business_lenders bl
+                 where bl.business_id = businesses.id and bl.lender_key in ${sql(f.lender)}) as lenders` : sql``}
       from businesses where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
     sql`select count(*)::int as count from businesses where ${w}`,
   ]);

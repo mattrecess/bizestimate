@@ -382,3 +382,12 @@ table.mini td { padding: 3px 4px; }
 .compare .page, .compare { max-width: 1100px; }
 .compare td.k { color: var(--muted); font-size: 13px; white-space: nowrap; }
 .compare th { text-align: left; vertical-align: bottom; }
+.lender-line { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); margin: 6px 0 2px; }
+.popover.wide { width: 360px; max-width: calc(100vw - 32px); }
+.check-option { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.check-option:hover { background: var(--panel-2); }
+.check-option .code { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 52px; }
+.check-option .label { flex: 1; }
+.check-option .count { color: var(--faint); font-size: 12px; }
+.check-option.group { font-weight: 650; }
+.check-list { max-height: 320px; overflow-y: auto; margin: 6px 0; }

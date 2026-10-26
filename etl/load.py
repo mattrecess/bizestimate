@@ -190,6 +190,11 @@ def main():
             print(f"Filling owners failed (non-fatal): {e}", flush=True)
         try:
             with conn.transaction():
+                enrich.apply_lenders(cur, state.upper())
+        except psycopg.Error as e:
+            print(f"Lender links failed (non-fatal): {e}", flush=True)
+        try:
+            with conn.transaction():
                 enrich.apply_signals(cur, state.upper())
         except psycopg.Error as e:
             print(f"Sell signals failed (non-fatal): {e}", flush=True)

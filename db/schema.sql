@@ -203,3 +203,16 @@ alter table known_financials add column if not exists sale_year int;
 
 -- Oklahoma state payments were switched off (almost no private vendors); clear what it saved.
 delete from business_sources where source = 'state_payments';
+
+-- Which banks lent to each business (PPP and SBA 7(a)/504 loans), for the lender filter; rebuilt by
+-- enrich.apply_lenders after each load. lender_key groups spellings of one bank.
+create table if not exists business_lenders (
+  business_id bigint not null references businesses(id) on delete cascade,
+  lender_key  text not null,
+  lender      text not null,
+  source      text not null,          -- 'ppp' | 'sba'
+  program     text,                   -- 'PPP' | '7(a)' | '504'
+  year        int,
+  amount      numeric
+);
+create index if not exists business_lenders_key_idx on business_lenders (lender_key, business_id);

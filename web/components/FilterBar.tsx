@@ -4,7 +4,7 @@ import { SECTORS } from "@/lib/sectors";
 import { money } from "@/lib/format";
 import Icon from "./Icon";
 
-export type FilterState = { sector: string; city: string; minRev: string; maxRev: string; sort: string };
+export type FilterState = { sector: string; city: string; minRev: string; maxRev: string; sort: string; naics: string; lender: string };
 
 const MIN_REV = [250e3, 500e3, 1e6, 2e6, 5e6, 10e6, 25e6];
 const MAX_REV = [500e3, 1e6, 2e6, 5e6, 10e6, 25e6, 50e6];
@@ -26,8 +26,19 @@ export default function FilterBar({ value, onChange, cities }: {
   onChange: (next: Partial<FilterState>) => void;
   cities: { city: string; count: number }[];
 }) {
-  const [open, setOpen] = useState<"" | "industry" | "city" | "revenue">("");
+  const [open, setOpen] = useState<"" | "industry" | "city" | "revenue" | "naics" | "lender">("");
   const [cityQuery, setCityQuery] = useState("");
+  const [naicsQuery, setNaicsQuery] = useState("");
+  const [lenderQuery, setLenderQuery] = useState("");
+  const [naicsOptions, setNaicsOptions] = useState<{ code: string; label: string; count: number }[] | null>(null);
+  const [lenderOptions, setLenderOptions] = useState<{ key: string; name: string; count: number }[] | null>(null);
+  const naicsSel = value.naics ? value.naics.split(",") : [];
+  const lenderSel = value.lender ? value.lender.split(",") : [];
+  useEffect(() => {
+    if ((open === "naics" || naicsSel.length) && !naicsOptions) fetch("/api/naics").then((r) => r.json()).then(setNaicsOptions).catch(() => setNaicsOptions([]));
+    if ((open === "lender" || lenderSel.length) && !lenderOptions) fetch("/api/lenders").then((r) => r.json()).then(setLenderOptions).catch(() => setLenderOptions([]));
+  }, [open, naicsSel.length, lenderSel.length, naicsOptions, lenderOptions]);
+  const flip = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]).join(",");
   const bar = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +50,27 @@ export default function FilterBar({ value, onChange, cities }: {
   }, []);
 
   const toggle = (k: typeof open) => setOpen(open === k ? "" : k);
-  const anyFilter = value.sector || value.city || value.minRev || value.maxRev;
+  const anyFilter = value.sector || value.city || value.minRev || value.maxRev || value.naics || value.lender;
+  // NAICS options: each sector (2-digit) as a selectable group, then its codes; searchable by code or name.
+  const nq = naicsQuery.trim().toLowerCase();
+  const naicsRows = (() => {
+    if (!naicsOptions) return [];
+    const out: { code: string; label: string; count: number; group?: boolean }[] = [];
+    const sectors = new Map<string, number>();
+    for (const o of naicsOptions) sectors.set(o.code.slice(0, 2), (sectors.get(o.code.slice(0, 2)) ?? 0) + o.count);
+    for (const [two, count] of sectors) {
+      const label = SECTORS.find((s) => s.prefixes.includes(two))?.label ?? `Sector ${two}`;
+      const kids = naicsOptions.filter((o) => o.code.startsWith(two) && (!nq || o.code.startsWith(nq) || o.label?.toLowerCase().includes(nq)));
+      const groupHit = !nq || two.startsWith(nq) || label.toLowerCase().includes(nq);
+      if (groupHit || kids.length) out.push({ code: two, label, count, group: true });
+      out.push(...(groupHit && !nq ? [] : kids));
+    }
+    return out.slice(0, 400);
+  })();
+  const naicsLabel = !naicsSel.length ? "NAICS" : naicsSel.length === 1 ? `NAICS ${naicsSel[0]}` : `NAICS (${naicsSel.length})`;
+  const shownLenders = (lenderOptions ?? []).filter((l) => l.name.toLowerCase().includes(lenderQuery.toLowerCase())).slice(0, 200);
+  const lenderLabel = !lenderSel.length ? "Lender"
+    : lenderSel.length === 1 ? (lenderOptions?.find((l) => l.key === lenderSel[0])?.name ?? "1 lender") : `Lenders (${lenderSel.length})`;
   const shownCities = cities.filter((c) => c.city.toLowerCase().includes(cityQuery.toLowerCase())).slice(0, 80);
 
   return (
@@ -79,6 +110,56 @@ export default function FilterBar({ value, onChange, cities }: {
       </div>
 
       <div className="pill-wrap">
+        <button className={`pill ${naicsSel.length ? "active" : ""}`} aria-expanded={open === "naics"} onClick={() => toggle("naics")}>
+          {naicsLabel}<Icon name="chevron" size={14} className="chev" />
+        </button>
+        {open === "naics" && (
+          <div className="popover wide">
+            <input className="filter-input" placeholder="Code or industry, e.g. 2382 or janitorial" value={naicsQuery} autoFocus
+              onChange={(e) => setNaicsQuery(e.target.value)} />
+            <div className="check-list">
+              {!naicsOptions && <div className="check-option">Loading…</div>}
+              {naicsRows.map((o) => (
+                <label key={o.code} className={`check-option ${o.group ? "group" : ""}`}>
+                  <input type="checkbox" checked={naicsSel.includes(o.code)} onChange={() => onChange({ naics: flip(naicsSel, o.code) })} />
+                  <span className="code">{o.code}</span><span className="label">{o.label}</span><span className="count">{o.count.toLocaleString()}</span>
+                </label>
+              ))}
+            </div>
+            <div className="popover-actions">
+              <button className="link-btn" onClick={() => onChange({ naics: "" })}>Clear{naicsSel.length ? ` (${naicsSel.length})` : ""}</button>
+              <button className="link-btn" onClick={() => setOpen("")}>Done</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="pill-wrap">
+        <button className={`pill ${lenderSel.length ? "active" : ""}`} aria-expanded={open === "lender"} onClick={() => toggle("lender")}>
+          {lenderLabel}<Icon name="chevron" size={14} className="chev" />
+        </button>
+        {open === "lender" && (
+          <div className="popover wide">
+            <h4>Businesses that borrowed from (PPP and SBA loans)</h4>
+            <input className="filter-input" placeholder="Find a bank" value={lenderQuery} autoFocus onChange={(e) => setLenderQuery(e.target.value)} />
+            <div className="check-list">
+              {!lenderOptions && <div className="check-option">Loading…</div>}
+              {shownLenders.map((l) => (
+                <label key={l.key} className="check-option">
+                  <input type="checkbox" checked={lenderSel.includes(l.key)} onChange={() => onChange({ lender: flip(lenderSel, l.key) })} />
+                  <span className="label">{l.name}</span><span className="count">{l.count.toLocaleString()}</span>
+                </label>
+              ))}
+            </div>
+            <div className="popover-actions">
+              <button className="link-btn" onClick={() => onChange({ lender: "" })}>Clear{lenderSel.length ? ` (${lenderSel.length})` : ""}</button>
+              <button className="link-btn" onClick={() => setOpen("")}>Done</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="pill-wrap">
         <button className={`pill ${value.minRev || value.maxRev ? "active" : ""}`} aria-expanded={open === "revenue"} onClick={() => toggle("revenue")}>
           {revenueLabel(value.minRev, value.maxRev)}<Icon name="chevron" size={14} className="chev" />
         </button>
@@ -111,7 +192,7 @@ export default function FilterBar({ value, onChange, cities }: {
       </select>
 
       {anyFilter && (
-        <button className="clear-filters" onClick={() => onChange({ sector: "", city: "", minRev: "", maxRev: "" })}>Clear filters</button>
+        <button className="clear-filters" onClick={() => onChange({ sector: "", city: "", minRev: "", maxRev: "", naics: "", lender: "" })}>Clear filters</button>
       )}
     </div>
   );

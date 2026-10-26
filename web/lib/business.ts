@@ -52,9 +52,9 @@ export async function getBusinessRow(id: string): Promise<Business | null> {
 export async function getProfile(id: string) {
   const biz = await getBusinessRow(id);
   if (!biz) return null;
-  const [loans, headcounts, comps, sources] = await Promise.all([
-    getLoans(id), getHeadcounts(id), getComparables(biz), getSources(id)]);
-  return { ...biz, loans, headcounts, comps, sources };
+  const [loans, headcounts, comps, sources, lenders] = await Promise.all([
+    getLoans(id), getHeadcounts(id), getComparables(biz), getSources(id), getLenders(id)]);
+  return { ...biz, loans, headcounts, comps, sources, lenders };
 }
 
 const getLoans = (id: string) => sql<Loan[]>`
@@ -67,6 +67,14 @@ const getSources = (id: string) => sql<SourceRecord[]>`
   -- Contact details stay out of the profile; they load on request from /api/contact.
   select s.source, s.data - 'phone' - 'email' as data from business_sources s join businesses b on b.biz_key = s.biz_key
   where b.id = ${id} order by s.source`.catch(() => [] as SourceRecord[]);
+
+// Banks that lent to the business, with how many other listed businesses each one lends to.
+export type LenderLink = { key: string; name: string; loans: string[]; borrowers: number };
+const getLenders = (id: string) => sql<LenderLink[]>`
+  select bl.lender_key as key, min(bl.lender) as name,
+         array_agg(distinct concat_ws(' ', bl.program, bl.year)) as loans,
+         (select count(distinct x.business_id)::int from business_lenders x where x.lender_key = bl.lender_key) as borrowers
+  from business_lenders bl where bl.business_id = ${id} group by bl.lender_key order by name`.catch(() => [] as LenderLink[]);
 
 // Retirement-plan participants by year (Form 5500); empty until that table has been loaded.
 const getHeadcounts = (id: string) => sql<Headcount[]>`

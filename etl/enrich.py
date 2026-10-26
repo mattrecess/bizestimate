@@ -5,6 +5,8 @@ and calls save() with one JSON object per business. Profiles show those objects;
 actual revenue also feed apply_reported(), which replaces our estimate with the reported figure.
 """
 import json
+import re
+from collections import Counter
 
 from benchmarks import load_benchmarks, lookup
 from margins import Margins
@@ -213,3 +215,43 @@ def apply_signals(cur, state):
     cur.execute("""update businesses b set sell_score = t.score, sell_signals = t.signals from sell_stage t
                    where b.biz_key = t.biz_key and (b.sell_score, b.sell_signals) is distinct from (t.score, t.signals)""")
     print(f"Sell signals: {counts['scored']:,} businesses scored, {counts['high']:,} at 40+ ({cur.rowcount:,} changed)", flush=True)
+
+
+# Words that vary between spellings of one bank ("BancFirst", "BANCFIRST, N.A.", "The Bank of X, National Association").
+_LENDER_NOISE = {"THE", "NA", "N", "A", "NATIONAL", "ASSOCIATION", "INC", "INCORPORATED", "CORP", "CORPORATION",
+                 "CO", "COMPANY", "LLC", "FSB", "SSB", "DBA"}
+
+
+def lender_key(name):
+    words = re.sub(r"[^A-Z0-9 ]", " ", (name or "").upper().replace("&", " AND ")).split()
+    return " ".join(w for w in words if w not in _LENDER_NOISE) or None
+
+
+def apply_lenders(cur, state):
+    """Rebuild business_lenders from PPP loans and SBA 7(a)/504 records (the lender filter)."""
+    cur.execute("""select l.business_id, l.lender, extract(year from l.date_approved)::int, l.amount
+                   from ppp_loans l join businesses b on b.id = l.business_id
+                   where b.state = %s and coalesce(l.lender, '') <> ''""", (state,))
+    rows = [(bid, lender, "ppp", "PPP", year, amount) for bid, lender, year, amount in cur.fetchall()]
+    cur.execute("""select b.id, s.data -> 'loans' from business_sources s join businesses b on b.biz_key = s.biz_key
+                   where b.state = %s and s.source = 'sba'""", (state,))
+    for bid, loans in cur.fetchall():
+        for loan in loans or []:
+            if loan.get("lender"):
+                rows.append((bid, loan["lender"], "sba", loan.get("program"), loan.get("fiscal_year"), loan.get("amount")))
+    # One display name per bank: its most common spelling.
+    spellings = {}
+    for _, lender, *_ in rows:
+        k = lender_key(lender)
+        if k:
+            spellings.setdefault(k, Counter())[lender.strip()] += 1
+    names = {k: c.most_common(1)[0][0] for k, c in spellings.items()}
+    cur.execute("delete from business_lenders where business_id in (select id from businesses where state = %s)", (state,))
+    seen = set()
+    with cur.copy("copy business_lenders (business_id, lender_key, lender, source, program, year, amount) from stdin") as cp:
+        for bid, lender, source, program, year, amount in rows:
+            k = lender_key(lender)
+            if k and (bid, k, source, program, year) not in seen:
+                seen.add((bid, k, source, program, year))
+                cp.write_row((bid, k, names[k], source, program, year, amount))
+    print(f"Lenders: {len(seen):,} business-bank links across {len(names):,} lenders", flush=True)
