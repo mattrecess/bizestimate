@@ -10,6 +10,7 @@ import argparse
 import csv
 import os
 import re
+import time
 from urllib.parse import unquote, urlparse
 
 import psycopg
@@ -74,8 +75,21 @@ def main():
         # The database's default statement limit is sized for page requests; a load that touches
         # every row (e.g. after new columns are added) needs longer. Readers aren't blocked meanwhile.
         cur.execute("set statement_timeout = '45min'")
+        # Schema changes need a brief exclusive lock; if another job holds the table, retry in short
+        # attempts rather than queue page requests behind a long wait.
         with open(os.path.join(ROOT, "db", "schema.sql")) as f:
-            cur.execute(f.read())
+            schema = f.read()
+        for attempt in range(1, 61):
+            try:
+                with conn.transaction():
+                    cur.execute("set local lock_timeout = '5s'")
+                    cur.execute(schema)
+                break
+            except (psycopg.errors.LockNotAvailable, psycopg.errors.DeadlockDetected) as e:
+                if attempt == 60:
+                    raise
+                print(f"Schema: table busy ({type(e).__name__}), retrying", flush=True)
+                time.sleep(30)
 
         cur.execute("delete from industry_benchmarks")
         cur.executemany(
