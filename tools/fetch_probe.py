@@ -1,16 +1,13 @@
-"""Current public estimates for a few businesses (from the live site's search API)."""
-import json
-import urllib.parse
+"""Find Census SUSB tables with receipts by enterprise size."""
+import re
 import urllib.request
 
-for q in ("minick materials", "aaa landscape", "red dirt septic", "vantage point itad", "hunter mechanical"):
-    url = "https://bizestimate-six.vercel.app/api/businesses?limit=5&q=" + urllib.parse.quote(q)
+for url in ("https://www2.census.gov/programs-surveys/susb/tables/2022/", "https://www2.census.gov/programs-surveys/susb/tables/2017/"):
     try:
         with urllib.request.urlopen(url, timeout=60) as r:
-            data = json.loads(r.read())
-        print(f"== {q}: {data['total']} found")
-        for b in data["results"][:4]:
-            print(f"   {b['name']} ({b['city']}) rev {float(b['est_revenue_mid'] or 0):,.0f} ebitda {float(b['est_ebitda_mid'] or 0):,.0f} "
-                  f"jobs {b.get('jobs_reported')} {b['est_method']} naics {b['naics']}")
+            body = r.read().decode("utf-8", "replace")
+        print(f"== {url}")
+        for f in re.findall(r'href="([^"?/][^"]*)"', body):
+            print("  ", f)
     except Exception as e:  # noqa: BLE001
-        print(f"== {q}: {e!r}")
+        print(f"== {url}: {e!r}")
