@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sql } from "@/lib/db";
 import { money } from "@/lib/format";
+import { estimateValue } from "@/lib/valuation";
 import { adminConfigured, businessId, isAdmin, signIn, signOut } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const metadata = { title: "Admin | BizEstimate", robots: { index: false, 
 type Row = {
   id: string; name: string; city: string; revenue: string | null; ebitda: string | null; year: number | null;
   note: string | null; is_public: boolean; est_revenue_mid: string | null; est_ebitda_mid: string | null; est_method: string;
+  sale_price: string | null; sale_year: number | null; naics: string | null; is_nonprofit: boolean;
 };
 
 const dollars = (v: FormDataEntryValue | null) => {
@@ -42,11 +44,14 @@ async function save(form: FormData) {
   const ebitda = dollars(form.get("ebitda"));
   const year = Number(form.get("year")) || null;
   const isPublic = form.get("is_public") === "on";
+  const salePrice = dollars(form.get("sale_price"));
+  const saleYear = Number(form.get("sale_year")) || null;
   await sql`
-    insert into known_financials (biz_key, revenue, ebitda, year, note, is_public, updated_at)
-    values (${b.biz_key}, ${revenue}, ${ebitda}, ${year}, ${String(form.get("note") ?? "") || null}, ${isPublic}, now())
+    insert into known_financials (biz_key, revenue, ebitda, year, note, is_public, sale_price, sale_year, updated_at)
+    values (${b.biz_key}, ${revenue}, ${ebitda}, ${year}, ${String(form.get("note") ?? "") || null}, ${isPublic}, ${salePrice}, ${saleYear}, now())
     on conflict (biz_key) do update set revenue = excluded.revenue, ebitda = excluded.ebitda, year = excluded.year,
-      note = excluded.note, is_public = excluded.is_public, updated_at = now()`;
+      note = excluded.note, is_public = excluded.is_public, sale_price = excluded.sale_price, sale_year = excluded.sale_year,
+      updated_at = now()`;
   revalidatePath("/admin");
   redirect("/admin?saved=1");
 }
@@ -85,7 +90,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
   }
   const rows = await sql<Row[]>`
     select b.id, b.name, b.city, k.revenue, k.ebitda, k.year, k.note, k.is_public,
-           b.est_revenue_mid, b.est_ebitda_mid, b.est_method
+           b.est_revenue_mid, b.est_ebitda_mid, b.est_method, k.sale_price, k.sale_year, b.naics, b.is_nonprofit
     from known_financials k join businesses b on b.biz_key = k.biz_key order by k.updated_at desc`.catch(() => [] as Row[]);
   // Accuracy of what the site would show without these figures (private rows only: public ones
   // already replace the estimate).
@@ -111,6 +116,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         <input name="revenue" placeholder="Revenue (e.g. 15M)" />
         <input name="ebitda" placeholder="EBITDA (e.g. 2M)" />
         <input name="year" placeholder="Year (optional)" inputMode="numeric" />
+        <input name="sale_price" placeholder="Sale price, if sold (e.g. 9M)" />
+        <input name="sale_year" placeholder="Sale year" inputMode="numeric" />
         <input name="note" placeholder="Note (private)" />
         <label className="check"><input type="checkbox" name="is_public" /> Show publicly</label>
         <button className="btn primary">Save</button>
@@ -124,7 +131,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <div className="tile"><div className="k">EBITDA: typically off by</div><div className="v">{factor(off(ebi))}</div><div className="r">typically {bias(ebi)} vs actual</div></div>
           </div>
           <table>
-            <thead><tr><th>Business</th><th className="num">Revenue (est / actual)</th><th className="num">EBITDA (est / actual)</th><th>Shown</th><th /></tr></thead>
+            <thead><tr><th>Business</th><th className="num">Revenue (est / actual)</th><th className="num">EBITDA (est / actual)</th><th>Sale (multiple: actual / ours)</th><th>Shown</th><th /></tr></thead>
             <tbody>
               {rows.map((r) => {
                 const rr = ratio(r.est_revenue_mid, r.revenue), er = ratio(r.est_ebitda_mid, r.ebitda);
@@ -133,6 +140,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
                     <td><a href={`/business/${r.id}`}>{r.name}</a><div className="disclaimer" style={{ margin: 0 }}>{r.city}{r.year ? ` · ${r.year}` : ""}{r.note ? ` · ${r.note}` : ""}</div></td>
                     <td className="num">{r.is_public ? "—" : money(r.est_revenue_mid)} / {money(r.revenue)}{rr && !r.is_public ? <div className="disclaimer" style={{ margin: 0 }}>{rr.toFixed(2)}×</div> : null}</td>
                     <td className="num">{r.is_public ? "—" : money(r.est_ebitda_mid)} / {money(r.ebitda)}{er && !r.is_public ? <div className="disclaimer" style={{ margin: 0 }}>{er.toFixed(2)}×</div> : null}</td>
+                    <td>{r.sale_price ? <>{money(r.sale_price)}{r.sale_year ? ` (${r.sale_year})` : ""}
+                      <div className="disclaimer" style={{ margin: 0 }}>{r.ebitda && Number(r.ebitda) > 0 ? `${(Number(r.sale_price) / Number(r.ebitda)).toFixed(1)}×` : "—"} / {
+                        estimateValue({ naics: r.naics, est_ebitda_mid: r.ebitda, is_nonprofit: r.is_nonprofit })?.multiple ?? "—"}×</div></> : "—"}</td>
                     <td>{r.is_public ? "Public" : "Private"}</td>
                     <td><form action={remove}><input type="hidden" name="id" value={r.id} /><button className="link-btn">Remove</button></form></td>
                   </tr>

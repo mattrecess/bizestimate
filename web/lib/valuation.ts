@@ -2,6 +2,9 @@
 // for its industry. Multiples rise with size (small owner-run firms sell for 2-3x, $10M+ EBITDA
 // companies for 7x+), following the published averages of business-broker and private-equity deal
 // surveys (BizBuySell Insight, Pepperdine Private Capital Markets, GF Data). A rough guide only.
+// Checked against 2026 figures: BizBuySell main-street sales ~2.6-2.7x SDE (owner's earnings, so a
+// higher multiple of EBITDA); GF Data's $10-25M enterprise-value deals ~5.9x and PE deals overall ~7x.
+// Sales the admin records (/admin) show actual vs. modelled multiples, to tune these over time.
 
 type Num = string | number | null | undefined;
 
@@ -16,7 +19,7 @@ const INDUSTRY: [string, number][] = [
   ["5415", 1.3], ["5182", 1.3], ["5132", 1.35], ["5242", 1.3], ["562", 1.15], ["6212", 1.2], ["6211", 1.1],
   ["6213", 1.1], ["6216", 1.15], ["5412", 1.15], ["5411", 0.95], ["5413", 1.0], ["238220", 1.05],
   ["238210", 1.0], ["5617", 0.95], ["561720", 0.9], ["23", 0.85], ["31", 1.05], ["32", 1.05], ["33", 1.1],
-  ["42", 0.95], ["44", 0.8], ["45", 0.8], ["7225", 0.7], ["7224", 0.75], ["721", 0.9], ["484", 0.8],
+  ["42", 0.95], ["44", 0.8], ["45", 0.8], ["7225", 0.7], ["7224", 0.75], ["721", 0.9], ["484", 0.8], ["811192", 1.3],
   ["211", 0.8], ["213", 0.75], ["8111", 0.9], ["812", 0.85], ["54", 1.0], ["62", 1.05],
 ];
 

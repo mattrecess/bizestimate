@@ -197,3 +197,6 @@ create table if not exists contact_lookups (
 alter table businesses add column if not exists sell_score smallint;
 alter table businesses add column if not exists sell_signals jsonb;
 create index if not exists businesses_sell_idx on businesses (sell_score desc nulls last, id);
+-- A known sale (price and year) for calibrating the valuation multiples; private like the rest.
+alter table known_financials add column if not exists sale_price numeric;
+alter table known_financials add column if not exists sale_year int;
