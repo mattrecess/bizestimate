@@ -359,3 +359,10 @@ table.mini td { padding: 3px 4px; }
 .admin-nav { display: flex; gap: 14px; align-items: center; }
 .admin h2 { margin-top: 28px; }
 .admin td ul { margin: 0; padding-left: 16px; }
+.landing .lede { color: var(--muted); font-size: 16px; margin: 4px 0 16px; }
+.landing .crumbs { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.landing .crumbs a { color: var(--muted); }
+.landing-tiles { grid-template-columns: repeat(4, 1fr); margin-bottom: 14px; }
+.link-grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; }
+.link-grid span { color: var(--muted); font-size: 12px; }
+@media (max-width: 640px) { .landing-tiles { grid-template-columns: 1fr 1fr; } }

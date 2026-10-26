@@ -117,3 +117,6 @@ export function industryLabel(naics: string | null | undefined): string | null {
   }
   return best?.label ?? null;
 }
+
+/** URL slug for an industry or city page ("Plumbing, heating & air" -> "plumbing-heating-and-air"). */
+export const slug = (s: string) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

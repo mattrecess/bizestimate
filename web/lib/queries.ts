@@ -54,7 +54,7 @@ export function where(f: Filters) {
 
 // A business is in the industry when its NAICS code starts with one of the industry's codes, or
 // (map listings with only a coarse code, e.g. 5617) when its code starts one of them.
-function industryMatch(codes: string[]) {
+export function industryMatch(codes: string[]) {
   return codes
     .map((c) => sql`(naics like ${c + "%"} or (length(naics) between 4 and 5 and ${c} like naics || '%'))`)
     .reduce((a, b) => sql`${a} or ${b}`);

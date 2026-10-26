@@ -8,7 +8,7 @@ import HeadcountChart from "./HeadcountChart";
 import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
 import { estimateValue } from "@/lib/valuation";
-import { industryLabel } from "@/lib/industries";
+import { industryLabel, slug } from "@/lib/industries";
 import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
 import RangeBar from "./RangeBar";
@@ -91,7 +91,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             {[b.address, b.city, `OK ${b.zip}`].filter(Boolean).join(", ")}
           </div>
           <div className="badges">
-            <span className="badge info">{industryLabel(b.naics) ?? b.industry}</span>
+            {industryLabel(b.naics)
+              ? <a className="badge info" href={`/oklahoma/${slug(industryLabel(b.naics)!)}${b.city ? `/${slug(b.city)}` : ""}`}>{industryLabel(b.naics)}</a>
+              : <span className="badge info">{b.industry}</span>}
             {b.est_method === "branch" ? <span className="badge">Branch location</span>
               : avg ? <span className="badge">Industry avg</span>
               : b.est_method === "verified" ? <span className="badge good">Verified financials</span>
