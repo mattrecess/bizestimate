@@ -13,9 +13,11 @@ on:
     paths: ["etl/**", "db/**", ".github/workflows/etl.yml"]
 permissions:
   contents: write
+# A new run waits for the current one instead of cancelling it: a full load takes over an hour, and
+# a push part-way through used to throw that work away.
 concurrency:
   group: etl
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   etl:
     runs-on: ubuntu-latest
