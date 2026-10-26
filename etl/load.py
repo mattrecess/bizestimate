@@ -90,6 +90,9 @@ def main():
                     raise
                 print(f"Schema: table busy ({type(e).__name__}), retrying", flush=True)
                 time.sleep(30)
+        # Commit now: schema changes lock the table, and the load below runs in one long transaction
+        # that would otherwise hold that lock (blocking pages and other jobs) until it finishes.
+        conn.commit()
 
         cur.execute("delete from industry_benchmarks")
         cur.executemany(

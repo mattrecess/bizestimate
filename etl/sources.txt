@@ -8,7 +8,7 @@ ncua
 sec
 sba_loans
 contracts
-state_payments   (Oklahoma state agency payments to vendors, data.ok.gov)
+# state_payments   (off: the published tables are almost all payments between public bodies)
 fmcsa
 website_profile paid   (AI reads company websites; runs in the Public records workflow only)
 owner_search paid   (Google results via Serper for owners we lack; Public records workflow only)

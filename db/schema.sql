@@ -200,3 +200,6 @@ create index if not exists businesses_sell_idx on businesses (sell_score desc nu
 -- A known sale (price and year) for calibrating the valuation multiples; private like the rest.
 alter table known_financials add column if not exists sale_price numeric;
 alter table known_financials add column if not exists sale_year int;
+
+-- Oklahoma state payments were switched off (almost no private vendors); clear what it saved.
+delete from business_sources where source = 'state_payments';
