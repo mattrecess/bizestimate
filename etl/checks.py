@@ -8,7 +8,8 @@ error, which fails the workflow and raises an alert, when something looks broken
   - median estimated revenue moved by more than MAX_MEDIAN_SHIFT;
   - one city holds more than MAX_CITY_SHARE of the 1,000 highest-revenue businesses (the old
     Tulsa skew);
-  - an estimate (not a reported or verified figure) is above MAX_ESTIMATE;
+  - an estimate from PPP figures or industry averages is above MAX_ESTIMATE (reported and verified
+    figures, and large employers sized from their 401(k) headcount, can legitimately be bigger);
   - far fewer businesses have an owner, website or phone than last time.
 """
 import argparse
@@ -35,7 +36,7 @@ def metrics(cur, state):
                count(*) filter (where coalesce(owner_name, '') <> ''),
                count(*) filter (where coalesce(website, '') <> ''),
                count(*) filter (where coalesce(to_jsonb(b) ->> 'phone', '') <> '' or coalesce(to_jsonb(b) ->> 'site_phone', '') <> ''),
-               count(*) filter (where est_revenue_mid > %s and est_method not in ('reported', 'verified'))
+               count(*) filter (where est_revenue_mid > %s and est_method not in ('reported', 'verified', 'retirement_plan'))
         from businesses b where state = %s""", (MAX_ESTIMATE, state))
     total, median, owners, websites, phones, huge = cur.fetchone()
     cur.execute("""
@@ -47,6 +48,10 @@ def metrics(cur, state):
     top_city, top_count = cur.fetchone() or ("", 0)
     cur.execute("select est_method, count(*) from businesses where state = %s group by 1 order by 2 desc", (state,))
     methods = {m or "": n for m, n in cur.fetchall()}
+    cur.execute("""select name, city, est_method, jobs_reported, round(est_revenue_mid / 1e6) from businesses
+                   where state = %s and est_revenue_mid > %s order by est_revenue_mid desc limit 15""", (state, MAX_ESTIMATE))
+    for name, city, method, jobs, rev in cur.fetchall():
+        print(f"Checks: over ${MAX_ESTIMATE / 1e9:.0f}B: {name} ({city}) ${rev:,.0f}M via {method}, {jobs or '?'} PPP jobs", flush=True)
     return {"total": total, "median_revenue": float(median or 0), "owners": owners, "websites": websites,
             "phones": phones, "huge_estimates": huge, "top_city": top_city, "top_city_share": top_count / 1000,
             "methods": methods}
