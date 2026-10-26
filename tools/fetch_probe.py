@@ -9,8 +9,15 @@ UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/126 Safari/537.36"}
 
 
 def get(url, n=60_000_000):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=180) as r:
-        return r.read(n)
+    import time
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=180) as r:
+                return r.read(n)
+        except Exception:  # noqa: BLE001
+            if attempt == 3:
+                raise
+            time.sleep(10)
 
 
 z = zipfile.ZipFile(io.BytesIO(get("https://www.ncua.gov/files/publications/analysis/call-report-data-2026-06.zip")))
