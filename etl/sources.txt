@@ -4,9 +4,11 @@
 irs990
 irs990_people
 banks
+ncua
 sec
 sba_loans
 contracts
+state_payments   (Oklahoma state agency payments to vendors, data.ok.gov)
 fmcsa
 website_profile paid   (AI reads company websites; runs in the Public records workflow only)
 owner_search paid   (Google results via Serper for owners we lack; Public records workflow only)

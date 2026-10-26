@@ -42,6 +42,24 @@ export default function PublicRecords({ sources }: { sources: SourceRecord[] }) 
             {by.fdic.founded && <Fact k="Established" v={String(by.fdic.founded)} />}
           </Record>
         )}
+        {by.ncua && (
+          <Record title="NCUA call report" sub="Credit union" url={by.ncua.url}>
+            <Fact k={`Revenue (${by.ncua.quarter}, annualized)`} v={money(by.ncua.revenue)} />
+            <Fact k="Net income" v={money(by.ncua.ebitda)} />
+            <Fact k="Assets" v={money(by.ncua.assets)} />
+            {by.ncua.members && <Fact k="Members" v={count(by.ncua.members)} />}
+            {by.ncua.employees && <Fact k="Employees" v={count(by.ncua.employees)} />}
+            {by.ncua.founded && <Fact k="Chartered" v={String(by.ncua.founded)} />}
+          </Record>
+        )}
+        {by.state_payments && (
+          <Record title="Oklahoma state payments" sub={(by.state_payments.agencies || []).join(" · ") || "State agencies"} url={by.state_payments.url}>
+            <Fact k="Total, recent years" v={money(by.state_payments.total)} />
+            {Object.entries(by.state_payments.by_year as Record<string, number>).reverse().map(([y, v]) => (
+              <Fact key={y} k={`FY${y}`} v={money(v)} />
+            ))}
+          </Record>
+        )}
         {by.sba && (
           <Record title="SBA loans" sub={by.sba.ownership_change_year ? `Changed ownership (SBA-financed, FY${by.sba.ownership_change_year})` : `${by.sba.loans.length} since 2020`}>
             <table className="mini"><tbody>

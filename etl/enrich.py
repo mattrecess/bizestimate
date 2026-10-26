@@ -148,7 +148,7 @@ def _parts(name):
 
 def sell_signals(row, src, headcounts, this_year):
     """(score, [signal text]) for one business, or (None, []) where it doesn't apply."""
-    if row["is_nonprofit"] or row["est_method"] == "branch" or src.get("sec") or src.get("fdic") or src.get("irs990"):
+    if row["is_nonprofit"] or row["est_method"] == "branch" or src.get("sec") or src.get("fdic") or src.get("ncua") or src.get("irs990"):
         return None, []
     points, signals = 0, []
     founded = _years_in_business(src)
