@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { matchIndustry } from "@/lib/industries";
-import { CACHE, parseFilters, publicAddress, relevance, where } from "@/lib/queries";
+import { industryLabel, matchIndustry } from "@/lib/industries";
+import { CACHE, naicsQuery, parseFilters, publicAddress, relevance, where } from "@/lib/queries";
 
 // Each ends with id, so ties (equal revenue) keep one order and continuous scrolling never repeats
 // or skips a business between batches.
@@ -37,6 +37,14 @@ export async function GET(req: NextRequest) {
   // Let Vercel's CDN answer repeat requests (the default view especially) without the database.
   // Tell the page when a search reads as an industry ("janitorial", "janitorial tulsa"), so it can
   // say so; not when the other words are a name ("Triple Bar Ranch" is a ranch, not a bar).
+  const code = naicsQuery(f.q);
+  if (code) {
+    const [b] = await sql`select label from industry_benchmarks where ${code.code} like naics_prefix || '%'
+                          order by length(naics_prefix) desc limit 1`.catch(() => []);
+    const label = industryLabel(code.code) ?? b?.label;
+    return NextResponse.json({ total: count, results: rows, industry: `NAICS ${code.code}${label ? ` · ${label}` : ""}` },
+      { headers: { "Cache-Control": CACHE } });
+  }
   const m = f.q ? matchIndustry(f.q) : null;
   const industry = !m ? null
     : !m.rest || (await sql`select 1 from businesses where lower(city) = ${m.rest} limit 1`).length

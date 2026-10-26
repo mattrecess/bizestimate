@@ -41,7 +41,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions }: {
     <div className="searchbox" ref={box}>
       <Icon name="search" className="icon-search" />
       <input
-        type="search" placeholder="Search a business, city or industry" value={text} aria-label="Search businesses"
+        type="search" placeholder="Search a business, city, industry or NAICS code" value={text} aria-label="Search businesses"
         onFocus={() => setOpen(true)}
         onChange={(e) => { setText(e.target.value); onChange(e.target.value); setOpen(true); }}
         onKeyDown={(e) => {
@@ -62,7 +62,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions }: {
           {industry && (
             <li>
               <button className="s-industry" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen(false)}>
-                <span className="s-name"><Icon name="search" size={14} />All {industry.toLowerCase()} businesses</span>
+                <span className="s-name"><Icon name="search" size={14} />{industry.startsWith("NAICS") ? `All businesses in ${industry}` : `All ${industry.toLowerCase()} businesses`}</span>
                 <span className="s-meta">{current?.total?.toLocaleString()} found</span>
               </button>
             </li>

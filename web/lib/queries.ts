@@ -24,9 +24,23 @@ export function parseFilters(p: URLSearchParams): Filters {
   };
 }
 
+// "5617", "561720", "naics 2382", "238220 tulsa": a NAICS code (2-6 digits) and any place words.
+export function naicsQuery(q: string | undefined) {
+  const m = q?.trim().match(/^(?:naics\s*:?\s*)?(\d{2,6})(?:\s+(.+))?$/i);
+  return m ? { code: m[1], rest: (m[2] ?? "").trim() } : null;
+}
+
 export function where(f: Filters) {
   const prefixes = SECTORS.find((s) => s.label === f.sector)?.prefixes;
   const conds = [sql`true`];
+  const code = naicsQuery(f.q);
+  if (code) {
+    // Every business whose code starts with it, plus map listings with only a coarser code that
+    // it falls under (e.g. 5617 for 561720).
+    conds.push(sql`(naics like ${code.code + "%"} or (length(naics) between 4 and 5 and ${code.code} like naics || '%'))`);
+    if (code.rest) conds.push(sql`search @@ websearch_to_tsquery('simple', ${code.rest})`);
+    f = { ...f, q: undefined };
+  }
   // Every word of the query starts a word of the name ("tru solutions" -> TRUE SOLUTIONS ...,
   // "jk janitorial" -> J K JANITORIAL), or the name is a close misspelling of the query.
   if (f.q) {
@@ -71,7 +85,7 @@ const wordMatch = (w: string) => sql`name_norm ~ ${"\\m" + w}`;
 
 // When searching: names matching more of the query's words first, then the closest spelling.
 export function relevance(f: Filters) {
-  if (!f.q) return sql``;
+  if (!f.q || naicsQuery(f.q)) return sql``;
   const words = queryWords(f.q);
   const matched = words.length
     ? words.map((w) => sql`(${wordMatch(w)})::int`).reduce((a, b) => sql`${a} + ${b}`)

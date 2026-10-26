@@ -308,7 +308,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <table><tbody>
             <tr><td>Revenue range</td><td className="num">{moneyRange(b.est_revenue_low, b.est_revenue_high)}</td></tr>
             <tr><td>EBITDA range</td><td className="num">{moneyRange(b.est_ebitda_low, b.est_ebitda_high)}</td></tr>
-            <tr><td>Industry (NAICS)</td><td className="num">{b.industry} ({b.naics || "n/a"})</td></tr>
+            <tr><td>Industry (NAICS)</td><td className="num">{b.industry} ({b.naics ? <a href={`/?q=${b.naics}`} title="Every business with this NAICS code">{b.naics}</a> : "n/a"})</td></tr>
           </tbody></table>
           {b.est_confidence === "low" && b.est_method === "employees" && (
             <p className="disclaimer">Low confidence: the employee-based and payroll-based estimates differ by more than 2×.</p>
