@@ -26,3 +26,4 @@ done
 "$PY" etl/owners_search.py || echo "search owner lookup failed (non-fatal)"
 "$PY" etl/diagnose.py --state "$STATE" || echo "diagnose failed (non-fatal)"
 "$PY" etl/load.py --state "$STATE"
+"$PY" etl/checks.py --state "$STATE"
