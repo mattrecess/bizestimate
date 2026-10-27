@@ -46,17 +46,50 @@ type Props = {
   onHover?: (id: number | null) => void;
 };
 
-// Rounded price-tag image that stretches around its label (drawn at 2× for sharp edges).
+// Zillow-style price tag: a rounded pill that stretches around its label, with a small pointer at the
+// bottom whose tip marks the spot (drawn at 2x for sharp edges). Only the straight parts stretch, so the
+// corners stay round and the pointer stays centred and the same size.
+const TAG_W = 64, TAG_H = 54;
 function tagImage(fill: string, stroke: string) {
-  const size = 48, r = 18, c = document.createElement("canvas");
-  c.width = c.height = size;
+  const c = document.createElement("canvas");
+  c.width = TAG_W; c.height = TAG_H;
   const g = c.getContext("2d")!;
+  const top = 3, bottom = 40, left = 3, right = TAG_W - 3, r = 14, mid = TAG_W / 2, tail = 8, tip = TAG_H - 3;
   g.beginPath();
-  g.roundRect(2, 2, size - 4, size - 4, r);
+  g.moveTo(left + r, top);
+  g.arcTo(right, top, right, bottom, r);
+  g.arcTo(right, bottom, left, bottom, r);
+  g.lineTo(mid + tail, bottom);
+  g.lineTo(mid, tip);
+  g.lineTo(mid - tail, bottom);
+  g.arcTo(left, bottom, left, top, r);
+  g.arcTo(left, top, right, top, r);
+  g.closePath();
   g.fillStyle = fill; g.fill();
-  g.lineWidth = 3; g.strokeStyle = stroke; g.stroke();
-  return { data: g.getImageData(0, 0, size, size), opts: { pixelRatio: 2, stretchX: [[20, 28]] as [number, number][], stretchY: [[20, 28]] as [number, number][] } };
+  g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = stroke; g.stroke();
+  return {
+    data: g.getImageData(0, 0, TAG_W, TAG_H),
+    opts: {
+      pixelRatio: 2,
+      stretchX: [[left + r + 1, mid - tail - 1], [mid + tail + 1, right - r - 1]] as [number, number][],
+      stretchY: [[top + r + 1, bottom - r - 1]] as [number, number][],
+      content: [left + 8, top + 4, right - 8, bottom - 4] as [number, number, number, number],
+    },
+  };
 }
+
+// Small dot for businesses whose tag is hidden where tags would overlap.
+function dotImage(fill: string) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 16;
+  const g = c.getContext("2d")!;
+  g.beginPath(); g.arc(8, 8, 5.5, 0, Math.PI * 2);
+  g.fillStyle = fill; g.fill(); g.lineWidth = 2.5; g.strokeStyle = "#ffffff"; g.stroke();
+  return { data: g.getImageData(0, 0, 16, 16), opts: { pixelRatio: 2 } };
+}
+
+// Lifts a label so the tag's pointer tip (padding + pointer below the text) lands on the point.
+const TIP_OFFSET: [number, number] = [0, -0.95];
 
 const PPP = "#0b3b75", AVG = "#5b6b82", HOT = "#1f6feb";
 
@@ -66,6 +99,9 @@ function addBizLayers(m: maplibregl.Map, data: GeoJSON.FeatureCollection, select
   if (m.getSource("biz")) return;
   for (const [name, fill] of [["tag", PPP], ["tag-avg", AVG], ["tag-hot", HOT]] as const) {
     if (!m.hasImage(name)) { const t = tagImage(fill, "#ffffff"); m.addImage(name, t.data, t.opts); }
+  }
+  for (const [name, fill] of [["dot", PPP], ["dot-avg", AVG]] as const) {
+    if (!m.hasImage(name)) { const d = dotImage(fill); m.addImage(name, d.data, d.opts); }
   }
   m.addSource("biz", { type: "geojson", data, cluster: true, clusterRadius: 44, clusterMaxZoom: 12 });
   m.addLayer({
@@ -80,40 +116,44 @@ function addBizLayers(m: maplibregl.Map, data: GeoJSON.FeatureCollection, select
     layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12, "text-font": ["Noto Sans Bold"] },
     paint: { "text-color": "#fff" },
   });
+  // Dots sit below the tags and are placed after them, so a dot only shows where its business's tag
+  // was hidden by a bigger neighbour's (a shown tag's pointer covers its own dot).
   m.addLayer({
-    id: "points", type: "circle", source: "biz", filter: ["!", ["has", "point_count"]],
-    paint: {
-      "circle-color": ["case", ["==", ["get", "avg"], 1], AVG, PPP],
-      "circle-radius": 5, "circle-stroke-width": 1.5, "circle-stroke-color": "#fff",
+    id: "points", type: "symbol", source: "biz", filter: ["!", ["has", "point_count"]],
+    layout: {
+      "icon-image": ["case", ["==", ["get", "avg"], 1], "dot-avg", "dot"],
+      "icon-padding": 0, "symbol-sort-key": ["-", 0, ["get", "rev"]],
     },
   });
   m.addLayer({
     id: "tags", type: "symbol", source: "biz", filter: ["all", ["!", ["has", "point_count"]], ["has", "label"]],
     layout: {
       "icon-image": ["case", ["==", ["get", "avg"], 1], "tag-avg", "tag"],
-      "icon-text-fit": "both", "icon-text-fit-padding": [2, 7, 4, 7],
+      "icon-text-fit": "both", "icon-text-fit-padding": [2, 2, 3, 2],
       "text-field": ["get", "label"], "text-font": ["Noto Sans Bold"], "text-size": 12,
-      "text-anchor": "bottom", "text-offset": [0, -0.85],
+      "text-anchor": "bottom", "text-offset": TIP_OFFSET,
       // Biggest businesses win when tags collide.
       "symbol-sort-key": ["-", 0, ["get", "rev"]], "text-padding": 2,
     },
     paint: { "text-color": "#ffffff" },
   });
+  // The hovered business: a bright tag with its name, drawn over everything without moving other tags.
   m.addSource("hover", { type: "geojson", data: hover });
   m.addLayer({
     id: "hover", type: "symbol", source: "hover",
     layout: {
-      "icon-image": "tag-hot", "icon-text-fit": "both", "icon-text-fit-padding": [3, 9, 5, 9],
-      "text-field": ["get", "label"], "text-font": ["Noto Sans Bold"], "text-size": 13,
-      "text-anchor": "bottom", "text-offset": [0, -0.85],
-      "icon-allow-overlap": true, "text-allow-overlap": true,
+      "icon-image": "tag-hot", "icon-text-fit": "both", "icon-text-fit-padding": [3, 4, 4, 4],
+      "text-field": ["case", ["has", "name"], ["concat", ["get", "name"], "  ·  ", ["coalesce", ["get", "label"], ""]], ["get", "label"]],
+      "text-font": ["Noto Sans Bold"], "text-size": 13, "text-max-width": 30,
+      "text-anchor": "bottom", "text-offset": TIP_OFFSET,
+      "icon-allow-overlap": true, "text-allow-overlap": true, "icon-ignore-placement": true, "text-ignore-placement": true,
     },
     paint: { "text-color": "#ffffff" },
   });
   m.addSource("selected", { type: "geojson", data: selected });
   m.addLayer({
     id: "selected", type: "circle", source: "selected",
-    paint: { "circle-color": HOT, "circle-radius": 9, "circle-stroke-width": 3, "circle-stroke-color": "#fff" },
+    paint: { "circle-color": HOT, "circle-radius": 6, "circle-stroke-width": 2.5, "circle-stroke-color": "#fff" },
   });
 }
 
@@ -147,7 +187,8 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
   const [satellite, setSatellite] = useState(true);
 
   useEffect(() => {
-    const m = new maplibregl.Map({ container: el.current!, style: SATELLITE, center, zoom });
+    // No fade: tags changing as data or the hover updates otherwise blink.
+    const m = new maplibregl.Map({ container: el.current!, style: SATELLITE, center, zoom, fadeDuration: 0 });
     map.current = m;
     m.addControl(new maplibregl.NavigationControl(), "top-right");
     const emit = () => {
@@ -161,12 +202,10 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       const z = await src.getClusterExpansionZoom(f.properties!.cluster_id);
       m.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom: z }, { user: true });
     });
-    const hover = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: [0, -34] });
     const pins = ["points", "tags"];
     m.on("click", pins, (e) => {
       const p = e.features![0].properties!;
       if (selectCb.current) {
-        hover.remove();
         selectCb.current(Number(p.id));
         return;
       }
@@ -177,20 +216,17 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       div.append(a, document.createElement("br"), `Est. revenue ${shortMoney(Number(p.rev))}`);
       new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(m);
     });
-    // Name on hover (the tag already shows revenue), and the matching card is highlighted.
+    // Hover: the tag turns bright and shows the name (the hover layer), and the matching card is
+    // highlighted. Nothing is drawn under the pointer, so the hover can't cancel itself.
     let hovering: number | null = null;
     m.on("mousemove", pins, (e) => {
       if (!selectCb.current) return;
-      const f = e.features![0];
-      const id = Number(f.properties!.id);
+      const id = Number(e.features![0].properties!.id);
       if (id === hovering) return;
       hovering = id;
       hoverCb.current?.(id);
-      const strong = document.createElement("strong");
-      strong.textContent = f.properties!.name;
-      hover.setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number]).setDOMContent(strong).addTo(m);
     });
-    m.on("mouseleave", pins, () => { hovering = null; hover.remove(); hoverCb.current?.(null); });
+    m.on("mouseleave", pins, () => { hovering = null; hoverCb.current?.(null); });
     for (const l of ["clusters", ...pins]) {
       m.on("mouseenter", l, () => (m.getCanvas().style.cursor = "pointer"));
       m.on("mouseleave", l, () => (m.getCanvas().style.cursor = ""));
