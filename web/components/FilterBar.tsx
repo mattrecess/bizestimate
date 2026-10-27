@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { SECTORS } from "@/lib/sectors";
 import { money } from "@/lib/format";
 import Icon from "./Icon";
+import NaicsPicker from "./NaicsPicker";
+import RevenueRange from "./RevenueRange";
 
 export type FilterState = { sector: string; city: string; minRev: string; maxRev: string; sort: string; naics: string; lender: string };
 
-const MIN_REV = [250e3, 500e3, 1e6, 2e6, 5e6, 10e6, 25e6];
-const MAX_REV = [500e3, 1e6, 2e6, 5e6, 10e6, 25e6, 50e6];
 const SORTS: [string, string][] = [
   ["revenue_desc", "Revenue: high to low"], ["revenue_asc", "Revenue: low to high"],
   ["ebitda_desc", "EBITDA: high to low"], ["jobs_desc", "Most employees"], ["sell_desc", "Likely to sell"], ["name", "Name A–Z"],
@@ -28,16 +28,13 @@ export default function FilterBar({ value, onChange, cities }: {
 }) {
   const [open, setOpen] = useState<"" | "industry" | "city" | "revenue" | "naics" | "lender">("");
   const [cityQuery, setCityQuery] = useState("");
-  const [naicsQuery, setNaicsQuery] = useState("");
   const [lenderQuery, setLenderQuery] = useState("");
-  const [naicsOptions, setNaicsOptions] = useState<{ code: string; label: string; count: number }[] | null>(null);
   const [lenderOptions, setLenderOptions] = useState<{ key: string; name: string; count: number }[] | null>(null);
   const naicsSel = value.naics ? value.naics.split(",") : [];
   const lenderSel = value.lender ? value.lender.split(",") : [];
   useEffect(() => {
-    if ((open === "naics" || naicsSel.length) && !naicsOptions) fetch("/api/naics").then((r) => r.json()).then(setNaicsOptions).catch(() => setNaicsOptions([]));
     if ((open === "lender" || lenderSel.length) && !lenderOptions) fetch("/api/lenders").then((r) => r.json()).then(setLenderOptions).catch(() => setLenderOptions([]));
-  }, [open, naicsSel.length, lenderSel.length, naicsOptions, lenderOptions]);
+  }, [open, lenderSel.length, lenderOptions]);
   const flip = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]).join(",");
   const bar = useRef<HTMLDivElement>(null);
 
@@ -51,22 +48,6 @@ export default function FilterBar({ value, onChange, cities }: {
 
   const toggle = (k: typeof open) => setOpen(open === k ? "" : k);
   const anyFilter = value.sector || value.city || value.minRev || value.maxRev || value.naics || value.lender;
-  // NAICS options: each sector (2-digit) as a selectable group, then its codes; searchable by code or name.
-  const nq = naicsQuery.trim().toLowerCase();
-  const naicsRows = (() => {
-    if (!naicsOptions) return [];
-    const out: { code: string; label: string; count: number; group?: boolean }[] = [];
-    const sectors = new Map<string, number>();
-    for (const o of naicsOptions) sectors.set(o.code.slice(0, 2), (sectors.get(o.code.slice(0, 2)) ?? 0) + o.count);
-    for (const [two, count] of sectors) {
-      const label = SECTORS.find((s) => s.prefixes.includes(two))?.label ?? `Sector ${two}`;
-      const kids = naicsOptions.filter((o) => o.code.startsWith(two) && (!nq || o.code.startsWith(nq) || o.label?.toLowerCase().includes(nq)));
-      const groupHit = !nq || two.startsWith(nq) || label.toLowerCase().includes(nq);
-      if (groupHit || kids.length) out.push({ code: two, label, count, group: true });
-      out.push(...(groupHit && !nq ? [] : kids));
-    }
-    return out.slice(0, 400);
-  })();
   const naicsLabel = !naicsSel.length ? "NAICS" : naicsSel.length === 1 ? `NAICS ${naicsSel[0]}` : `NAICS (${naicsSel.length})`;
   const shownLenders = (lenderOptions ?? []).filter((l) => l.name.toLowerCase().includes(lenderQuery.toLowerCase())).slice(0, 200);
   const lenderLabel = !lenderSel.length ? "Lender"
@@ -114,18 +95,8 @@ export default function FilterBar({ value, onChange, cities }: {
           {naicsLabel}<Icon name="chevron" size={14} className="chev" />
         </button>
         {open === "naics" && (
-          <div className="popover wide">
-            <input className="filter-input" placeholder="Code or industry, e.g. 2382 or janitorial" value={naicsQuery} autoFocus
-              onChange={(e) => setNaicsQuery(e.target.value)} />
-            <div className="check-list">
-              {!naicsOptions && <div className="check-option">Loading…</div>}
-              {naicsRows.map((o) => (
-                <label key={o.code} className={`check-option ${o.group ? "group" : ""}`}>
-                  <input type="checkbox" checked={naicsSel.includes(o.code)} onChange={() => onChange({ naics: flip(naicsSel, o.code) })} />
-                  <span className="code">{o.code}</span><span className="label">{o.label}</span><span className="count">{o.count.toLocaleString()}</span>
-                </label>
-              ))}
-            </div>
+          <div className="popover wide naics-pop">
+            <NaicsPicker selected={naicsSel} onChange={(codes) => onChange({ naics: codes.join(",") })} />
             <div className="popover-actions">
               <button className="link-btn" onClick={() => onChange({ naics: "" })}>Clear{naicsSel.length ? ` (${naicsSel.length})` : ""}</button>
               <button className="link-btn" onClick={() => setOpen("")}>Done</button>
@@ -164,21 +135,9 @@ export default function FilterBar({ value, onChange, cities }: {
           {revenueLabel(value.minRev, value.maxRev)}<Icon name="chevron" size={14} className="chev" />
         </button>
         {open === "revenue" && (
-          <div className="popover">
-            <h4>Minimum revenue</h4>
-            <div className="chips">
-              {MIN_REV.map((v) => (
-                <button key={v} className={`chip ${value.minRev === String(v) ? "selected" : ""}`}
-                  onClick={() => onChange({ minRev: value.minRev === String(v) ? "" : String(v) })}>{money(v)}+</button>
-              ))}
-            </div>
-            <h4>Maximum revenue</h4>
-            <div className="chips">
-              {MAX_REV.map((v) => (
-                <button key={v} className={`chip ${value.maxRev === String(v) ? "selected" : ""}`}
-                  onClick={() => onChange({ maxRev: value.maxRev === String(v) ? "" : String(v) })}>{money(v)}</button>
-              ))}
-            </div>
+          <div className="popover wide">
+            <h4>Revenue range</h4>
+            <RevenueRange minRev={value.minRev} maxRev={value.maxRev} onChange={(next) => onChange(next)} />
             <div className="popover-actions">
               <button className="link-btn" onClick={() => onChange({ minRev: "", maxRev: "" })}>Reset</button>
               <button className="link-btn" onClick={() => setOpen("")}>Done</button>

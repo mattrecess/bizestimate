@@ -35,12 +35,13 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
       {b.est_method === "branch" ? (
         <div className="card-figures"><span className="sub">Location of <b>{b.parent_name}</b></span></div>
       ) : <div className="card-figures">
+        {/* Headline: estimated value (revenue where a sale value doesn't apply, e.g. nonprofits). */}
         <div>
-          <div className="rev-label">Est. revenue</div>
-          <div className="rev">{money(b.est_revenue_mid)}</div>
+          <div className="rev-label">{value ? "Est. value" : "Est. revenue"}</div>
+          <div className="rev">{money(value ? value.mid : b.est_revenue_mid)}</div>
         </div>
+        {value && <span className="stat-chip">Revenue<b>{money(b.est_revenue_mid)}</b></span>}
         <span className="stat-chip">EBITDA<b>{money(b.est_ebitda_mid)}</b></span>
-        {value && <span className="stat-chip">Value<b>{money(value.mid)}</b></span>}
         {b.jobs_reported ? <span className="stat-chip">Employees<b>{b.jobs_reported}</b></span> : null}
       </div>}
       {b.lenders?.length ? (
