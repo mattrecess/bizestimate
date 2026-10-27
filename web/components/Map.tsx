@@ -78,14 +78,14 @@ function tagImage(fill: string, stroke: string) {
   };
 }
 
-// Small dot for businesses whose tag is hidden where tags would overlap.
+// Small dot: every business, visible where its tag is hidden by a bigger neighbour's.
 function dotImage(fill: string) {
   const c = document.createElement("canvas");
-  c.width = c.height = 16;
+  c.width = c.height = 12;
   const g = c.getContext("2d")!;
-  g.beginPath(); g.arc(8, 8, 5.5, 0, Math.PI * 2);
-  g.fillStyle = fill; g.fill(); g.lineWidth = 2.5; g.strokeStyle = "#ffffff"; g.stroke();
-  return { data: g.getImageData(0, 0, 16, 16), opts: { pixelRatio: 2 } };
+  g.beginPath(); g.arc(6, 6, 4, 0, Math.PI * 2);
+  g.fillStyle = fill; g.fill(); g.lineWidth = 1.5; g.strokeStyle = "#ffffff"; g.stroke();
+  return { data: g.getImageData(0, 0, 12, 12), opts: { pixelRatio: 2 } };
 }
 
 // Lifts a label so the tag's pointer tip (padding + pointer below the text) lands on the point.
@@ -94,7 +94,7 @@ const TIP_OFFSET: [number, number] = [0, -0.95];
 const PPP = "#0b3b75", AVG = "#5b6b82", HOT = "#1f6feb";
 
 // Business pins sit on top of whichever basemap is active; re-added after every style switch.
-// Clusters while zoomed out; then each business is a dot with a revenue tag (tags hide where they'd overlap).
+// Each business is a revenue tag, or a small dot where its tag would overlap a bigger business's.
 function addBizLayers(m: maplibregl.Map, data: GeoJSON.FeatureCollection, selected: GeoJSON.FeatureCollection, hover: GeoJSON.FeatureCollection) {
   if (m.getSource("biz")) return;
   for (const [name, fill] of [["tag", PPP], ["tag-avg", AVG], ["tag-hot", HOT]] as const) {
@@ -103,30 +103,20 @@ function addBizLayers(m: maplibregl.Map, data: GeoJSON.FeatureCollection, select
   for (const [name, fill] of [["dot", PPP], ["dot-avg", AVG]] as const) {
     if (!m.hasImage(name)) { const d = dotImage(fill); m.addImage(name, d.data, d.opts); }
   }
-  m.addSource("biz", { type: "geojson", data, cluster: true, clusterRadius: 44, clusterMaxZoom: 12 });
+  // No clustering (as on Zillow): every business is a pin; the biggest get price tags where there's room.
+  m.addSource("biz", { type: "geojson", data });
+  // Every business is a small dot (they may overlap, showing density, as on Zillow) drawn under the
+  // tags. Each dot sits just above its point, inside where the tag's pointer goes, so a business with
+  // a tag shows only the tag.
   m.addLayer({
-    id: "clusters", type: "circle", source: "biz", filter: ["has", "point_count"],
-    paint: {
-      "circle-color": PPP, "circle-opacity": 0.92, "circle-stroke-width": 2, "circle-stroke-color": "#fff",
-      "circle-radius": ["step", ["get", "point_count"], 15, 50, 20, 500, 26, 5000, 32],
-    },
-  });
-  m.addLayer({
-    id: "cluster-count", type: "symbol", source: "biz", filter: ["has", "point_count"],
-    layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12, "text-font": ["Noto Sans Bold"] },
-    paint: { "text-color": "#fff" },
-  });
-  // Dots sit below the tags and are placed after them, so a dot only shows where its business's tag
-  // was hidden by a bigger neighbour's (a shown tag's pointer covers its own dot).
-  m.addLayer({
-    id: "points", type: "symbol", source: "biz", filter: ["!", ["has", "point_count"]],
+    id: "points", type: "symbol", source: "biz",
     layout: {
       "icon-image": ["case", ["==", ["get", "avg"], 1], "dot-avg", "dot"],
-      "icon-padding": 0, "symbol-sort-key": ["-", 0, ["get", "rev"]],
+      "icon-offset": [0, -5], "icon-allow-overlap": true, "icon-ignore-placement": true,
     },
   });
   m.addLayer({
-    id: "tags", type: "symbol", source: "biz", filter: ["all", ["!", ["has", "point_count"]], ["has", "label"]],
+    id: "tags", type: "symbol", source: "biz", filter: ["has", "label"],
     layout: {
       "icon-image": ["case", ["==", ["get", "avg"], 1], "tag-avg", "tag"],
       "icon-text-fit": "both", "icon-text-fit-padding": [2, 2, 3, 2],
@@ -196,12 +186,6 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       boundsCb.current?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
     };
     m.on("style.load", () => addBizLayers(m, latest.current, pointFC(selectedRef.current), hoverFC(latest.current, hoveredRef.current)));
-    m.on("click", "clusters", async (e) => {
-      const f = e.features![0];
-      const src = m.getSource("biz") as maplibregl.GeoJSONSource;
-      const z = await src.getClusterExpansionZoom(f.properties!.cluster_id);
-      m.easeTo({ center: (f.geometry as GeoJSON.Point).coordinates as [number, number], zoom: z }, { user: true });
-    });
     const pins = ["points", "tags"];
     m.on("click", pins, (e) => {
       const p = e.features![0].properties!;
@@ -227,7 +211,7 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       hoverCb.current?.(id);
     });
     m.on("mouseleave", pins, () => { hovering = null; hoverCb.current?.(null); });
-    for (const l of ["clusters", ...pins]) {
+    for (const l of pins) {
       m.on("mouseenter", l, () => (m.getCanvas().style.cursor = "pointer"));
       m.on("mouseleave", l, () => (m.getCanvas().style.cursor = ""));
     }
