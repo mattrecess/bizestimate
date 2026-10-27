@@ -5,6 +5,7 @@ import BusinessProfile, { type Profile } from "@/components/BusinessProfile";
 import BizCard, { type Biz } from "@/components/BizCard";
 import FilterBar, { type FilterState } from "@/components/FilterBar";
 import { saveSearch } from "@/lib/saved";
+import { moreFrom } from "@/lib/more-filters";
 import Icon from "@/components/Icon";
 import SearchBox from "@/components/SearchBox";
 
@@ -20,7 +21,7 @@ function padBox([w, s, e, n]: Box): Box {
   return [Math.floor((w - dx) / g) * g, Math.floor((s - dy) / g) * g, Math.ceil((e + dx) / g) * g, Math.ceil((n + dy) / g) * g];
 }
 const inside = (a: Box, b: Box) => a[0] >= b[0] && a[1] >= b[1] && a[2] <= b[2] && a[3] <= b[3];
-const NO_FILTERS: FilterState = { sector: "", city: "", minRev: "", maxRev: "", sort: "revenue_desc", naics: "", lender: "" };
+const NO_FILTERS: FilterState = { sector: "", city: "", minRev: "", maxRev: "", sort: "revenue_desc", naics: "", lender: "", more: "" };
 
 // Filters are mirrored into the page URL so a search can be bookmarked or shared.
 const URL_KEYS = ["q", "sector", "city", "min_rev", "max_rev", "naics", "lender", "sort", "id"] as const;
@@ -52,7 +53,7 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
-  const { sector, city, minRev, maxRev, sort, naics, lender } = filters;
+  const { sector, city, minRev, maxRev, sort, naics, lender, more: moreFilters } = filters;
 
   function openBusiness(id: number) {
     if (!selectedId) listScroll.current = panel.current?.scrollTop ?? 0;
@@ -66,7 +67,7 @@ export default function Home() {
     setFilters({
       sector: u.get("sector") ?? "", city: u.get("city") ?? "",
       minRev: u.get("min_rev") ?? "", maxRev: u.get("max_rev") ?? "", sort: u.get("sort") ?? "revenue_desc",
-      naics: u.get("naics") ?? "", lender: u.get("lender") ?? "",
+      naics: u.get("naics") ?? "", lender: u.get("lender") ?? "", more: moreFrom(u),
     });
     // A shared link to a business opens its profile (on phones, the list side rather than the map).
     if (u.get("id") && /^\d+$/.test(u.get("id")!)) { setSelectedId(Number(u.get("id"))); setView("list"); }
@@ -82,9 +83,10 @@ export default function Home() {
     };
     const u = new URLSearchParams();
     for (const k of URL_KEYS) if (values[k]) u.set(k, values[k]);
+    for (const [k, v] of new URLSearchParams(moreFilters)) u.set(k, v);
     const qs = u.toString();
     window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-  }, [ready, debouncedQ, sector, city, minRev, maxRev, naics, lender, sort, selectedId]);
+  }, [ready, debouncedQ, sector, city, minRev, maxRev, naics, lender, moreFilters, sort, selectedId]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -124,8 +126,9 @@ export default function Home() {
     if (maxRev) p.set("max_rev", maxRev);
     if (naics) p.set("naics", naics);
     if (lender) p.set("lender", lender);
+    for (const [k, v] of new URLSearchParams(moreFilters)) p.set(k, v);
     return p.toString();
-  }, [debouncedQ, sector, city, minRev, maxRev, naics, lender]);
+  }, [debouncedQ, sector, city, minRev, maxRev, naics, lender, moreFilters]);
   // A city or name search covers the whole state; the map then flies to the matches.
   const fmtBox = (b: Box) => b.map((n) => n.toFixed(4)).join(",");
   const params = useMemo(() => {

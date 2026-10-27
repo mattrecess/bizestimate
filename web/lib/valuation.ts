@@ -9,13 +9,13 @@
 type Num = string | number | null | undefined;
 
 // EBITDA floor of each band -> typical multiple.
-const SIZE: [number, number][] = [
+export const SIZE: [number, number][] = [
   [0, 2.5], [250e3, 3.0], [500e3, 3.75], [1e6, 4.5], [2e6, 5.5], [5e6, 6.5], [10e6, 7.5], [25e6, 8.5],
 ];
 
 // Industry adjustments by NAICS prefix (longest wins): recurring-revenue and specialist businesses
 // sell for more, project-based and commodity ones for less.
-const INDUSTRY: [string, number][] = [
+export const INDUSTRY: [string, number][] = [
   ["5415", 1.3], ["5182", 1.3], ["5132", 1.35], ["5242", 1.3], ["562", 1.15], ["6212", 1.2], ["6211", 1.1],
   ["6213", 1.1], ["6216", 1.15], ["5412", 1.15], ["5411", 0.95], ["5413", 1.0], ["238220", 1.05],
   ["238210", 1.0], ["5617", 0.95], ["561720", 0.9], ["23", 0.85], ["31", 1.05], ["32", 1.05], ["33", 1.1],

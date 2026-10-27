@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import type { Business, Comparable, Headcount, LenderLink, Loan } from "@/lib/business";
+import type { Business, Comparable, Headcount, LenderLink, Loan, Location } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import ContactCard from "./ContactCard";
 import SaveButton from "./SaveButton";
@@ -14,7 +14,7 @@ import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
 import RangeBar from "./RangeBar";
 
-export type Profile = Business & { loans: Loan[]; comps: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[]; lenders?: LenderLink[] };
+export type Profile = Business & { loans: Loan[]; comps: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[]; lenders?: LenderLink[]; locations?: Location[] };
 
 // "https://www.blastrac.com/" -> "blastrac.com"
 function siteLabel(url: string) {
@@ -229,6 +229,21 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
           <PeopleAdvisors sources={b.sources ?? []} owner={b.owner_name}
             lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
+          {b.locations?.length ? (
+            <div className="section">
+              <h2><Icon name="map" size={16} />{b.locations.length + 1} locations</h2>
+              <table><tbody>
+                <tr><td><b>{b.address ?? b.city}</b></td><td>{b.city}</td><td className="num">This listing</td></tr>
+                {b.locations.map((l) => (
+                  <tr key={l.id}><td>{l.address ?? "—"}</td><td>{l.city}</td>
+                    <td className="num">{onSelect
+                      ? <a href={`/business/${l.id}`} onClick={(e) => { e.preventDefault(); onSelect(Number(l.id)); }}>View</a>
+                      : <a href={`/business/${l.id}`}>View</a>}</td></tr>
+                ))}
+              </tbody></table>
+              <p className="disclaimer">Revenue, EBITDA and value above are for the whole company.</p>
+            </div>
+          ) : null}
           {b.lenders?.length ? (
             <div className="section">
               <h2><Icon name="bank" size={16} />Banking relationships</h2>

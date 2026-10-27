@@ -1,6 +1,7 @@
 import { sql } from "./db";
 import { matchIndustry } from "./industries";
 import { SECTORS } from "./sectors";
+import { INDUSTRY, SIZE } from "./valuation";
 
 export type Filters = {
   q?: string;
@@ -10,8 +11,37 @@ export type Filters = {
   maxRev?: number;
   naics?: string[];    // codes or prefixes ("561720", "2382")
   lender?: string[];   // business_lenders.lender_key
+  // "More" filters
+  minValue?: number; maxValue?: number; minEbitda?: number; maxEbitda?: number;
+  minEmp?: number; maxEmp?: number;
+  sell?: number;          // likely-to-sell score at least
+  years?: number;         // in business at least this many years
+  owner?: boolean; phone?: boolean; email?: boolean; website?: boolean; contractor?: boolean;
+  basis?: string[];       // reported | k401 | ppp | avg
+  noBranch?: boolean; noNonprofit?: boolean; noFranchise?: boolean;
   bbox?: [number, number, number, number]; // west, south, east, north
 };
+
+// Estimate basis -> est_method values.
+const BASIS: Record<string, string[]> = {
+  reported: ["reported", "verified"], k401: ["retirement_plan"], ppp: ["employees", "payroll", "owner_earnings"], avg: ["industry_average"],
+};
+
+// Estimated value in SQL, from the same size and industry multiples as lib/valuation.ts.
+const multipleSql = (() => {
+  const size = [...SIZE].reverse().map(([floor, m]) => sql`when est_ebitda_mid >= ${floor} then ${m}::numeric`)
+    .reduce((a, b) => sql`${a} ${b}`);
+  const adj = [...INDUSTRY].sort((a, b) => b[0].length - a[0].length)
+    .map(([prefix, f]) => sql`when naics like ${prefix + "%"} then ${f}::numeric`).reduce((a, b) => sql`${a} ${b}`);
+  return sql`round((case ${size} else ${SIZE[0][1]}::numeric end) * (case ${adj} else 1 end), 1)`;
+})();
+export const valueSql = sql`(case when est_ebitda_mid > 0 and not is_nonprofit and coalesce(naics, '') not like '5221%'
+  and coalesce(naics, '') not like '813%' then est_ebitda_mid * ${multipleSql} end)`;
+
+// Latest headcount: the newest 401(k) filing, else the PPP application.
+const employeesSql = sql`coalesce((select h.employees from headcounts h where h.biz_key = businesses.biz_key
+  order by h.year desc limit 1), jobs_reported)`;
+const hasSource = (source: string) => sql`exists (select 1 from business_sources s where s.biz_key = businesses.biz_key and s.source = ${source})`;
 
 const list = (v: string | null) => (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -26,6 +56,12 @@ export function parseFilters(p: URLSearchParams): Filters {
     maxRev: num("max_rev"),
     naics: list(p.get("naics")).filter((c) => /^\d{2,6}$/.test(c)).slice(0, 50),
     lender: list(p.get("lender")).slice(0, 50),
+    minValue: num("min_value"), maxValue: num("max_value"), minEbitda: num("min_ebitda"), maxEbitda: num("max_ebitda"),
+    minEmp: num("min_emp"), maxEmp: num("max_emp"), sell: num("sell"), years: num("years"),
+    owner: p.get("owner") === "1", phone: p.get("phone") === "1", email: p.get("email") === "1",
+    website: p.get("website") === "1", contractor: p.get("contractor") === "1",
+    basis: list(p.get("basis")).filter((b) => b in BASIS),
+    noBranch: p.get("x_branch") === "1", noNonprofit: p.get("x_nonprofit") === "1", noFranchise: p.get("x_franchise") === "1",
     bbox: bbox?.length === 4 && bbox.every(Number.isFinite) ? (bbox as Filters["bbox"]) : undefined,
   };
 }
@@ -67,6 +103,31 @@ export function where(f: Filters) {
   if (f.lender?.length) conds.push(sql`id in (select business_id from business_lenders where lender_key in ${sql(f.lender)})`);
   if (f.minRev !== undefined) conds.push(sql`est_revenue_mid >= ${f.minRev}`);
   if (f.maxRev !== undefined) conds.push(sql`est_revenue_mid <= ${f.maxRev}`);
+  if (f.minValue !== undefined) conds.push(sql`${valueSql} >= ${f.minValue}`);
+  if (f.maxValue !== undefined) conds.push(sql`${valueSql} <= ${f.maxValue}`);
+  if (f.minEbitda !== undefined) conds.push(sql`est_ebitda_mid >= ${f.minEbitda}`);
+  if (f.maxEbitda !== undefined) conds.push(sql`est_ebitda_mid <= ${f.maxEbitda}`);
+  if (f.minEmp !== undefined) conds.push(sql`${employeesSql} >= ${f.minEmp}`);
+  if (f.maxEmp !== undefined) conds.push(sql`${employeesSql} <= ${f.maxEmp}`);
+  if (f.sell) conds.push(sql`(to_jsonb(businesses) ->> 'sell_score')::int >= ${f.sell}`);
+  if (f.years) {
+    const by = new Date().getFullYear() - f.years;
+    conds.push(sql`exists (select 1 from business_sources s where s.biz_key = businesses.biz_key and (
+      (s.source = 'founded' and (s.data ->> 'year')::int <= ${by})
+      or (s.source = 'website_profile' and (s.data ->> 'founded_year')::int between 1800 and ${by})
+      or (s.source = 'fdic' and (s.data ->> 'founded')::int <= ${by})))`);
+  }
+  if (f.owner) conds.push(sql`coalesce(owner_name, '') <> ''`);
+  if (f.phone) conds.push(sql`(coalesce(to_jsonb(businesses) ->> 'phone', '') <> '' or coalesce(to_jsonb(businesses) ->> 'site_phone', '') <> ''
+    or exists (select 1 from business_sources s where s.biz_key = businesses.biz_key and s.source = 'fmcsa' and s.data ->> 'phone' is not null))`);
+  if (f.email) conds.push(sql`coalesce(to_jsonb(businesses) ->> 'site_email', '') <> ''`);
+  if (f.website) conds.push(sql`coalesce(website, '') <> ''`);
+  if (f.contractor) conds.push(hasSource("contracts"));
+  if (f.basis?.length) conds.push(sql`est_method in ${sql(f.basis.flatMap((b) => BASIS[b]))}`);
+  if (f.noBranch) conds.push(sql`coalesce(est_method, '') <> 'branch'`);
+  if (f.noNonprofit) conds.push(sql`not is_nonprofit and not ${hasSource("irs990")}`);
+  if (f.noFranchise) conds.push(sql`not exists (select 1 from business_sources s where s.biz_key = businesses.biz_key
+    and s.source = 'sba' and s.data ->> 'franchise' is not null)`);
   if (f.bbox) {
     const [w, s, e, n] = f.bbox;
     conds.push(sql`lat between ${s} and ${n} and lon between ${w} and ${e}`);

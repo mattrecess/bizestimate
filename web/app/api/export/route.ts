@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
-import { parseFilters, relevance, where } from "@/lib/queries";
+import { parseFilters, relevance, valueSql, where } from "@/lib/queries";
 import { estimateValue } from "@/lib/valuation";
 import { SITE_URL } from "@/lib/site";
 
@@ -9,6 +9,7 @@ const SORTS: Record<string, ReturnType<typeof sql>> = {
   revenue_desc: sql`est_revenue_mid desc nulls last, id`, revenue_asc: sql`est_revenue_mid asc nulls last, id`,
   ebitda_desc: sql`est_ebitda_mid desc nulls last, id`, jobs_desc: sql`jobs_reported desc nulls last, id`,
   sell_desc: sql`sell_score desc nulls last, est_revenue_mid desc nulls last, id`, name: sql`name asc, id`,
+  value_desc: sql`${valueSql} desc nulls last, est_revenue_mid desc nulls last, id`,
 };
 
 const cell = (v: unknown) => {
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
            jobs_reported, est_revenue_low, est_revenue_mid, est_revenue_high, est_ebitda_low, est_ebitda_mid,
            est_ebitda_high, est_method, is_nonprofit, website, owner_name, owner_title,
            to_jsonb(businesses) ->> 'sell_score' as sell_score
-    from businesses where ${where(f)} order by ${relevance(f)} ${sort} limit ${MAX_ROWS}`;
+    from businesses where ${where(f)} and coalesce(est_method, '') <> 'branch' order by ${relevance(f)} ${sort} limit ${MAX_ROWS}`;
   const head = ["Name", "Address", "City", "ZIP", "Industry", "NAICS", "Employees (reported)", "Revenue low", "Revenue estimate",
     "Revenue high", "EBITDA estimate", "Value estimate", "Basis", "Owner", "Owner title", "Website", "Likely-to-sell score", "Profile"];
   const whole = (v: unknown) => (v == null || v === "" ? "" : Math.round(Number(v)));

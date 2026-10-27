@@ -229,3 +229,4 @@ insert into known_owners (biz_key, owner_name, owner_title, note)
 select biz_key, 'Don Lavicky', 'Owner', 'D&B and Buzzfile list him as owner; son of founder Charlie Lavicky (est. 1978)'
 from businesses where id = 1311985 and name ilike 'lavicky sand%'
 on conflict (biz_key) do nothing;
+create index if not exists businesses_parent_idx on businesses (parent_key) where parent_key is not null;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { industryLabel, matchIndustry } from "@/lib/industries";
-import { CACHE, naicsQuery, parseFilters, publicAddress, relevance, where } from "@/lib/queries";
+import { CACHE, naicsQuery, parseFilters, publicAddress, relevance, valueSql, where } from "@/lib/queries";
 
 // Each ends with id, so ties (equal revenue) keep one order and continuous scrolling never repeats
 // or skips a business between batches.
@@ -11,6 +11,7 @@ const SORTS = {
   ebitda_desc: sql`est_ebitda_mid desc nulls last, id`,
   jobs_desc: sql`jobs_reported desc nulls last, id`,
   name: sql`name asc, id`,
+  value_desc: sql`${valueSql} desc nulls last, est_revenue_mid desc nulls last, id`,
   sell_desc: sql`sell_score desc nulls last, est_revenue_mid desc nulls last, id`,
 };
 
@@ -20,7 +21,9 @@ export async function GET(req: NextRequest) {
   const sort = SORTS[(p.get("sort") as keyof typeof SORTS) ?? "revenue_desc"] ?? SORTS.revenue_desc;
   const limit = Math.min(Number(p.get("limit")) || 50, 200);
   const offset = Math.max(Number(p.get("offset")) || 0, 0);
-  const w = where(f);
+  // The list shows each company once: extra locations (est_method 'branch') stay on the map but
+  // appear in the list only as their parent's location count.
+  const w = sql`${where(f)} and coalesce(est_method, '') <> 'branch'`;
 
   // The page and the total run side by side; without a window count, the page can come straight
   // off an index instead of sorting every matching business.
@@ -30,11 +33,15 @@ export async function GET(req: NextRequest) {
              est_revenue_low, est_revenue_mid, est_revenue_high,
              est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
              coalesce(owner_name, '') <> '' as has_owner,
-             coalesce(website, '') <> '' as has_website, to_jsonb(businesses) ->> 'sell_score' as sell_score
+             coalesce(website, '') <> '' as has_website, to_jsonb(businesses) ->> 'sell_score' as sell_score,
+             coalesce(loc.n, 0) as locations
              ${f.lender?.length ? sql`, (select json_agg(json_build_object('lender', bl.lender, 'program', bl.program, 'year', bl.year)
                  order by bl.year desc nulls last) from business_lenders bl
                  where bl.business_id = businesses.id and bl.lender_key in ${sql(f.lender)}) as lenders` : sql``}
-      from businesses where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
+      -- One pass over the locations (rather than a lookup per row, which needs an index the database may not have yet).
+      from businesses left join (select parent_key, count(*)::int as n from businesses where parent_key is not null group by 1) loc
+        on loc.parent_key = businesses.biz_key
+      where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
     sql`select count(*)::int as count from businesses where ${w}`,
   ]);
   // Let Vercel's CDN answer repeat requests (the default view especially) without the database.

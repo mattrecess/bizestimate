@@ -52,9 +52,9 @@ export async function getBusinessRow(id: string): Promise<Business | null> {
 export async function getProfile(id: string) {
   const biz = await getBusinessRow(id);
   if (!biz) return null;
-  const [loans, headcounts, comps, sources, lenders] = await Promise.all([
-    getLoans(id), getHeadcounts(id), getComparables(biz), getSources(id), getLenders(id)]);
-  return { ...biz, loans, headcounts, comps, sources, lenders };
+  const [loans, headcounts, comps, sources, lenders, locations] = await Promise.all([
+    getLoans(id), getHeadcounts(id), getComparables(biz), getSources(id), getLenders(id), getLocations(id)]);
+  return { ...biz, loans, headcounts, comps, sources, lenders, locations };
 }
 
 const getLoans = (id: string) => sql<Loan[]>`
@@ -67,6 +67,12 @@ const getSources = (id: string) => sql<SourceRecord[]>`
   -- Contact details stay out of the profile; they load on request from /api/contact.
   select s.source, s.data - 'phone' - 'email' as data from business_sources s join businesses b on b.biz_key = s.biz_key
   where b.id = ${id} order by s.source`.catch(() => [] as SourceRecord[]);
+
+// The company's other locations (map listings rolled up to it).
+export type Location = { id: string; address: string | null; city: string };
+const getLocations = (id: string) => sql<Location[]>`
+  select c.id, c.address, c.city from businesses c join businesses p on c.parent_key = p.biz_key
+  where p.id = ${id} order by c.city, c.address`.catch(() => [] as Location[]);
 
 // Banks that lent to the business, with how many other listed businesses each one lends to.
 export type LenderLink = { key: string; name: string; loans: string[]; borrowers: number };

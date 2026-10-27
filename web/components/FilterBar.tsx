@@ -5,11 +5,13 @@ import { money } from "@/lib/format";
 import Icon from "./Icon";
 import NaicsPicker from "./NaicsPicker";
 import RevenueRange from "./RevenueRange";
+import MoreFilters from "./MoreFilters";
+import { moreCount } from "@/lib/more-filters";
 
-export type FilterState = { sector: string; city: string; minRev: string; maxRev: string; sort: string; naics: string; lender: string };
+export type FilterState = { sector: string; city: string; minRev: string; maxRev: string; sort: string; naics: string; lender: string; more: string };
 
 const SORTS: [string, string][] = [
-  ["revenue_desc", "Revenue: high to low"], ["revenue_asc", "Revenue: low to high"],
+  ["value_desc", "Value: high to low"], ["revenue_desc", "Revenue: high to low"], ["revenue_asc", "Revenue: low to high"],
   ["ebitda_desc", "EBITDA: high to low"], ["jobs_desc", "Most employees"], ["sell_desc", "Likely to sell"], ["name", "Name A–Z"],
 ];
 
@@ -26,7 +28,7 @@ export default function FilterBar({ value, onChange, cities }: {
   onChange: (next: Partial<FilterState>) => void;
   cities: { city: string; count: number }[];
 }) {
-  const [open, setOpen] = useState<"" | "industry" | "city" | "revenue" | "naics" | "lender">("");
+  const [open, setOpen] = useState<"" | "industry" | "city" | "revenue" | "naics" | "lender" | "more">("");
   const [cityQuery, setCityQuery] = useState("");
   const [lenderQuery, setLenderQuery] = useState("");
   const [lenderOptions, setLenderOptions] = useState<{ key: string; name: string; count: number }[] | null>(null);
@@ -47,7 +49,8 @@ export default function FilterBar({ value, onChange, cities }: {
   }, []);
 
   const toggle = (k: typeof open) => setOpen(open === k ? "" : k);
-  const anyFilter = value.sector || value.city || value.minRev || value.maxRev || value.naics || value.lender;
+  const anyFilter = value.sector || value.city || value.minRev || value.maxRev || value.naics || value.lender || value.more;
+  const moreN = moreCount(value.more);
   const naicsLabel = !naicsSel.length ? "NAICS" : naicsSel.length === 1 ? `NAICS ${naicsSel[0]}` : `NAICS (${naicsSel.length})`;
   const shownLenders = (lenderOptions ?? []).filter((l) => l.name.toLowerCase().includes(lenderQuery.toLowerCase())).slice(0, 200);
   const lenderLabel = !lenderSel.length ? "Lender"
@@ -146,12 +149,19 @@ export default function FilterBar({ value, onChange, cities }: {
         )}
       </div>
 
+      <div className="pill-wrap">
+        <button className={`pill ${moreN ? "active" : ""}`} aria-expanded={open === "more"} onClick={() => toggle("more")}>
+          {moreN ? `More (${moreN})` : "More"}<Icon name="chevron" size={14} className="chev" />
+        </button>
+        {open === "more" && <MoreFilters value={value.more} onApply={(more) => onChange({ more })} onClose={() => setOpen("")} />}
+      </div>
+
       <select className="sort-select" aria-label="Sort" value={value.sort} onChange={(e) => onChange({ sort: e.target.value })}>
         {SORTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
       </select>
 
       {anyFilter && (
-        <button className="clear-filters" onClick={() => onChange({ sector: "", city: "", minRev: "", maxRev: "", naics: "", lender: "" })}>Clear filters</button>
+        <button className="clear-filters" onClick={() => onChange({ sector: "", city: "", minRev: "", maxRev: "", naics: "", lender: "", more: "" })}>Clear filters</button>
       )}
     </div>
   );
