@@ -94,14 +94,30 @@ export default function Home() {
       requestAnimationFrame(() => panel.current?.scrollTo({ top: listScroll.current }));
       return;
     }
+    // The business and its own records first (fast), then comparables, banks and locations.
     const ctrl = new AbortController();
-    fetch(`/api/businesses/${selectedId}`, { signal: ctrl.signal })
+    const card = data?.results.find((b) => Number(b.id) === selectedId);
+    fetch(`/api/businesses/${selectedId}?core=1`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : null))
-      .then((p) => { setProfile(p); if (!p) setSelectedId(null); })
+      .then((p) => {
+        setProfile(p);
+        if (!p) { setSelectedId(null); return; }
+        return fetch(`/api/businesses/${selectedId}/related${card && !card.locations ? "?locations=0" : ""}`, { signal: ctrl.signal })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((rel) => rel && setProfile((cur) => (cur && Number(cur.id) === selectedId ? { ...cur, ...rel } : cur)));
+      })
       .catch(() => {});
     panel.current?.scrollTo({ top: 0 });
     return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
+
+  // Hovering a card for a moment loads its profile into the browser's cache, so a click opens it at once.
+  useEffect(() => {
+    if (!hovered || hovered === selectedId) return;
+    const t = setTimeout(() => { fetch(`/api/businesses/${hovered}?core=1`).catch(() => {}); }, 150);
+    return () => clearTimeout(t);
+  }, [hovered, selectedId]);
 
   const selectedPoint = useMemo(
     () => (profile?.lat != null ? { lat: Number(profile.lat), lon: Number(profile.lon) } : null),

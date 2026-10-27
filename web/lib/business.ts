@@ -52,9 +52,27 @@ export async function getBusinessRow(id: string): Promise<Business | null> {
 export async function getProfile(id: string) {
   const biz = await getBusinessRow(id);
   if (!biz) return null;
-  const [loans, headcounts, comps, sources, lenders, locations] = await Promise.all([
-    getLoans(id), getHeadcounts(id), getComparables(biz), getSources(id), getLenders(id), getLocations(id)]);
-  return { ...biz, loans, headcounts, comps, sources, lenders, locations };
+  const [core, related] = await Promise.all([coreParts(id), relatedParts(biz)]);
+  return { ...biz, ...core, ...related };
+}
+
+// The quick part (indexed lookups by business): what the side panel shows first.
+export async function getProfileCore(id: string) {
+  const biz = await getBusinessRow(id);
+  if (!biz) return null;
+  return { ...biz, ...(await coreParts(id)) };
+}
+
+async function coreParts(id: string) {
+  const [loans, headcounts, sources] = await Promise.all([getLoans(id), getHeadcounts(id), getSources(id)]);
+  return { loans, headcounts, sources };
+}
+
+// The slower part (comparables search, bank and location roll-ups), loaded just after.
+export async function relatedParts(biz: Business, opts: { locations?: boolean } = {}) {
+  const [comps, lenders, locations] = await Promise.all([
+    getComparables(biz), getLenders(biz.id), opts.locations === false ? Promise.resolve([] as Location[]) : getLocations(biz.id)]);
+  return { comps, lenders, locations };
 }
 
 const getLoans = (id: string) => sql<Loan[]>`
@@ -97,7 +115,10 @@ export async function getComparables(b: Business, limit = 6): Promise<Comparable
   if (!b.naics) return [];
   const lat = b.lat == null ? null : Number(b.lat);
   const lon = b.lon == null ? null : Number(b.lon);
-  for (const prefix of [b.naics.slice(0, 4), b.naics.slice(0, 2)]) {
+  // Nearby first (within about 50 miles, so only that area is measured and sorted), then statewide.
+  const tries = [b.naics.slice(0, 4), b.naics.slice(0, 2)].flatMap((prefix) => [{ prefix, near: true }, { prefix, near: false }]);
+  for (const { prefix, near } of tries) {
+    if (near && lat == null) continue;
     const distance = lat == null
       ? sql`null::float8`
       : sql`69.0 * sqrt(power(lat - ${lat}, 2) + power((lon - ${lon}) * cos(radians(${lat})), 2))`;
@@ -105,10 +126,13 @@ export async function getComparables(b: Business, limit = 6): Promise<Comparable
       select id, name, city, industry, jobs_reported, est_revenue_mid, est_ebitda_mid, ${distance} as miles
       from businesses
       where naics like ${prefix + "%"} and id <> ${b.id} and est_revenue_mid is not null
-        ${lat == null ? sql`and city = ${b.city}` : sql`and lat is not null`}
+        and coalesce(est_method, '') <> 'branch'
+        ${lat == null ? sql`and city = ${b.city}` : near
+          ? sql`and lat between ${lat! - 0.75} and ${lat! + 0.75} and lon between ${lon! - 0.9} and ${lon! + 0.9}`
+          : sql`and lat is not null`}
       order by ${lat == null ? sql`est_revenue_mid desc` : sql`miles`}
       limit ${limit}`;
-    if (rows.length >= 3 || prefix.length === 2) return rows;
+    if (rows.length >= 3 || (prefix.length === 2 && !near)) return rows;
   }
   return [];
 }

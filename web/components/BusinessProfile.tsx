@@ -14,7 +14,7 @@ import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
 import RangeBar from "./RangeBar";
 
-export type Profile = Business & { loans: Loan[]; comps: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[]; lenders?: LenderLink[]; locations?: Location[] };
+export type Profile = Business & { loans: Loan[]; comps?: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[]; lenders?: LenderLink[]; locations?: Location[] };
 
 // "https://www.blastrac.com/" -> "blastrac.com"
 function siteLabel(url: string) {
@@ -71,7 +71,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   const tabs: [Tab, string][] = [
     ["overview", "Overview"], ["financials", "How we estimated"],
     ...(b.loans.length ? [["loans", `PPP loans (${b.loans.length})`] as [Tab, string]] : []),
-    ...(b.comps.length ? [["comparables", "Comparables"] as [Tab, string]] : []),
+    ...(b.comps?.length ? [["comparables", "Comparables"] as [Tab, string]] : []),
   ];
 
   async function share() {
@@ -380,7 +380,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <table>
             <thead><tr><th>Business</th><th className="num">Est. revenue</th><th className="num hide-sm">Est. EBITDA</th><th className="num">Distance</th></tr></thead>
             <tbody>
-              {b.comps.map((c) => (
+              {(b.comps ?? []).map((c) => (
                 <tr key={c.id}>
                   <td>
                     {onSelect
