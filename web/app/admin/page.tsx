@@ -56,6 +56,34 @@ async function save(form: FormData) {
   redirect("/admin?saved=1");
 }
 
+// Owners entered by hand: shown on the profile at once, and kept over found owners on every load.
+async function saveOwner(form: FormData) {
+  "use server";
+  if (!(await isAdmin())) redirect("/admin");
+  const id = businessId(String(form.get("business") ?? ""));
+  const [b] = id ? await sql`select biz_key from businesses where id = ${id}` : [];
+  const name = String(form.get("owner_name") ?? "").trim();
+  if (!b || !name) redirect("/admin?error=owner");
+  const title = String(form.get("owner_title") ?? "").trim() || "Owner";
+  const note = String(form.get("note") ?? "").trim() || null;
+  await sql`insert into known_owners (biz_key, owner_name, owner_title, note, updated_at)
+            values (${b.biz_key}, ${name}, ${title}, ${note}, now())
+            on conflict (biz_key) do update set owner_name = excluded.owner_name, owner_title = excluded.owner_title,
+              note = excluded.note, updated_at = now()`;
+  await sql`update businesses set owner_name = ${name}, owner_title = ${title}, owner_source = null where biz_key = ${b.biz_key}`;
+  revalidatePath("/admin");
+  redirect("/admin?owner=1");
+}
+
+async function removeOwner(form: FormData) {
+  "use server";
+  if (!(await isAdmin())) redirect("/admin");
+  // The owner found automatically (if any) comes back with the next data load.
+  await sql`delete from known_owners where biz_key = ${String(form.get("biz_key"))}`;
+  await sql`update businesses set owner_name = null, owner_title = null, owner_source = null where biz_key = ${String(form.get("biz_key"))}`;
+  redirect("/admin");
+}
+
 async function remove(form: FormData) {
   "use server";
   if (!(await isAdmin())) redirect("/admin");
@@ -88,6 +116,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
       </main>
     );
   }
+  const owners = await sql<{ id: string; biz_key: string; name: string; city: string; owner_name: string; owner_title: string | null; note: string | null }[]>`
+    select b.id, k.biz_key, b.name, b.city, k.owner_name, k.owner_title, k.note
+    from known_owners k join businesses b on b.biz_key = k.biz_key order by k.updated_at desc`.catch(() => []);
   const rows = await sql<Row[]>`
     select b.id, b.name, b.city, k.revenue, k.ebitda, k.year, k.note, k.is_public,
            b.est_revenue_mid, b.est_ebitda_mid, b.est_method, k.sale_price, k.sale_year, b.naics, b.is_nonprofit
@@ -123,6 +154,34 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
         <button className="btn primary">Save</button>
       </form>
 
+      <h2>Owners</h2>
+      <p className="disclaimer">Owners you know: shown on the business&apos;s public page right away, and kept over any owner
+        found automatically. The note stays private.</p>
+      {params.owner && <p className="badge good">Owner saved</p>}
+      {params.error === "owner" && <p className="badge warn">Couldn&apos;t find that business, or the name was empty.</p>}
+      <form action={saveOwner} className="admin-form">
+        <input name="business" placeholder="Business link or number" required />
+        <input name="owner_name" placeholder="Owner's name" required />
+        <input name="owner_title" placeholder="Title (default Owner)" />
+        <input name="note" placeholder="Source (private)" />
+        <button className="btn primary">Save owner</button>
+      </form>
+      {owners.length > 0 && (
+        <table>
+          <thead><tr><th>Business</th><th>Owner</th><th /></tr></thead>
+          <tbody>
+            {owners.map((o) => (
+              <tr key={o.biz_key}>
+                <td><a href={`/business/${o.id}`}>{o.name}</a><div className="disclaimer" style={{ margin: 0 }}>{o.city}</div></td>
+                <td>{o.owner_name}{o.owner_title ? `, ${o.owner_title}` : ""}{o.note && <div className="disclaimer" style={{ margin: 0 }}>{o.note}</div>}</td>
+                <td><form action={removeOwner}><input type="hidden" name="biz_key" value={o.biz_key} /><button className="link-btn">Remove</button></form></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <h2>Accuracy</h2>
       {rows.length > 0 && (
         <>
           <div className="tiles admin-stats">

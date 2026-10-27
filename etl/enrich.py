@@ -111,6 +111,12 @@ def apply_owners(cur, state):
     cur.executemany("update businesses set owner_name = %s, owner_title = %s, owner_source = %s where biz_key = %s",
                     [(name, title[:60], url, key) for key, (_, name, title, url) in best.items()])
     print(f"Owners filled from websites and search results: {len(best):,}", flush=True)
+    # Owners entered by hand in /admin win over everything found automatically.
+    cur.execute("""update businesses b set owner_name = k.owner_name, owner_title = coalesce(k.owner_title, 'Owner'),
+                       owner_source = null
+                   from known_owners k where k.biz_key = b.biz_key and b.state = %s
+                     and (b.owner_name, b.owner_title) is distinct from (k.owner_name, coalesce(k.owner_title, 'Owner'))""", (state,))
+    print(f"Owners entered by hand applied: {cur.rowcount:,}", flush=True)
 
 
 def state_get(cur, key, default):

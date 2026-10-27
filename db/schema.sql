@@ -216,3 +216,16 @@ create table if not exists business_lenders (
   amount      numeric
 );
 create index if not exists business_lenders_key_idx on business_lenders (lender_key, business_id);
+
+-- Owners entered by hand in /admin: shown publicly and always win over found ones (enrich.apply_owners).
+create table if not exists known_owners (
+  biz_key     text primary key,
+  owner_name  text not null,
+  owner_title text,
+  note        text,                 -- private: where it came from
+  updated_at  timestamptz not null default now()
+);
+insert into known_owners (biz_key, owner_name, owner_title, note)
+select biz_key, 'Don Lavicky', 'Owner', 'D&B and Buzzfile list him as owner; son of founder Charlie Lavicky (est. 1978)'
+from businesses where id = 1311985 and name ilike 'lavicky sand%'
+on conflict (biz_key) do nothing;
