@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "@fontsource-variable/inter";
@@ -9,6 +10,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "BizEstimate — Oklahoma business values",
   description: "Estimated revenue and EBITDA for Oklahoma businesses, from public PPP loan data.",
+  // Google Search Console ownership check: set GOOGLE_SITE_VERIFICATION in Vercel to the code Google gives.
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 export const viewport: Viewport = {
@@ -42,6 +45,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </nav>
         </header>
         {children}
+        {/* Page-view counts (no cookies); shows in Vercel once Web Analytics is enabled for the project. */}
+        <Analytics />
       </body>
     </html>
   );

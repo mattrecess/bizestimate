@@ -1,0 +1,21 @@
+name: Site check
+# After each successful production deploy on Vercel (and daily), load the main pages and APIs and
+# fail if any is broken or very slow; Run alerts then opens an issue.
+on:
+  deployment_status:
+  schedule:
+    - cron: "23 13 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    if: github.event_name != 'deployment_status' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python tools/site_check.py "${{ github.event.deployment_status.environment_url || 'https://bizestimate-six.vercel.app' }}"

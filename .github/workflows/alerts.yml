@@ -3,7 +3,7 @@ name: Run alerts
 # issues), adds a comment if it fails again, and closes it once the same workflow succeeds.
 on:
   workflow_run:
-    workflows: ["Load PPP data", "Public records", "Form 5500 headcounts"]
+    workflows: ["Load PPP data", "Public records", "Form 5500 headcounts", "Site check"]
     types: [completed]
 permissions:
   issues: write
