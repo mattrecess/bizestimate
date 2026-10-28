@@ -1,0 +1,23 @@
+name: UX test
+# Walk through the live site on a slow connection and save screenshots of what visitors see while
+# things load (tools/ux_test.mjs), published to the ux-logs branch.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  ux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
+      - run: OUT="$RUNNER_TEMP/shots" node tools/ux_test.mjs
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP/shots" && git init -q -b ux-logs
+          git add . && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm shots
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ux-logs
