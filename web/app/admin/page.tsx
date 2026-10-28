@@ -136,7 +136,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
     <main className="page admin">
       <div className="admin-head">
         <h1>Verified figures</h1>
-        <div className="admin-nav"><a href="/admin/contacts">Contacts &amp; requests</a><form action={logout}><button className="link-btn">Sign out</button></form></div>
+        <div className="admin-nav"><a href="/admin/pipeline">My pipeline</a><a href="/admin/contacts">Contacts &amp; requests</a><form action={logout}><button className="link-btn">Sign out</button></form></div>
       </div>
       <p className="disclaimer">Actual revenue and EBITDA you know for a business. Private by default: they&apos;re used only
         to measure and tune the estimates. Tick &ldquo;show publicly&rdquo; only when the figures may appear on the site.</p>

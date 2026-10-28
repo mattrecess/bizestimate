@@ -5,6 +5,7 @@ import type { Business, Comparable, Headcount, LenderLink, Loan, Location } from
 import { money, moneyRange } from "@/lib/format";
 import ContactCard from "./ContactCard";
 import SaveButton from "./SaveButton";
+import PipelineBox from "./PipelineBox";
 import HeadcountChart from "./HeadcountChart";
 import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
@@ -141,6 +142,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
       )}
 
       <ContactCard id={String(b.id)} name={b.name} owner={b.owner_name} />
+      <PipelineBox id={String(b.id)} />
 
       <div className="tabs" role="tablist">
         {tabs.map(([key, label]) => (

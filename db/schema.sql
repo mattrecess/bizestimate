@@ -230,3 +230,18 @@ select biz_key, 'Don Lavicky', 'Owner', 'D&B and Buzzfile list him as owner; son
 from businesses where id = 1311985 and name ilike 'lavicky sand%'
 on conflict (biz_key) do nothing;
 create index if not exists businesses_parent_idx on businesses (parent_key) where parent_key is not null;
+
+-- Your deal pipeline: a status, private notes and a follow-up date per business (admin only).
+create table if not exists pipeline (
+  biz_key     text primary key,
+  status      text not null default 'watching',   -- watching | contacted | talking | passed
+  follow_up   date,
+  updated_at  timestamptz not null default now()
+);
+create table if not exists pipeline_notes (
+  id          bigserial primary key,
+  biz_key     text not null,
+  body        text not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists pipeline_notes_biz_idx on pipeline_notes (biz_key, created_at desc);

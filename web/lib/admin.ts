@@ -27,13 +27,16 @@ export async function signIn(attempt: string) {
   const a = Buffer.from(attempt), b = Buffer.from(password);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
   (await cookies()).set(COOKIE, token(password), {
-    httpOnly: true, secure: true, sameSite: "strict", path: "/admin", maxAge: 60 * 60 * 24 * 30,
+    // Whole site, so business pages can show your pipeline tools (fetched from /api/admin/..., never cached).
+    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30,
   });
   return true;
 }
 
 export async function signOut() {
-  (await cookies()).delete({ name: COOKIE, path: "/admin" });
+  const jar = await cookies();
+  jar.delete({ name: COOKIE, path: "/" });
+  jar.delete({ name: COOKIE, path: "/admin" });   // from before the cookie covered the whole site
 }
 
 // "https://.../business/1316278", "?id=1316278" or "1316278" -> "1316278".

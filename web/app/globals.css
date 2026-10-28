@@ -425,3 +425,14 @@ table.mini td { padding: 3px 4px; }
 .more-body h4 { margin-top: 14px; }
 .more-body .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 0 6px; }
 .more-body .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.pipeline-box { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius); border: 1px dashed var(--accent); background: var(--accent-soft); }
+.pipeline-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.pipeline-head a { font-size: 13px; }
+.pipeline-box .follow { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); margin: 8px 0; }
+.pipeline-box input[type=date], .pipeline-box textarea { font: inherit; font-size: 14px; color: var(--text); background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 6px 8px; }
+.pipeline-box form { display: grid; gap: 6px; }
+.pipeline-box form .btn { justify-self: start; height: 30px; font-size: 13px; }
+.pipeline-box .notes { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; font-size: 14px; }
+.pipeline-box .notes .when { color: var(--muted); font-size: 12px; margin-right: 4px; }
+.note-cell { max-width: 320px; font-size: 13px; color: var(--muted); }
+a.chip { text-decoration: none; display: inline-flex; align-items: center; }
