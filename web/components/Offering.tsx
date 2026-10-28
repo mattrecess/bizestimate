@@ -24,16 +24,16 @@ export function WhatTheyDo({ offering, industry }: { offering: any; industry: st
   );
 }
 
-// Customers and suppliers: named on its website, federal agencies that awarded it contracts, its banks
-// and auditor, and possible customers nearby in the markets it says it serves.
-export function CustomersSuppliers({ offering, contracts, lenders, auditor, prospects, onSelect }: {
-  offering: any; contracts: any; lenders: { name: string; loans: string[] }[]; auditor?: string | null;
-  prospects: { market: string; items: Prospect[] }[]; onSelect?: (id: number) => void;
+// Customers and suppliers: named on its website, federal agencies that awarded it contracts, and
+// possible customers nearby in the markets it says it serves. (Banks and accountants are advisors,
+// shown under People & advisors, not suppliers.)
+export function CustomersSuppliers({ offering, contracts, prospects, onSelect }: {
+  offering: any; contracts: any; prospects: { market: string; items: Prospect[] }[]; onSelect?: (id: number) => void;
 }) {
   const customers: string[] = offering?.customers ?? [];
   const agencies: { name: string; amount: number }[] = contracts?.agencies ?? [];
   const suppliers: string[] = offering?.suppliers ?? [];
-  if (!customers.length && !agencies.length && !suppliers.length && !lenders.length && !auditor && !prospects.length) return null;
+  if (!customers.length && !agencies.length && !suppliers.length && !prospects.length) return null;
   const link = (p: Prospect) => onSelect
     ? <a href={`/business/${p.id}`} onClick={(e) => { e.preventDefault(); onSelect(Number(p.id)); }}>{p.name}</a>
     : <a href={`/business/${p.id}`}>{p.name}</a>;
@@ -50,14 +50,10 @@ export function CustomersSuppliers({ offering, contracts, lenders, auditor, pros
             </ul>
           </div>
         )}
-        {(suppliers.length > 0 || lenders.length > 0 || auditor) && (
+        {suppliers.length > 0 && (
           <div>
-            <h3>Suppliers &amp; partners</h3>
-            <ul>
-              {suppliers.map((s) => <li key={s}>{s} <span className="muted">· brand it sells or installs</span></li>)}
-              {lenders.map((l) => <li key={l.name}>{l.name} <span className="muted">· lender ({l.loans.join(", ")})</span></li>)}
-              {auditor && <li>{auditor} <span className="muted">· 401(k) plan auditor (CPA)</span></li>}
-            </ul>
+            <h3>Suppliers &amp; brands</h3>
+            <ul>{suppliers.map((s) => <li key={s}>{s} <span className="muted">· brand it sells or installs</span></li>)}</ul>
           </div>
         )}
       </div>

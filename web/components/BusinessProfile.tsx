@@ -270,9 +270,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
           <PeopleAdvisors sources={b.sources ?? []} owner={b.owner_name}
             lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
-          <CustomersSuppliers offering={src.website_offering} contracts={src.contracts} onSelect={onSelect}
-            lenders={(b.lenders ?? []).map((l) => ({ name: l.name, loans: l.loans }))}
-            auditor={src.form5500_people?.auditor?.firm ?? null} prospects={b.prospects ?? []} />
+          <CustomersSuppliers offering={src.website_offering} contracts={src.contracts} onSelect={onSelect} prospects={b.prospects ?? []} />
           {b.locations?.length ? (
             <div className="section">
               <h2><Icon name="map" size={16} />{b.locations.length + 1} locations</h2>
