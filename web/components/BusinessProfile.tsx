@@ -7,6 +7,7 @@ import ContactCard from "./ContactCard";
 import SaveButton from "./SaveButton";
 import PipelineBox from "./PipelineBox";
 import HeadcountChart from "./HeadcountChart";
+import ValueChart, { valueHistory } from "./ValueChart";
 import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
 import { estimateValue } from "@/lib/valuation";
@@ -226,6 +227,15 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <p className="disclaimer">No PPP loan on record: these are typical figures for {b.industry} businesses in
               Oklahoma, not this business&apos;s own. <button className="link-btn" onClick={() => setTab("financials")}>How we estimate</button></p>
           )}
+          {(() => {
+            // Value over time: needs a headcount basis for today's estimate (PPP grown since, or the latest 401(k) count).
+            const ppp = b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null;
+            const plan = b.headcounts ?? [];
+            const employeesNow = b.est_method === "retirement_plan" && plan.length ? plan[plan.length - 1].employees
+              : b.est_method === "employees" && b.jobs_reported ? b.jobs_reported * (Number(b.est_growth) || 1) : null;
+            const points = valueHistory({ valueNow: value?.mid ?? null, employeesNow, ppp, plan });
+            return points ? <ValueChart points={points} /> : null;
+          })()}
           <HeadcountChart
             ppp={b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null}
             plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
