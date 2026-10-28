@@ -178,74 +178,80 @@ def main():
     usage = [0, 0, 0, 0]  # direct in/out, batch in/out
 
     if key:
-        client = anthropic.Anthropic(api_key=key)
-        candidates = {}
-        queued = {e["site"] for b in pending for e in b["items"].values()}
-        for r in sorted(rows, key=lambda r: -float(r.get("est_revenue_mid") or 0)):
-            site = (r.get("website") or "").strip()
-            if (site and not r.get("owner_name") and r.get("geo_precision") in LISTED
-                    and r.get("is_individual") != "True" and site not in cache and site not in queued
-                    and not any(d in site.lower() for d in SOCIAL)):
-                candidates.setdefault(site, r)
-        todo = list(candidates.items())[:limit]
-        # Guard: an empty cache facing a large job usually means saved results went missing
-        # (not a genuinely first run), so don't silently pay for everything again.
-        if not cache and not pending and len(todo) > 2_000 and os.environ.get("OWNERS_AI_ALLOW_FRESH") != "1":
-            print(f"Owners AI: REFUSING to look up {len(todo):,} sites with no saved results; "
-                  f"set OWNERS_AI_ALLOW_FRESH=1 if this really is a first run", flush=True)
-            todo = []
-        print(f"Owners AI ({MODEL}): {len(candidates):,} unresolved websites, {in_flight:,} already submitted, "
-              f"looking up {len(todo):,} more (cap {max_total:,}, {len(cache):,} done)", flush=True)
+        try:
+            client = anthropic.Anthropic(api_key=key)
+            candidates = {}
+            queued = {e["site"] for b in pending for e in b["items"].values()}
+            for r in sorted(rows, key=lambda r: -float(r.get("est_revenue_mid") or 0)):
+                site = (r.get("website") or "").strip()
+                if (site and not r.get("owner_name") and r.get("geo_precision") in LISTED
+                        and r.get("is_individual") != "True" and site not in cache and site not in queued
+                        and not any(d in site.lower() for d in SOCIAL)):
+                    candidates.setdefault(site, r)
+            todo = list(candidates.items())[:limit]
+            # Guard: an empty cache facing a large job usually means saved results went missing
+            # (not a genuinely first run), so don't silently pay for everything again.
+            if not cache and not pending and len(todo) > 2_000 and os.environ.get("OWNERS_AI_ALLOW_FRESH") != "1":
+                print(f"Owners AI: REFUSING to look up {len(todo):,} sites with no saved results; "
+                      f"set OWNERS_AI_ALLOW_FRESH=1 if this really is a first run", flush=True)
+                todo = []
+            print(f"Owners AI ({MODEL}): {len(candidates):,} unresolved websites, {in_flight:,} already submitted, "
+                  f"looking up {len(todo):,} more (cap {max_total:,}, {len(cache):,} done)", flush=True)
 
-        with ThreadPoolExecutor(FETCH_WORKERS) as pool:
-            prepared = list(zip(todo, pool.map(lambda t: prepare(t[0]), todo)))
-        ready = []
-        for (site, business), pages in prepared:
-            if pages:
-                ready.append((site, business, pages))
+            with ThreadPoolExecutor(FETCH_WORKERS) as pool:
+                prepared = list(zip(todo, pool.map(lambda t: prepare(t[0]), todo)))
+            ready = []
+            for (site, business), pages in prepared:
+                if pages:
+                    ready.append((site, business, pages))
+                else:
+                    record(cache, site, ("", "", ""))   # unreachable or blocked: nothing to send
+            print(f"Owners AI: {len(ready):,} sites readable, {len(todo) - len(ready):,} unreachable", flush=True)
+
+            if len(ready) <= DIRECT_MAX:
+                def direct(item):
+                    site, business, pages = item
+                    try:
+                        msg = client.messages.create(**params(business, pages))
+                        return site, interpret(msg, pages), (msg.usage.input_tokens, msg.usage.output_tokens)
+                    except (anthropic.APIStatusError, anthropic.APIConnectionError) as e:
+                        print(f"Owners AI: {site}: {e!r}", flush=True)
+                        return site, None, (0, 0)
+                with ThreadPoolExecutor(DIRECT_WORKERS) as pool:
+                    for site, result, (t_in, t_out) in pool.map(direct, ready):
+                        usage[0] += t_in
+                        usage[1] += t_out
+                        if result is not None:
+                            record(cache, site, result)
             else:
-                record(cache, site, ("", "", ""))   # unreachable or blocked: nothing to send
-        print(f"Owners AI: {len(ready):,} sites readable, {len(todo) - len(ready):,} unreachable", flush=True)
+                for start in range(0, len(ready), BATCH_SIZE):
+                    chunk = ready[start:start + BATCH_SIZE]
+                    items = {f"s{start + i}": {"site": s, "pages": p} for i, (s, _, p) in enumerate(chunk)}
+                    batch = client.messages.batches.create(requests=[
+                        Request(custom_id=cid, params=MessageCreateParamsNonStreaming(**params(b, p)))
+                        for cid, (_, b, p) in zip(items, chunk)
+                    ])
+                    pending.append({"id": batch.id, "items": items})
+                    save_pending(pending)
+                    print(f"Owners AI: submitted batch {batch.id} ({len(chunk):,} sites)", flush=True)
+            save_cache(cache)
 
-        if len(ready) <= DIRECT_MAX:
-            def direct(item):
-                site, business, pages = item
-                try:
-                    msg = client.messages.create(**params(business, pages))
-                    return site, interpret(msg, pages), (msg.usage.input_tokens, msg.usage.output_tokens)
-                except (anthropic.APIStatusError, anthropic.APIConnectionError) as e:
-                    print(f"Owners AI: {site}: {e!r}", flush=True)
-                    return site, None, (0, 0)
-            with ThreadPoolExecutor(DIRECT_WORKERS) as pool:
-                for site, result, (t_in, t_out) in pool.map(direct, ready):
-                    usage[0] += t_in
-                    usage[1] += t_out
-                    if result is not None:
-                        record(cache, site, result)
-        else:
-            for start in range(0, len(ready), BATCH_SIZE):
-                chunk = ready[start:start + BATCH_SIZE]
-                items = {f"s{start + i}": {"site": s, "pages": p} for i, (s, _, p) in enumerate(chunk)}
-                batch = client.messages.batches.create(requests=[
-                    Request(custom_id=cid, params=MessageCreateParamsNonStreaming(**params(b, p)))
-                    for cid, (_, b, p) in zip(items, chunk)
-                ])
-                pending.append({"id": batch.id, "items": items})
-                save_pending(pending)
-                print(f"Owners AI: submitted batch {batch.id} ({len(chunk):,} sites)", flush=True)
-        save_cache(cache)
-
-        if pending:
-            pending, (b_in, b_out) = collect_batches(client, cache, pending, deadline)
-            usage[2] += b_in
-            usage[3] += b_out
             if pending:
-                print(f"Owners AI: {sum(len(b['items']) for b in pending):,} lookups still processing; "
-                      f"the next data load will collect them", flush=True)
-        p_in, p_out = PRICE_PER_MTOK.get(MODEL, (0, 0))
-        cost = (usage[0] * p_in + usage[1] * p_out + (usage[2] * p_in + usage[3] * p_out) / 2) / 1e6
-        print(f"Owners AI: this run used {usage[0] + usage[2]:,} input + {usage[1] + usage[3]:,} output tokens "
-              f"≈ ${cost:.2f}", flush=True)
+                pending, (b_in, b_out) = collect_batches(client, cache, pending, deadline)
+                usage[2] += b_in
+                usage[3] += b_out
+                if pending:
+                    print(f"Owners AI: {sum(len(b['items']) for b in pending):,} lookups still processing; "
+                          f"the next data load will collect them", flush=True)
+            p_in, p_out = PRICE_PER_MTOK.get(MODEL, (0, 0))
+            cost = (usage[0] * p_in + usage[1] * p_out + (usage[2] * p_in + usage[3] * p_out) / 2) / 1e6
+            print(f"Owners AI: this run used {usage[0] + usage[2]:,} input + {usage[1] + usage[3]:,} output tokens "
+                  f"≈ ${cost:.2f}", flush=True)
+        except anthropic.APIError as e:
+            # Out of credits, or the API is down: keep what's been found so far and apply the cache, so
+            # owners already known aren't dropped from the site.
+            save_cache(cache)
+            print(f"Owners AI: lookups stopped ({e!r}); applying cached results", flush=True)
     else:
         print("Owners AI: no ANTHROPIC_API_KEY; applying cached results", flush=True)
 
