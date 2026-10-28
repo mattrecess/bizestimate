@@ -2,7 +2,8 @@
 
     DATABASE_URL=postgresql://... python etl/load.py --state OK
 
-Only businesses geocoded to their street address are loaded.
+Businesses are listed at their geocoded street address, or at their ZIP when the address couldn't be
+matched (shown as an approximate location); sole proprietors are never listed.
 Re-running updates that state's businesses in place (matched on biz_key), so their ids,
 and therefore their page URLs, stay the same; businesses no longer in the data are removed.
 """
@@ -18,6 +19,7 @@ import psycopg
 import enrich
 import headcount_estimates
 from benchmarks import load_benchmarks
+import records_only
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, "..")
@@ -105,13 +107,20 @@ def main():
         with cur.copy(f"copy stage_biz ({', '.join(BIZ_COLS)}) from stdin") as cp:
             for r in rows(os.path.join(DATA_DIR, "businesses.csv"), BIZ_COLS):
                 cp.write_row(r)
-        # Only list businesses pinned at their own geocoded street address; ZIP-level placements
-        # (sole proprietors, whose addresses we never geocode, and addresses the Census couldn't
-        # match) are left out, which also removes any already loaded.
+        # Businesses pinned at their own geocoded street address are listed as is. Companies whose
+        # address the Census couldn't match are listed at their ZIP (a jittered point, shown as an
+        # approximate location). Sole proprietors are never listed.
         cur.execute("delete from stage_biz where geo_precision is null "
-                    "or geo_precision not in ('rooftop', 'place', 'building', 'address') "
-                    "or coalesce(address, '') = ''")
-        print(f"skipped without a street-level address: {cur.rowcount:,}")
+                    "or geo_precision not in ('rooftop', 'place', 'building', 'address', 'zip') "
+                    "or lower(coalesce(is_individual, '')) in ('true', 't') "
+                    "or (geo_precision <> 'zip' and coalesce(address, '') = '')")
+        print(f"skipped (sole proprietors or no location): {cur.rowcount:,}")
+        extra = records_only.stage(cur, state, BIZ_COLS)
+        with cur.copy(f"copy stage_biz ({', '.join(BIZ_COLS)}) from stdin") as cp:
+            for r in extra:
+                cp.write_row([None if r[c] in ("", None) else str(r[c]) for c in BIZ_COLS])
+        cur.execute("select count(*) from stage_biz where geo_precision = 'zip'")
+        print(f"listed at an approximate (ZIP) location: {cur.fetchone()[0]:,}")
         # Safety net: a truncated input file must never wipe the site. Refuse to shrink a state's
         # listings by more than 30% unless LOAD_ALLOW_SHRINK=1.
         cur.execute("select count(*) from stage_biz")

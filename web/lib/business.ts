@@ -9,7 +9,7 @@ export type Business = {
   is_nonprofit: boolean; jobs_reported: number | null; lat: number | null; lon: number | null;
   geo_precision: string | null; est_payroll: Num; est_revenue_low: Num; est_revenue_mid: Num;
   est_revenue_high: Num; est_ebitda_low: Num; est_ebitda_mid: Num; est_ebitda_high: Num;
-  est_revenue_by_employees: Num; est_revenue_by_payroll: Num; est_method: string; est_confidence: string; total_ppp_amount: Num;
+  est_revenue_by_employees: Num; est_revenue_by_payroll: Num; est_method: string; est_confidence: string; total_ppp_amount: Num; key_source?: string;
   website: string | null; owner_name: string | null; owner_title: string | null;
   owner_source: string | null; payroll_to_revenue: Num; revenue_per_employee: Num; ebitda_margin: Num; benchmark_source: string | null;
   est_ebitda_margin: Num; est_inflation: Num; est_growth: Num;
@@ -30,7 +30,7 @@ export async function getBusinessRow(id: string): Promise<Business | null> {
            b.business_type, b.is_individual, b.is_nonprofit, b.jobs_reported, b.lat, b.lon,
            b.geo_precision, b.est_payroll, b.est_revenue_low, b.est_revenue_mid, b.est_revenue_high,
            b.est_ebitda_low, b.est_ebitda_mid, b.est_ebitda_high, b.est_revenue_by_employees, b.est_revenue_by_payroll,
-           b.est_method, b.est_confidence, b.total_ppp_amount,
+           b.est_method, b.est_confidence, b.total_ppp_amount, split_part(b.biz_key, '|', 1) as key_source,
            -- via to_jsonb: tolerant of databases loaded before these columns existed
            to_jsonb(b) ->> 'website' as website, to_jsonb(b) ->> 'owner_name' as owner_name,
            to_jsonb(b) ->> 'owner_title' as owner_title, to_jsonb(b) ->> 'owner_source' as owner_source,

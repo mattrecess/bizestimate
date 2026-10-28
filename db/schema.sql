@@ -278,3 +278,13 @@ select biz_key, '2025-08-01', 'Achieve Capital', 'investment',
 from businesses where name ilike 'vantage point itad%' and coalesce(est_method, '') <> 'branch'
 order by est_revenue_mid desc nulls last limit 1
 on conflict (biz_key, buyer) do nothing;
+
+-- Companies known only from public records (unmatched FMCSA carriers, Form 5500 sponsors); load.py
+-- lists them at their ZIP. Rewritten per source by etl/records_only.py.
+create table if not exists record_listings (
+  biz_key text primary key,
+  source text not null,
+  state text not null,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);

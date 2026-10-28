@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["etl/form5500.py", "etl/headcount_estimates.py", ".github/workflows/form5500.yml"]
+    paths: ["etl/form5500.py", "etl/headcount_estimates.py", "etl/records_only.py", ".github/workflows/form5500.yml"]
 permissions:
   contents: write
 concurrency:

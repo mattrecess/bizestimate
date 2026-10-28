@@ -13,7 +13,7 @@ from build import norm_name
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(HERE, "..", "data")
-LISTED = {"rooftop", "place", "building", "address"}
+LISTED = {"rooftop", "place", "building", "address", "zip"}   # zip: listed at an approximate location
 
 
 def main():

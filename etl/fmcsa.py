@@ -13,6 +13,7 @@ import urllib.parse
 import psycopg
 
 import enrich
+import records_only
 from load import database_url
 from matching import match_entities
 from netutil import urlopen
@@ -107,6 +108,17 @@ def main():
         for key, d in sorted(out.items(), key=lambda kv: -kv[1]["power_units"])[:12]:
             print(f"  match: {names[key]} <- {d['name']} {d['power_units']:.0f} trucks, {d['drivers'] or 0:.0f} drivers", flush=True)
         enrich.save(cur, state, "fmcsa", out)
+        # Carriers matching no business become listings of their own (a carrier already matched to its
+        # own record-only listing stays one).
+        records = []
+        for dot, e in entities.items():
+            if dot in matches and not records_only.own_listing(matches[dot]):
+                continue
+            d = e["data"]
+            street, city, zip5 = next(iter(e["places"]))
+            records.append({"id": dot, "name": d["name"] or "", "address": street, "city": city, "zip": zip5,
+                            "employees": max(d["drivers"] or 0, d["power_units"]), "phone": d["phone"]})
+        records_only.save(cur, state, "fmcsa", records)
 
 
 if __name__ == "__main__":

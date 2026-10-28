@@ -25,6 +25,7 @@ from datetime import date
 import psycopg
 
 import enrich
+import records_only
 import headcount_estimates
 from csvio import write_rows
 from load import database_url
@@ -311,6 +312,19 @@ def main():
         enrich.save(cur, state, "form5500_people", found)
         print(f"Form 5500: signers for {sum(1 for p in found.values() if 'signer' in p):,} businesses, "
               f"audit firms for {sum(1 for p in found.values() if 'auditor' in p):,}", flush=True)
+        # Recent sponsors matching no business become listings of their own (sized from the plan).
+        since = date.today().year - headcount_estimates.RECENT_YEARS
+        records = []
+        for ein, s in sponsors.items():
+            if ein in matches and not records_only.own_listing(matches[ein]):
+                continue
+            year = max(s["years"])
+            if year < since or s["years"][year] < headcount_estimates.MIN_PARTICIPANTS:
+                continue
+            street, city, zip5 = sorted(s["places"])[0]
+            records.append({"id": ein, "name": sorted(s["names"])[0], "address": street, "city": city, "zip": zip5,
+                            "employees": s["years"][year], "naics": s["naics"] or "", "year": year})
+        records_only.save(cur, state, "form5500", records)
         headcount_estimates.apply(cur, state)
     print("Form 5500: headcounts saved", flush=True)
 

@@ -26,6 +26,7 @@ DATA_DIR = os.path.join(HERE, "..", "data")
 BIZ_CSV = os.path.join(DATA_DIR, "businesses.csv")
 LISTED = {"rooftop", "place", "building", "address"}
 MIN_CONFIDENCE = 0.6
+MIN_CORROBORATED = 0.45  # a lower score is accepted when the listing has both a website and a phone
 MIN_PEERS = 30          # PPP businesses needed before an industry prefix's average is used
 PPP_MATCH_M = 400       # an Overture place this close to a same-name PPP borrower is that borrower
 STATE_NAMES = {"OK": {"OK", "OKLAHOMA"}}
@@ -71,10 +72,23 @@ CATEGORY_NAICS = {
     "travel_service": "5615", "b2b_service": "56", "corporate_or_business_office": "56",
     "event_or_party_service": "5619", "environmental_or_ecological_service": "562",
     "b2b_energy_and_utility_service": "21", "specialty_school": "6116", "preschool": "6244",
+    "family_service": "8122", "brewery": "3121", "winery": "3121", "lounge": "7224", "dance_club": "7224",
+    "musical_instrument_and_pro_audio_store": "451", "toys_and_games_store": "451", "tutoring_service": "6116",
+    "security_service": "5616", "telecommunications_service": "517", "urgent_care_clinic": "6211",
+    "industrial_facility_or_service": "33", "b2b_science_and_technology_service": "5417",
+    "arcade": "7139", "gaming_venue": "7139", "marina": "7139", "food_service": "7225",
 }
 # Finer Overture categories that pin down the industry better than the basic category.
 # Checked in order, so the more specific words come first.
 DETAIL_NAICS = [
+    # Mining, oil and gas, farming: the basic categories ("b2b_energy_and_utility_service",
+    # "b2b_service") are too broad for these.
+    (("quarry", "sand_and_gravel", "aggregate_supplier", "rock_crusher"), "212321"), (("b2b_mining",), "212"),
+    (("oil_and_gas_exploration", "oil_and_gas_extraction"), "211"), (("oil_refinery",), "324110"),
+    (("b2b_oil_and_gas",), "213112"), (("well_drilling",), "237110"),
+    (("livestock_breeder", "livestock_dealer", "ranch", "cattle"), "112"), (("crops_production",), "111"),
+    (("grain_elevator",), "424510"), (("masonry_concrete",), "238140"), (("sandblasting", "powder_coating"), "332812"),
+    (("septic_service",), "562991"), (("garbage_collection",), "562111"), (("funeral",), "812210"),
     (("dry_cleaning",), "812320"), (("carpet_cleaning", "upholstery"), "561740"),
     (("pest_control", "exterminat"), "561710"), (("landscap", "lawn", "tree_service", "gardener"), "561730"),
     (("window_washing", "air_duct_cleaning", "pressure_washing", "power_washing"), "561790"),
@@ -119,14 +133,16 @@ class BorrowerIndex:
             tokens = name_tokens(r["name"])
             if not tokens:
                 continue
-            self.by_zip[r.get("zip", "")[:5]].append(tokens)
+            self.by_zip[r.get("zip", "")[:5]].append((tokens, r))
             if r.get("lat") and r.get("lon"):
                 lat, lon = float(r["lat"]), float(r["lon"])
                 self.cells[(int(lon // self.CELL), int(lat // self.CELL))].append((tokens, lat, lon))
 
     def matches(self, tokens, lat, lon, zip5):
-        if any(name_score(tokens, t) >= 0.8 for t in self.by_zip.get(zip5, ())):
-            return True
+        """The matched borrower's row (or True for a nearby one), else None."""
+        for t, r in self.by_zip.get(zip5, ()):
+            if name_score(tokens, t) >= 0.8:
+                return r
         mx, my = _meters(lat)
         cx, cy = int(lon // self.CELL), int(lat // self.CELL)
         for i in (cx - 1, cx, cx + 1):
@@ -135,7 +151,7 @@ class BorrowerIndex:
                     if (name_score(tokens, t) >= 0.6
                             and math.hypot((b_lon - lon) * mx, (b_lat - lat) * my) <= PPP_MATCH_M):
                         return True
-        return False
+        return None
 
 
 # Restaurants, hotels, salons, gas stations and convenience stores are mostly franchises or
@@ -200,7 +216,7 @@ def main():
     for n in cols["name"]:
         name_counts[full_name(n or "")] += 1
 
-    added, skipped = [], defaultdict(int)
+    added, skipped, unmapped, moved = [], defaultdict(int), defaultdict(int), 0
     # Names listed in etl/lookup.txt: say in the log what happened to their map listings.
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lookup.txt")) as f:
         traced = [q.strip().upper() for q in f if q.strip() and not q.startswith("#")]
@@ -212,7 +228,9 @@ def main():
         region = (get("region") or "").upper()
         if region not in STATE_NAMES[state] and not (state == "OK" and zip5[:2] in ("73", "74") and not region):
             continue
-        if get("status") == "permanently_closed" or (get("confidence") or 0) < MIN_CONFIDENCE:
+        confidence = get("confidence") or 0
+        corroborated = confidence >= MIN_CORROBORATED and get("websites") and get("phones")
+        if get("status") == "permanently_closed" or (confidence < MIN_CONFIDENCE and not corroborated):
             skipped["closed or low confidence"] += 1
             trace(traced, name, f"closed or low confidence ({get('status')}, confidence {get('confidence')})")
             continue
@@ -220,10 +238,18 @@ def main():
         tokens = name_tokens(name)
         if not code or not tokens or lat is None:
             skipped["not a business category"] += 1
+            unmapped[(get("category"), get("category_detail"))] += 1
             trace(traced, name, f"category not mapped to an industry ({get('category')} / {get('category_detail')})")
             continue
-        if borrowers.matches(tokens, lat, lon, zip5):
+        borrower = borrowers.matches(tokens, lat, lon, zip5)
+        if borrower:
             skipped["already in PPP data"] += 1
+            if borrower is not True and borrower.get("geo_precision") == "zip":
+                # A borrower we could only place at its ZIP: the map listing shows where it is.
+                borrower.update({"lat": lat, "lon": lon, "geo_precision": "place"})
+                borrower["website"] = borrower.get("website") or pick_website(get("websites")) or ""
+                borrower["phone"] = borrower.get("phone") or pick_phone(get("phones")) or ""
+                moved += 1
             trace(traced, name, "matched to a PPP borrower (listed from the loan data instead)")
             continue
         avg = next((averages[code[:n]] for n in (4, 3, 2) if code[:n] in averages), None)
@@ -262,7 +288,10 @@ def main():
         })
 
     write_rows(BIZ_CSV, fields, rows + added)
-    print(f"Places-only: added {len(added):,} businesses without loan data; skipped {dict(skipped)}", flush=True)
+    print(f"Places-only: added {len(added):,} businesses without loan data; skipped {dict(skipped)}; "
+          f"{moved:,} ZIP-placed borrowers moved to their map listing", flush=True)
+    top = sorted(unmapped.items(), key=lambda kv: -kv[1])[:25]
+    print("Places-only: most common categories not listed: " + ", ".join(f"{c}/{d} {n:,}" for (c, d), n in top), flush=True)
 
 
 if __name__ == "__main__":

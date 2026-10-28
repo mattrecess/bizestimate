@@ -58,6 +58,7 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
           : b.est_method === "verified" ? <span className="badge good">Verified</span>
           : b.est_method === "reported" ? <span className="badge good">Reported</span>
           : b.est_method === "retirement_plan" ? <span className="badge good">401(k) data</span>
+          : b.est_method === "fleet" ? <span className="badge good">Fleet data</span>
           : <span className="badge good">PPP data</span>}
         {Number(b.sell_score) >= 40 && <span className="badge warn">Likely to sell</span>}
         {b.locations ? <span className="badge info"><Icon name="map" size={12} />{b.locations + 1} locations</span> : null}

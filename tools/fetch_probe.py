@@ -1,14 +1,16 @@
-"""Inspect the largest estimates on the live site: method, headcounts, industry, figures."""
-import json
+"""Check whether Foursquare's open places data (FSQ OS Places) can be read without an account."""
 import urllib.request
 
-SITE = "https://bizestimate-six.vercel.app"
-get = lambda p: json.loads(urllib.request.urlopen(SITE + p, timeout=60).read())  # noqa: E731
-rows = get("/api/businesses?limit=25")["results"]
-for b in rows:
-    p = get(f"/api/businesses/{b['id']}?core=1")
-    hc = [(h["year"], h["employees"]) for h in p.get("headcounts") or []]
-    srcs = sorted(s["source"] for s in p.get("sources") or [])
-    print(f"{b['name'][:34]:34} rev {float(b['est_revenue_mid'] or 0)/1e9:7.2f}B  {b['est_method']:16} naics {b['naics']} "
-          f"'{p.get('industry')}' rpe {p.get('revenue_per_employee')} ppp_jobs {b.get('jobs_reported')} infl {p.get('est_inflation')} "
-          f"5500 {hc[-3:]} src {srcs}")
+URLS = [
+    "https://fsq-os-places-us-east-1.s3.amazonaws.com/?list-type=2&prefix=release/&delimiter=/",
+    "https://fsq-os-places-us-east-1.s3.amazonaws.com/?list-type=2&prefix=release/dt=&max-keys=20",
+    "https://huggingface.co/api/datasets/foursquare/fsq-os-places",
+    "https://huggingface.co/api/datasets/foursquare/fsq-os-places/tree/main",
+]
+for url in URLS:
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "bizestimate-probe"}), timeout=60) as r:
+            print(f"{url}\n  HTTP {r.status}\n  {r.read(3000).decode('utf-8', 'replace')}\n", flush=True)
+    except Exception as e:  # noqa: BLE001
+        body = getattr(e, "read", lambda: b"")()[:1000]
+        print(f"{url}\n  FAILED {e!r}\n  {body!r}\n", flush=True)

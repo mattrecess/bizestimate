@@ -59,6 +59,8 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   const noLoan = !b.loans.length;
   const fromPlan = b.est_method === "retirement_plan";       // re-based on the newest Form 5500 count
   const reported = b.est_method === "reported";              // SEC, FDIC or Form 990 figures
+  const fleet = b.est_method === "fleet";                    // trucking company known from its FMCSA registration
+  const approximate = b.geo_precision === "zip";             // placed at its ZIP: the address couldn't be mapped
   const src = Object.fromEntries((b.sources ?? []).map((s) => [s.source, s.data as Record<string, any>]));  // eslint-disable-line @typescript-eslint/no-explicit-any
   // The owner's own profile, only while it's for the owner we show (it was found for a name).
   const ownerLinkedIn = src.linkedin?.owner_url && src.linkedin.owner_name === b.owner_name ? src.linkedin.owner_url : null;
@@ -74,6 +76,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   const basis = b.est_method === "verified" ? "verified financials"
     : reported ? reportedSrc
     : fromPlan && latest ? `${latest.employees.toLocaleString()} employees on its ${latest.year} 401(k) filing`
+    : fromPlan ? "the employee count on its latest 401(k) filing"
+    : fleet && src.fmcsa ? `${Math.round(src.fmcsa.drivers || 0).toLocaleString()} drivers and ${Math.round(src.fmcsa.power_units).toLocaleString()} trucks on its federal motor carrier registration`
+    : fleet ? "the drivers and trucks on its federal motor carrier registration"
     : b.est_method === "employees" ? `${b.jobs_reported} employees reported for PPP in ${pppYear(b.loans)}, grown at the industry's Oklahoma rate since`
     : b.est_method === "payroll" ? `PPP payroll (${pppYear(b.loans)})`
     : b.est_method === "owner_earnings" ? `owner earnings on its PPP loan (${pppYear(b.loans)})`
@@ -103,6 +108,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <h1>{b.name}</h1>
           <div className="sub">
             {[b.address, b.city, `OK ${b.zip}`].filter(Boolean).join(", ")}
+            {approximate && <span className="muted" title="We couldn't map this address, so the pin is placed in its ZIP code"> · approximate map location</span>}
           </div>
           <div className="badges">
             {industryLabel(b.naics)
@@ -113,6 +119,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               : b.est_method === "verified" ? <span className="badge good">Verified financials</span>
               : reported ? <span className="badge good">Reported financials</span>
               : fromPlan ? <span className="badge good">401(k) plan data</span>
+              : fleet ? <span className="badge good">Fleet data</span>
               : <span className="badge good">PPP loan data</span>}
             {src.website_profile?.family_owned && (
               <span className="badge good">Family-owned{src.website_profile.generation ? ` · gen ${src.website_profile.generation}` : ""}</span>
@@ -229,7 +236,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             </div>
             <div className="tile">
               <div className="k">{noLoan ? "Estimate basis" : "Total PPP"}</div>
-              <div className="v">{noLoan ? (fromPlan ? "401(k) filing" : "Industry") : money(b.total_ppp_amount)}</div>
+              <div className="v">{noLoan ? (fromPlan ? "401(k) filing" : fleet ? "Trucks & drivers" : "Industry") : money(b.total_ppp_amount)}</div>
               <div className="r">
                 <span className={`badge ${b.est_confidence === "low" ? "warn" : "good"}`}>{b.est_confidence} confidence</span>
               </div>
@@ -392,9 +399,11 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               owners&apos; salaries.</p>
           )}
           <p className="disclaimer">Benchmarks: {b.benchmark_source ?? "sector default"}.
-            {!fromPlan && !avg && " PPP loans were sized on 2019–2020 payroll, so figures reflect that period."} These are
+            {!fromPlan && !avg && !fleet && " PPP loans were sized on 2019–2020 payroll, so figures reflect that period."} These are
             statistical estimates, not reported financials.
-            {noLoan && " Listing details come from Overture Maps open data."}{" "}
+            {noLoan && (b.key_source === "DOT" ? " Listing details come from the FMCSA motor carrier census."
+              : b.key_source === "EIN" ? " Listing details come from the company's Form 5500 retirement-plan filing."
+              : " Listing details come from Overture Maps open data.")}{" "}
             <Link href="/methodology">Full methodology</Link></p>
         </div>
       )}

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Compare businesses | BizEstimate", robots: { index: false, follow: true } };
 
 const METHOD: Record<string, string> = {
-  employees: "PPP headcount", payroll: "PPP payroll", retirement_plan: "401(k) headcount", reported: "Reported figures",
+  employees: "PPP headcount", payroll: "PPP payroll", retirement_plan: "401(k) headcount", fleet: "Trucks and drivers (FMCSA)", reported: "Reported figures",
   verified: "Verified figures", industry_average: "Industry average", owner_earnings: "Owner earnings", branch: "Branch location",
 };
 
