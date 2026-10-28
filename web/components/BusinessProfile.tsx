@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import type { Business, Comparable, Headcount, LenderLink, Loan, Location } from "@/lib/business";
+import type { Business, Comparable, Headcount, LenderLink, Loan, Location, Prospect } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import ContactCard from "./ContactCard";
 import SaveButton from "./SaveButton";
 import PipelineBox from "./PipelineBox";
 import HeadcountChart from "./HeadcountChart";
 import ValueChart, { valueHistory } from "./ValueChart";
+import { CustomersSuppliers, WhatTheyDo } from "./Offering";
 import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
 import { estimateValue } from "@/lib/valuation";
@@ -16,7 +17,8 @@ import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
 import RangeBar from "./RangeBar";
 
-export type Profile = Business & { loans: Loan[]; comps?: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[]; lenders?: LenderLink[]; locations?: Location[] };
+export type Profile = Business & { loans: Loan[]; comps?: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[]; lenders?: LenderLink[]; locations?: Location[];
+  prospects?: { market: string; items: Prospect[] }[] };
 
 // "https://www.blastrac.com/" -> "blastrac.com"
 function siteLabel(url: string) {
@@ -238,6 +240,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <p className="disclaimer">No PPP loan on record: these are typical figures for {b.industry} businesses in
               Oklahoma, not this business&apos;s own. <button className="link-btn" onClick={() => setTab("financials")}>How we estimate</button></p>
           )}
+          <WhatTheyDo offering={src.website_offering} industry={industryLabel(b.naics) ?? b.industry} />
           {(() => {
             // Value over time: needs a headcount basis for today's estimate (PPP grown since, or the latest 401(k) count).
             const ppp = b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null;
@@ -252,6 +255,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
           <PeopleAdvisors sources={b.sources ?? []} owner={b.owner_name}
             lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
+          <CustomersSuppliers offering={src.website_offering} contracts={src.contracts} onSelect={onSelect}
+            lenders={(b.lenders ?? []).map((l) => ({ name: l.name, loans: l.loans }))}
+            auditor={src.form5500_people?.auditor?.firm ?? null} prospects={b.prospects ?? []} />
           {b.locations?.length ? (
             <div className="section">
               <h2><Icon name="map" size={16} />{b.locations.length + 1} locations</h2>

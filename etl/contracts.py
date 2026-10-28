@@ -90,9 +90,21 @@ def main():
         for rid, key in matches.items():
             if key not in rows or entities[rid]["data"]["total"] > rows[key]["total"]:
                 rows[key] = entities[rid]["data"]
+        # Who the customers are: the federal agencies (and sub-agencies) that awarded the contracts.
+        window = [{"start_date": f"{this_fy - YEARS - 1}-10-01", "end_date": f"{this_fy}-09-30"}]
+        for d in rows.values():
+            try:
+                res = post("search/spending_by_category/awarding_subagency/", {
+                    "filters": {"recipient_search_text": [d.get("uei") or d["name"]], "award_type_codes": CONTRACTS,
+                                "time_period": window}, "limit": 5, "page": 1})
+                d["agencies"] = [{"name": r["name"], "amount": round(r["amount"])} for r in res.get("results", []) if r.get("amount")]
+            except Exception:  # noqa: BLE001 - the totals still stand without the breakdown
+                pass
+            time.sleep(0.1)
         names = {b["biz_key"]: b["name"] for b in biz}
         for key, d in sorted(rows.items(), key=lambda kv: -kv[1]["total"])[:12]:
-            print(f"  match: {names[key]} <- {d['name']} ${d['total']:,.0f} {d['business_types'][:4]}", flush=True)
+            print(f"  match: {names[key]} <- {d['name']} ${d['total']:,.0f} {d['business_types'][:4]} "
+                  f"customers {[a['name'] for a in d.get('agencies', [])][:3]}", flush=True)
         enrich.save(cur, state, "contracts", rows)
 
 

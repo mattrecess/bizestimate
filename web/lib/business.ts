@@ -1,5 +1,6 @@
 import { sql } from "./db";
-import { publicAddress } from "./queries";
+import { industryMatch, publicAddress } from "./queries";
+import { matchIndustry } from "./industries";
 
 type Num = string | number | null;
 export type Business = {
@@ -70,9 +71,36 @@ async function coreParts(id: string) {
 
 // The slower part (comparables search, bank and location roll-ups), loaded just after.
 export async function relatedParts(biz: Business, opts: { locations?: boolean } = {}) {
-  const [comps, lenders, locations] = await Promise.all([
-    getComparables(biz), getLenders(biz.id), opts.locations === false ? Promise.resolve([] as Location[]) : getLocations(biz.id)]);
-  return { comps, lenders, locations };
+  const [comps, lenders, locations, prospects] = await Promise.all([
+    getComparables(biz), getLenders(biz.id), opts.locations === false ? Promise.resolve([] as Location[]) : getLocations(biz.id),
+    getProspects(biz)]);
+  return { comps, lenders, locations, prospects };
+}
+
+// Possible customers: the largest businesses near this one in the industries its own website says it
+// serves ("hospitals", "oil and gas", "restaurants"), matched to industries the way search does.
+export type Prospect = { id: string; name: string; city: string; industry: string; est_revenue_mid: Num; miles: number | null };
+async function getProspects(b: Business): Promise<{ market: string; items: Prospect[] }[]> {
+  const [row] = await sql`select s.data -> 'markets' as markets from business_sources s join businesses x on x.biz_key = s.biz_key
+                          where x.id = ${b.id} and s.source = 'website_offering'`.catch(() => []);
+  const markets: string[] = Array.isArray(row?.markets) ? row.markets : [];
+  const lat = b.lat == null ? null : Number(b.lat), lon = b.lon == null ? null : Number(b.lon);
+  const out: { market: string; items: Prospect[] }[] = [];
+  const seen = new Set<string>();
+  for (const market of markets.slice(0, 6)) {
+    const m = matchIndustry(market);
+    if (!m || seen.has(m.industry.label) || b.naics && m.industry.naics.some((c) => b.naics!.startsWith(c))) continue;
+    seen.add(m.industry.label);
+    const near = lat == null ? sql`city = ${b.city}` : sql`lat between ${lat - 0.9} and ${lat + 0.9} and lon between ${lon! - 1.1} and ${lon! + 1.1}`;
+    const items = await sql<Prospect[]>`
+      select id, name, city, industry, est_revenue_mid,
+             ${lat == null ? sql`null::float8` : sql`round((69.0 * sqrt(power(lat - ${lat}, 2) + power((lon - ${lon}) * cos(radians(${lat})), 2)))::numeric, 0)::float8`} as miles
+      from businesses where (${industryMatch(m.industry.naics)}) and ${near} and not is_individual and coalesce(est_method, '') <> 'branch'
+      order by est_revenue_mid desc nulls last limit 5`.catch(() => [] as Prospect[]);
+    if (items.length) out.push({ market: m.industry.label, items });
+    if (out.length >= 4) break;
+  }
+  return out;
 }
 
 const getLoans = (id: string) => sql<Loan[]>`

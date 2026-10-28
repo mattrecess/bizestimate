@@ -457,3 +457,15 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 .map-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .draw-hint { background: var(--panel); border-radius: 999px; padding: 7px 12px; font-size: 13px; box-shadow: var(--shadow-md); }
 .as-of { font-size: 12px; color: var(--muted); margin: 6px 2px 10px; }
+.offering p { margin: 0 0 10px; }
+.offer-row { display: grid; grid-template-columns: 150px 1fr; gap: 8px; margin: 8px 0; align-items: start; }
+.offer-row .k { font-size: 12px; color: var(--muted); padding-top: 4px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 13px; padding: 3px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); }
+.cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+.offering h3 { font-size: 13px; margin: 8px 0 6px; }
+.offering ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+.offering .muted { color: var(--muted); font-size: 12px; }
+.prospects { margin: 8px 0; }
+.prospects .k { font-size: 12px; font-weight: 650; color: var(--muted); margin-bottom: 4px; }
+@media (max-width: 640px) { .offer-row, .cs-grid { grid-template-columns: 1fr; } }
