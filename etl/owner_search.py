@@ -110,12 +110,15 @@ def main():
     serper = os.environ.get("SERPER_API_KEY", "").strip()
     key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     max_total = int(os.environ.get("OWNER_SEARCH_MAX_TOTAL") or 2500)
+    # Only businesses at least this big (estimated revenue) are searched; 0 = all.
+    min_revenue = float(os.environ.get("OWNER_SEARCH_MIN_REVENUE") or 0)
     with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
         cache = enrich.state_get(cur, STATE_KEY, {})
         if serper and key:
             cur.execute("""select biz_key, name, city from businesses
                            where state = %s and coalesce(owner_name, '') = '' and not is_individual and not is_nonprofit
-                           order by est_revenue_mid desc nulls last""", (state,))
+                             and coalesce(est_method, '') <> 'branch' and coalesce(est_revenue_mid, 0) >= %s
+                           order by est_revenue_mid desc nulls last""", (state, min_revenue))
             todo = [dict(zip(["biz_key", "name", "city"], r)) for r in cur.fetchall() if r[0] not in cache]
             todo = todo[:max(max_total - len(cache), 0)]
             print(f"owner_search: {len(todo):,} businesses to search ({len(cache):,} of {max_total:,} done)", flush=True)

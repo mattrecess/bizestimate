@@ -56,10 +56,13 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
           SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
-          OWNER_SEARCH_MAX_TOTAL: ${{ vars.OWNER_SEARCH_MAX_TOTAL }}
+          # Approved Oct 28: owner search for every business over $1M revenue without an owner (~$80).
+          OWNER_SEARCH_MAX_TOTAL: ${{ vars.OWNER_SEARCH_MAX_TOTAL || '80000' }}
+          OWNER_SEARCH_MIN_REVENUE: ${{ vars.OWNER_SEARCH_MIN_REVENUE || '1000000' }}
           LINKEDIN_MAX_TOTAL: ${{ vars.LINKEDIN_MAX_TOTAL }}
           DEALS_NEWS_MAX_TOTAL: ${{ vars.DEALS_NEWS_MAX_TOTAL }}
-          WEBSITE_OFFERING_MAX_TOTAL: ${{ vars.WEBSITE_OFFERING_MAX_TOTAL }}
+          # Approved Oct 28: read every company website (~70,000 sites, ~$15), 15,000 per run.
+          WEBSITE_OFFERING_MAX_TOTAL: ${{ vars.WEBSITE_OFFERING_MAX_TOTAL || '80000' }}
       - if: always()
         run: |
           cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b enrich-logs
