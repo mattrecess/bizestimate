@@ -67,6 +67,16 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
     .filter((y): y is number => typeof y === "number").sort((a, b) => a - b)[0] ?? null;
   const ownershipChange = src.sba?.ownership_change_year ?? null;
   const latest = b.headcounts?.length ? b.headcounts[b.headcounts.length - 1] : null;
+  // What today's figures rest on, and how recent it is.
+  const reportedSrc = src.sec ? `SEC filings (FY${src.sec.year})` : src.fdic ? `FDIC call report (${src.fdic.year})`
+    : src.ncua ? `NCUA call report (${src.ncua.quarter})` : src.irs990 ? `IRS Form 990${src.irs990.year ? ` (${src.irs990.year})` : ""}` : "reported figures";
+  const basis = b.est_method === "verified" ? "verified financials"
+    : reported ? reportedSrc
+    : fromPlan && latest ? `${latest.employees.toLocaleString()} employees on its ${latest.year} 401(k) filing`
+    : b.est_method === "employees" ? `${b.jobs_reported} employees reported for PPP in ${pppYear(b.loans)}, grown at the industry's Oklahoma rate since`
+    : b.est_method === "payroll" ? `PPP payroll (${pppYear(b.loans)})`
+    : b.est_method === "owner_earnings" ? `owner earnings on its PPP loan (${pppYear(b.loans)})`
+    : "typical figures for its industry (2022 Economic Census), not its own records";
   // The margin actually applied (IRS industry margin adjusted for size) when the data has it.
   const irsMargin = b.est_ebitda_margin != null && b.est_method !== "owner_earnings";
   const margin = irsMargin ? b.est_ebitda_margin : b.ebitda_margin;
@@ -190,6 +200,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               </div>
             </div>
           )}
+          <p className="as-of">Based on {basis}</p>
           <div className="tiles">
             <div className="tile">
               <div className="k">Est. revenue</div>

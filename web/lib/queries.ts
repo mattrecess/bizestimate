@@ -20,6 +20,7 @@ export type Filters = {
   basis?: string[];       // reported | k401 | ppp | avg
   noBranch?: boolean; noNonprofit?: boolean; noFranchise?: boolean;
   bbox?: [number, number, number, number]; // west, south, east, north
+  area?: [number, number][];                // a shape drawn on the map: [lon, lat] corners
 };
 
 // Estimate basis -> est_method values.
@@ -43,6 +44,12 @@ const employeesSql = sql`coalesce((select h.employees from headcounts h where h.
   order by h.year desc limit 1), jobs_reported)`;
 const hasSource = (source: string) => sql`exists (select 1 from business_sources s where s.biz_key = businesses.biz_key and s.source = ${source})`;
 
+// "lon,lat;lon,lat;..." -> corners (3 to 80, valid numbers), or undefined.
+function parseArea(v: string | null) {
+  const pts = (v ?? "").split(";").map((s) => s.split(",").map(Number)).filter((p) => p.length === 2 && p.every(Number.isFinite));
+  return pts.length >= 3 && pts.length <= 80 ? (pts as [number, number][]) : undefined;
+}
+
 const list = (v: string | null) => (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
 export function parseFilters(p: URLSearchParams): Filters {
@@ -62,6 +69,7 @@ export function parseFilters(p: URLSearchParams): Filters {
     website: p.get("website") === "1", contractor: p.get("contractor") === "1",
     basis: list(p.get("basis")).filter((b) => b in BASIS),
     noBranch: p.get("x_branch") === "1", noNonprofit: p.get("x_nonprofit") === "1", noFranchise: p.get("x_franchise") === "1",
+    area: parseArea(p.get("area")),
     bbox: bbox?.length === 4 && bbox.every(Number.isFinite) ? (bbox as Filters["bbox"]) : undefined,
   };
 }
@@ -128,7 +136,14 @@ export function where(f: Filters) {
   if (f.noNonprofit) conds.push(sql`not is_nonprofit and not ${hasSource("irs990")}`);
   if (f.noFranchise) conds.push(sql`not exists (select 1 from business_sources s where s.biz_key = businesses.biz_key
     and s.source = 'sba' and s.data ->> 'franchise' is not null)`);
-  if (f.bbox) {
+  if (f.area) {
+    // Postgres's built-in polygon type: no extension needed. The box test lets the lat/lon index narrow it first.
+    const lons = f.area.map((p) => p[0]), lats = f.area.map((p) => p[1]);
+    const poly = `(${f.area.map(([x, y]) => `(${x},${y})`).join(",")})`;
+    conds.push(sql`lat between ${Math.min(...lats)} and ${Math.max(...lats)} and lon between ${Math.min(...lons)} and ${Math.max(...lons)}
+      and ${poly}::polygon @> point(lon, lat)`);
+  }
+  if (f.bbox && !f.area) {
     const [w, s, e, n] = f.bbox;
     conds.push(sql`lat between ${s} and ${n} and lon between ${w} and ${e}`);
   }

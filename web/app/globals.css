@@ -451,3 +451,9 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 }
 /* An open sheet lifts the toolbar above the header and the map/list button, so the dimmed backdrop covers them. */
 @media (max-width: 860px) { .toolbar:has(.sheet-backdrop) { z-index: 50; } }
+.draw-controls { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; gap: 8px; align-items: center; }
+.map-btn { height: 34px; padding: 0 14px; border-radius: 999px; font-weight: 650; background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); box-shadow: var(--shadow-md); }
+.map-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.draw-hint { background: var(--panel); border-radius: 999px; padding: 7px 12px; font-size: 13px; box-shadow: var(--shadow-md); }
+.as-of { font-size: 12px; color: var(--muted); margin: 6px 2px 10px; }

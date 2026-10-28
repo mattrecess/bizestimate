@@ -30,6 +30,9 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [cities, setCities] = useState<{ city: string; count: number }[]>([]);
   const [savedNote, setSavedNote] = useState(false);
+  // A shape drawn on the map ("lon,lat;lon,lat;..."): the search covers it instead of the map view.
+  const [area, setArea] = useState("");
+  const areaPts = useMemo(() => (area ? area.split(";").map((p) => p.split(",").map(Number) as [number, number]) : null), [area]);
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [filters, setFilters] = useState<FilterState>(NO_FILTERS);
@@ -71,6 +74,7 @@ export default function Home() {
     });
     // A shared link to a business opens its profile (on phones, the list side rather than the map).
     if (u.get("id") && /^\d+$/.test(u.get("id")!)) { setSelectedId(Number(u.get("id"))); setView("list"); }
+    setArea(u.get("area") ?? "");
     setReady(true);
     fetch("/api/cities").then((r) => r.json()).then(setCities).catch(() => {});
   }, []);
@@ -84,9 +88,10 @@ export default function Home() {
     const u = new URLSearchParams();
     for (const k of URL_KEYS) if (values[k]) u.set(k, values[k]);
     for (const [k, v] of new URLSearchParams(moreFilters)) u.set(k, v);
+    if (area) u.set("area", area);
     const qs = u.toString();
     window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-  }, [ready, debouncedQ, sector, city, minRev, maxRev, naics, lender, moreFilters, sort, selectedId]);
+  }, [ready, debouncedQ, sector, city, minRev, maxRev, naics, lender, moreFilters, area, sort, selectedId]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -130,7 +135,7 @@ export default function Home() {
   }, [q]);
 
   // A bank's borrowers are spread across the state, so a lender filter also searches statewide.
-  const fitKey = city || debouncedQ || lender ? `${city}|${debouncedQ}|${lender}` : "";
+  const fitKey = city || debouncedQ || lender || area ? `${city}|${debouncedQ}|${lender}|${area}` : "";
 
   // Strings, not objects, so a render that changes nothing never repeats a request.
   const filterParams = useMemo(() => {
@@ -143,8 +148,9 @@ export default function Home() {
     if (naics) p.set("naics", naics);
     if (lender) p.set("lender", lender);
     for (const [k, v] of new URLSearchParams(moreFilters)) p.set(k, v);
+    if (area) p.set("area", area);
     return p.toString();
-  }, [debouncedQ, sector, city, minRev, maxRev, naics, lender, moreFilters]);
+  }, [debouncedQ, sector, city, minRev, maxRev, naics, lender, moreFilters, area]);
   // A city or name search covers the whole state; the map then flies to the matches.
   const fmtBox = (b: Box) => b.map((n) => n.toFixed(4)).join(",");
   const params = useMemo(() => {
@@ -246,7 +252,8 @@ export default function Home() {
       <div className="explorer" data-view={view}>
         <div className="map">
           <Map points={points} onBoundsChange={setBbox} fitKey={fitKey} onSelect={openBusiness}
-            selected={selectedPoint} hoveredId={hovered} onHover={setHovered} />
+            selected={selectedPoint} hoveredId={hovered} onHover={setHovered}
+            area={areaPts} onArea={(pts) => setArea(pts ? pts.map((p) => p.join(",")).join(";") : "")} />
         </div>
         <div className="panel" ref={panel}>
           {selectedId && (

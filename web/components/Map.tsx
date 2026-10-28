@@ -44,7 +44,29 @@ type Props = {
   selected?: { lat: number; lon: number } | null; // highlighted pin
   hoveredId?: number | null; // business hovered in the list: its tag is raised and highlighted
   onHover?: (id: number | null) => void;
+  area?: [number, number][] | null;             // a shape drawn to search inside
+  onArea?: (area: [number, number][] | null) => void;
 };
+
+const MAX_AREA_POINTS = 60;
+const areaFC = (pts: [number, number][] | null | undefined, closed = true): GeoJSON.FeatureCollection => ({
+  type: "FeatureCollection",
+  features: pts && pts.length >= 2 ? [{
+    type: "Feature", properties: {},
+    geometry: closed && pts.length >= 3 ? { type: "Polygon", coordinates: [[...pts, pts[0]]] } : { type: "LineString", coordinates: pts },
+  }] : [],
+});
+
+// The drawn search area (and the line being drawn), under the pins; re-added after a style switch.
+function addAreaLayers(m: maplibregl.Map, area: [number, number][] | null | undefined) {
+  if (m.getSource("area")) return;
+  m.addSource("area", { type: "geojson", data: areaFC(area) });
+  m.addSource("drawing", { type: "geojson", data: areaFC(null) });
+  const below = m.getLayer("points") ? "points" : undefined;
+  m.addLayer({ id: "area-fill", type: "fill", source: "area", paint: { "fill-color": HOT, "fill-opacity": 0.08 } }, below);
+  m.addLayer({ id: "area-line", type: "line", source: "area", paint: { "line-color": HOT, "line-width": 2.5 } }, below);
+  m.addLayer({ id: "drawing-line", type: "line", source: "drawing", paint: { "line-color": HOT, "line-width": 2.5, "line-dasharray": [2, 1.5] } });
+}
 
 // Zillow-style price tag: a rounded pill that stretches around its label, with a small pointer at the
 // bottom whose tip marks the spot (drawn at 2x for sharp edges). Only the straight parts stretch, so the
@@ -159,7 +181,7 @@ const hoverFC = (points: GeoJSON.FeatureCollection, id: number | null | undefine
   features: id == null ? [] : points.features.filter((f) => f.properties?.id === id).slice(0, 1),
 });
 
-export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 6, fitKey = "", onSelect, selected, hoveredId, onHover }: Props) {
+export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 6, fitKey = "", onSelect, selected, hoveredId, onHover, area, onArea }: Props) {
   const fitted = useRef("");
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -175,6 +197,11 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
   const hoveredRef = useRef(hoveredId);
   hoveredRef.current = hoveredId;
   const [satellite, setSatellite] = useState(true);
+  const [drawing, setDrawing] = useState(false);
+  const areaRef = useRef(area);
+  areaRef.current = area;
+  const areaCb = useRef(onArea);
+  areaCb.current = onArea;
 
   useEffect(() => {
     // No fade: tags changing as data or the hover updates otherwise blink.
@@ -185,7 +212,10 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       const b = m.getBounds();
       boundsCb.current?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
     };
-    m.on("style.load", () => addBizLayers(m, latest.current, pointFC(selectedRef.current), hoverFC(latest.current, hoveredRef.current)));
+    m.on("style.load", () => {
+      addBizLayers(m, latest.current, pointFC(selectedRef.current), hoverFC(latest.current, hoveredRef.current));
+      addAreaLayers(m, areaRef.current);
+    });
     const pins = ["points", "tags"];
     m.on("click", pins, (e) => {
       const p = e.features![0].properties!;
@@ -252,6 +282,49 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
     (map.current?.getSource("hover") as maplibregl.GeoJSONSource | undefined)?.setData(hoverFC(latest.current, hoveredId));
   }, [hoveredId, points]);
 
+  useEffect(() => {
+    (map.current?.getSource("area") as maplibregl.GeoJSONSource | undefined)?.setData(areaFC(area));
+  }, [area]);
+
+  // Draw mode: press and drag a loop around the businesses you want; letting go searches inside it.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !drawing) return;
+    const canvas = m.getCanvasContainer();
+    const pts: [number, number][] = [];
+    let down = false;
+    m.dragPan.disable(); m.touchZoomRotate.disable(); m.doubleClickZoom.disable();
+    canvas.style.cursor = "crosshair";
+    const at = (e: PointerEvent): [number, number] => {
+      const r = canvas.getBoundingClientRect();
+      const ll = m.unproject([e.clientX - r.left, e.clientY - r.top]);
+      return [Number(ll.lng.toFixed(5)), Number(ll.lat.toFixed(5))];
+    };
+    const draw = () => (m.getSource("drawing") as maplibregl.GeoJSONSource | undefined)?.setData(areaFC(pts, false));
+    const onDown = (e: PointerEvent) => { down = true; pts.length = 0; pts.push(at(e)); canvas.setPointerCapture(e.pointerId); e.preventDefault(); };
+    const onMove = (e: PointerEvent) => { if (down) { pts.push(at(e)); draw(); } };
+    const onUp = () => {
+      if (!down) return;
+      down = false;
+      (m.getSource("drawing") as maplibregl.GeoJSONSource | undefined)?.setData(areaFC(null));
+      if (pts.length >= 3) {
+        const step = Math.ceil(pts.length / MAX_AREA_POINTS);
+        areaCb.current?.(pts.filter((_, i) => i % step === 0));
+      }
+      setDrawing(false);
+    };
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    return () => {
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      m.dragPan.enable(); m.touchZoomRotate.enable(); m.doubleClickZoom.enable();
+      canvas.style.cursor = "";
+    };
+  }, [drawing]);
+
   function toggle() {
     const next = !satellite;
     setSatellite(next);
@@ -262,6 +335,14 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
     <>
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
       <button className="map-toggle" onClick={toggle}>{satellite ? "Map" : "Satellite"}</button>
+      {onArea && (
+        <div className="draw-controls">
+          {drawing ? <span className="draw-hint">Drag a loop around an area…</span>
+            : area ? <button className="map-btn" onClick={() => onArea(null)}>Remove area</button>
+            : null}
+          <button className={`map-btn ${drawing ? "active" : ""}`} onClick={() => setDrawing((d) => !d)}>{drawing ? "Cancel" : "Draw"}</button>
+        </div>
+      )}
       {onSelect && <div className="legend" aria-hidden>
         <span><i style={{ background: PPP }} />PPP or 401(k) data</span>
         <span><i style={{ background: AVG }} />Industry average</span>
