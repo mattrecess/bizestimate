@@ -29,12 +29,11 @@ function siteLabel(url: string) {
   }
 }
 
-// People search for the owner at this business when we know a name, otherwise a company search.
+// The company's LinkedIn page itself: DuckDuckGo's "!ducky" jumps straight to the top result of a
+// search limited to LinkedIn company pages (used until the LinkedIn step has found the exact page).
 function linkedInSearch(b: Profile) {
   const name = b.name.replace(/,?\s+(LLC|L\.L\.C\.|INC\.?|CORP\.?|CO\.?|PLLC|LTD\.?)$/i, "");
-  return b.owner_name
-    ? `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${b.owner_name} ${name}`)}`
-    : `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(name)}`;
+  return `https://duckduckgo.com/?q=${encodeURIComponent(`!ducky site:linkedin.com/company "${name}" ${b.city ?? ""} Oklahoma`)}`;
 }
 
 const pct = (v: unknown) => (v == null ? "—" : `${(Number(v) * 100).toFixed(0)}%`);
@@ -270,6 +269,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
           <PeopleAdvisors sources={b.sources ?? []} owner={b.owner_name}
             lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
+          {b.comps === undefined && (
+            <div className="section loading-more"><span className="spinner" aria-hidden /> Loading comparables, banks, locations and possible customers…</div>
+          )}
           <CustomersSuppliers offering={src.website_offering} contracts={src.contracts} onSelect={onSelect} prospects={b.prospects ?? []} />
           {b.locations?.length ? (
             <div className="section">

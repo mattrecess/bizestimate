@@ -44,6 +44,7 @@ type Props = {
   selected?: { lat: number; lon: number } | null; // highlighted pin
   hoveredId?: number | null; // business hovered in the list: its tag is raised and highlighted
   onHover?: (id: number | null) => void;
+  loading?: boolean;                            // pins on their way: a small notice on the map
   area?: [number, number][] | null;             // a shape drawn to search inside
   onArea?: (area: [number, number][] | null) => void;
 };
@@ -181,7 +182,7 @@ const hoverFC = (points: GeoJSON.FeatureCollection, id: number | null | undefine
   features: id == null ? [] : points.features.filter((f) => f.properties?.id === id).slice(0, 1),
 });
 
-export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 6, fitKey = "", onSelect, selected, hoveredId, onHover, area, onArea }: Props) {
+export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 6, fitKey = "", onSelect, selected, hoveredId, onHover, area, onArea, loading = false }: Props) {
   const fitted = useRef("");
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -198,6 +199,7 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
   hoveredRef.current = hoveredId;
   const [satellite, setSatellite] = useState(true);
   const [drawing, setDrawing] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
   const areaRef = useRef(area);
   areaRef.current = area;
   const areaCb = useRef(onArea);
@@ -246,7 +248,7 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       m.on("mouseleave", l, () => (m.getCanvas().style.cursor = ""));
     }
     // The container can still be settling its size at creation; recentre once it has.
-    m.on("load", () => { m.resize(); if (!boundsCb.current) m.jumpTo({ center }); });
+    m.on("load", () => { m.resize(); setMapReady(true); if (!boundsCb.current) m.jumpTo({ center }); });
     // Report the view only when it actually moves (dragging, zooming, a cluster click, flying to
     // results), not for the initial view or a resize: an early report would cancel the page's
     // first, whole-state requests and start slower uncached ones.
@@ -334,6 +336,8 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
   return (
     <>
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
+      {!mapReady && <div className="map-loading"><span className="spinner" aria-hidden /> Loading map…</div>}
+      {mapReady && loading && onSelect && <div className="map-status"><span className="spinner" aria-hidden /> Loading businesses…</div>}
       <button className="map-toggle" onClick={toggle}>{satellite ? "Map" : "Satellite"}</button>
       {onArea && (
         <div className="draw-controls">

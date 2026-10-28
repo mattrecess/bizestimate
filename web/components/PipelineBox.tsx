@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 type Note = { id: string; body: string; created_at: string };
-type State = { entry: { status: string; follow_up: string | null } | null; notes: Note[] };
+type State = { admin?: boolean; entry: { status: string; follow_up: string | null } | null; notes: Note[] };
 const STATUSES: [string, string][] = [["watching", "Watching"], ["contacted", "Contacted"], ["talking", "Talking"], ["passed", "Passed"]];
 
 // Your pipeline tools on a business: shown only when you're signed in to /admin (the server says so).
@@ -14,7 +14,7 @@ export default function PipelineBox({ id }: { id: string }) {
     setState(null);
     fetch(`/api/admin/pipeline/${id}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then(setState).catch(() => {});
   }, [id]);
-  if (!state) return null;
+  if (!state?.admin) return null;
 
   async function send(body: Record<string, unknown>) {
     setBusy(true);

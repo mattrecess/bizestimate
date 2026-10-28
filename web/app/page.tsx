@@ -42,6 +42,7 @@ export default function Home() {
   const [data, setData] = useState<{ key: string; total: number; results: Biz[]; q: string; industry?: string | null } | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
+  const [pinsLoading, setPinsLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [points, setPoints] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -171,6 +172,9 @@ export default function Home() {
   }, [filterParams, pinArea, fitKey]);
 
   const listKey = `${params}&sort=${sort}`;
+  // Typed but not yet searched, or a new search/filter on its way: say so, and dim the old results.
+  const typing = q.trim() !== debouncedQ.trim();
+  const updating = typing || (loading && !!data && data.key !== listKey);
   const offset = more.key === listKey ? more.offset : 0;
 
   useEffect(() => {
@@ -224,15 +228,17 @@ export default function Home() {
     // A new search clears the map, so it never flies to the previous search's pins; panning and
     // zooming keep the current pins up until the new ones arrive.
     if (pinsFitKey.current !== fitKey) setPoints(null);
+    setPinsLoading(true);
     fetch(`/api/points?${pinParams}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
+        setPinsLoading(false);
         if (!d) return;
         pinsCapped.current = d.features.length >= PIN_LIMIT;
         pinsFitKey.current = fitKey;
         setPoints(d);
       })
-      .catch(() => {});
+      .catch(() => { if (!ctrl.signal.aborted) setPinsLoading(false); });
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, pinParams, attempt]);
@@ -244,14 +250,14 @@ export default function Home() {
     <>
       <div className="toolbar">
         {/* Suggestions are the top of the list query, so typing costs one request, not two. */}
-        <SearchBox value={q} onChange={setQ} onPick={openBusiness}
+        <SearchBox value={q} onChange={setQ} onPick={openBusiness} busy={updating && !!q}
           suggestions={data && data.q
             ? { q: data.q, items: data.results.slice(0, 6), industry: data.industry, total: data.total } : null} />
         <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
       </div>
       <div className="explorer" data-view={view}>
         <div className="map">
-          <Map points={points} onBoundsChange={setBbox} fitKey={fitKey} onSelect={openBusiness}
+          <Map points={points} loading={pinsLoading} onBoundsChange={setBbox} fitKey={fitKey} onSelect={openBusiness}
             selected={selectedPoint} hoveredId={hovered} onHover={setHovered}
             area={areaPts} onArea={(pts) => setArea(pts ? pts.map((p) => p.join(",")).join(";") : "")} />
         </div>
@@ -268,14 +274,27 @@ export default function Home() {
               </div>
               {profile && Number(profile.id) === selectedId
                 ? <BusinessProfile b={profile} compact onSelect={openBusiness} />
-                : <div className="cards"><div className="skeleton" style={{ height: 90 }} /><div className="skeleton" style={{ height: 220 }} /></div>}
+                : (() => {
+                    // The card's name and place straight away, while the details load.
+                    const card = data?.results.find((x) => Number(x.id) === selectedId);
+                    return (
+                      <div className="profile-loading">
+                        {card && <><h2>{card.name}</h2><div className="sub">{card.city}, OK · {card.industry}</div></>}
+                        <div className="loading-more"><span className="spinner" aria-hidden /> Loading details…</div>
+                        <div className="cards"><div className="skeleton" style={{ height: 90 }} /><div className="skeleton" style={{ height: 220 }} /></div>
+                      </div>
+                    );
+                  })()}
             </div>
           )}
           {/* The list stays mounted while a profile is open, so Back returns to the same scroll position. */}
           <div style={{ display: selectedId ? "none" : undefined }}>
             <div className="list-head">
-              <span className="count">
-                {failed ? "Couldn't load businesses" : data ? `${total.toLocaleString()} ${total === 1 ? "business" : "businesses"}` : "Loading…"}
+              {(updating || !data) && !failed && <div className="progress" aria-hidden />}
+              <span className="count" aria-live="polite">
+                {failed ? "Couldn't load businesses"
+                  : updating ? <><span className="spinner" aria-hidden /> {q ? "Searching…" : "Updating…"}</>
+                  : data ? `${total.toLocaleString()} ${total === 1 ? "business" : "businesses"}` : <><span className="spinner" aria-hidden /> Loading businesses…</>}
               </span>
               <span className="sub">
                 {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : "in map view"} · estimates
@@ -296,13 +315,13 @@ export default function Home() {
                 <button className="btn primary" onClick={() => setAttempt((a) => a + 1)}>Retry</button>
               </div>
             )}
-            <div className="cards" aria-busy={loading}>
+            <div className={`cards ${updating ? "stale" : ""}`} aria-busy={loading}>
               {!data && !failed && Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton" />)}
               {data?.results.map((b) => (
                 <BizCard key={b.id} b={b} hovered={hovered === Number(b.id)} onOpen={openBusiness} onHover={setHovered} />
               ))}
             </div>
-            {data && total === 0 && (
+            {data && total === 0 && !updating && (
               <div className="empty">
                 <Icon name="search" size={28} />
                 <h3>No businesses found</h3>

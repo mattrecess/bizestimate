@@ -19,7 +19,8 @@ async function current(key: string) {
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) return NextResponse.json({ admin: false }, { status: 401, headers: NO_STORE });
+  // Visitors get a plain "not signed in" (not an error status, which browsers log as a failure).
+  if (!(await isAdmin())) return NextResponse.json({ admin: false }, { headers: NO_STORE });
   const key = await bizKey((await params).id);
   if (!key) return NextResponse.json({ error: "not found" }, { status: 404, headers: NO_STORE });
   return NextResponse.json({ admin: true, ...(await current(key)) }, { headers: NO_STORE });

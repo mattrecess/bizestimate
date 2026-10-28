@@ -39,7 +39,9 @@ export default function RevenueRange({ minRev, maxRev, onChange }: {
             everything above the top step. */}
         {Array.from({ length: LAST }, (_, i) => {
           const n = hist ? (hist[i] ?? 0) + (i === LAST - 1 ? (hist[LAST] ?? 0) : 0) : 0;
-          return <span key={i} className={i >= lo && i < hi ? "in" : ""} style={{ height: `${Math.max(4, (Math.sqrt(n) / Math.sqrt(peak)) * 100)}%` }} />;
+          return hist
+            ? <span key={i} className={i >= lo && i < hi ? "in" : ""} style={{ height: `${Math.max(4, (Math.sqrt(n) / Math.sqrt(peak)) * 100)}%` }} />
+            : <span key={i} className="loading" style={{ height: `${30 + ((i * 37) % 50)}%` }} />;
         })}
       </div>
       <div className="dual-slider">

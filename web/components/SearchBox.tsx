@@ -7,8 +7,9 @@ type Suggestion = { id: number; name: string; city: string; est_revenue_mid: str
 
 // Search input with live business suggestions; Enter searches, picking a suggestion opens it.
 // The suggestions come from the page's own search results, so typing sends a single request.
-export default function SearchBox({ value, onChange, onPick, suggestions }: {
+export default function SearchBox({ value, onChange, onPick, suggestions, busy = false }: {
   value: string;
+  busy?: boolean;   // a search is on its way: the magnifier becomes a spinner
   onChange: (q: string) => void;
   onPick: (id: number) => void;
   suggestions: { q: string; items: Suggestion[]; industry?: string | null; total?: number } | null;
@@ -39,7 +40,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions }: {
 
   return (
     <div className="searchbox" ref={box}>
-      <Icon name="search" className="icon-search" />
+      {busy ? <span className="spinner icon-search" aria-label="Searching" /> : <Icon name="search" className="icon-search" />}
       <input
         type="search" placeholder="Search a business, city, industry or NAICS code" value={text} aria-label="Search businesses"
         onFocus={() => setOpen(true)}
