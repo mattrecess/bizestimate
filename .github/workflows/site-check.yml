@@ -7,7 +7,7 @@ on:
     - cron: "23 13 * * *"
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   check:
     if: github.event_name != 'deployment_status' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
@@ -18,4 +18,12 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: python tools/site_check.py "${{ github.event.deployment_status.environment_url || 'https://bizestimate-six.vercel.app' }}"
+      - run: python tools/site_check.py "${{ github.event.deployment_status.environment_url || 'https://bizestimate-six.vercel.app' }}" 2>&1 | tee "$RUNNER_TEMP/check.log"; exit ${PIPESTATUS[0]}
+        shell: bash
+      # Published like the other logs so it can be read without signing in.
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b check-logs
+          cp "$RUNNER_TEMP/check.log" check.log 2>/dev/null || echo none > check.log
+          git add check.log && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" check-logs
