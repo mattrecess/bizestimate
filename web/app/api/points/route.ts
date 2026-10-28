@@ -4,7 +4,7 @@ import { CACHE, parseFilters, relevance, where } from "@/lib/queries";
 import { estimateValue } from "@/lib/valuation";
 
 // Pin label: $1.2M / $850K.
-const shortMoney = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.max(1, Math.round(v / 1e3))}K`);
+const shortMoney = (v: number) => (v >= 1e9 ? `$${(v / 1e9).toFixed(2)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.max(1, Math.round(v / 1e3))}K`);
 
 // Lightweight GeoJSON for the map: biggest businesses first, capped.
 export async function GET(req: NextRequest) {

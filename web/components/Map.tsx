@@ -174,7 +174,7 @@ const pointFC = (p: { lat: number; lon: number } | null | undefined): GeoJSON.Fe
   features: p ? [{ type: "Feature", geometry: { type: "Point", coordinates: [p.lon, p.lat] }, properties: {} }] : [],
 });
 
-const shortMoney = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.max(1, Math.round(v / 1e3))}K`);
+const shortMoney = (v: number) => (v >= 1e9 ? `$${(v / 1e9).toFixed(2)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.max(1, Math.round(v / 1e3))}K`);
 
 const hoverFC = (points: GeoJSON.FeatureCollection, id: number | null | undefined): GeoJSON.FeatureCollection => ({
   type: "FeatureCollection",
