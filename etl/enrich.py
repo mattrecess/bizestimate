@@ -187,8 +187,14 @@ def sell_signals(row, src, headcounts, this_year):
         if peak >= 10 and latest <= 0.8 * peak and latest_year - peak_year <= 4:
             points += SELL_POINTS["shrinking"]
             signals.append(f"Headcount down {round(100 * (1 - latest / peak))}% since {peak_year} (retirement plan filings)")
+    deal = src.get("deal")
+    deal_year = int(str(deal["date"])[:4]) if deal and deal.get("date") else None
+    if deal and (deal_year is None or this_year - deal_year <= 5):
+        points += SELL_POINTS["sold"]
+        verb = "Acquired by" if deal.get("type") in ("acquisition", "merger") else "Investment from"
+        signals.append(f"{verb} {deal['buyer']}{f' ({deal_year})' if deal_year else ''}")
     changed = (src.get("sba") or {}).get("ownership_change_year")
-    if changed and this_year - int(changed) <= 5:
+    if changed and this_year - int(changed) <= 5 and not deal:
         points += SELL_POINTS["sold"]
         signals.append(f"Changed hands recently (SBA-financed purchase, FY{changed})")
     if not signals:
@@ -205,15 +211,18 @@ def apply_signals(cur, state):
                (select jsonb_object_agg(s.source, s.data) from business_sources s where s.biz_key = b.biz_key),
                (select jsonb_agg(jsonb_build_array(h.year, h.employees) order by h.year) from headcounts h
                 where h.biz_key = b.biz_key and h.source = 'form5500'),
-               b.sell_score
+               b.sell_score,
+               (select jsonb_build_object('buyer', t.buyer, 'date', t.deal_date, 'type', t.deal_type) from transactions t
+                where t.biz_key = b.biz_key order by t.deal_date desc nulls last limit 1)
         from businesses b where b.state = %s""", (state,))
     rows = cur.fetchall()
     counts = {"scored": 0, "high": 0}
     cur.execute("create temp table sell_stage (biz_key text primary key, score smallint, signals jsonb) on commit drop")
     with cur.copy("copy sell_stage (biz_key, score, signals) from stdin") as cp:
-        for key, owner, title, nonprofit, method, src, heads, old in rows:
+        for key, owner, title, nonprofit, method, src, heads, old, deal in rows:
             row = {"owner_name": owner, "owner_title": title, "is_nonprofit": nonprofit, "est_method": method}
-            score, signals = sell_signals(row, src or {}, [tuple(h) for h in heads or []], this_year)
+            src = {**(src or {}), **({"deal": deal} if deal else {})}
+            score, signals = sell_signals(row, src, [tuple(h) for h in heads or []], this_year)
             counts["scored"] += score is not None
             counts["high"] += (score or 0) >= 40
             if score is not None or old is not None:

@@ -245,3 +245,36 @@ create table if not exists pipeline_notes (
   created_at  timestamptz not null default now()
 );
 create index if not exists pipeline_notes_biz_idx on pipeline_notes (biz_key, created_at desc);
+
+-- Ownership transactions: acquisitions, PE investments, recapitalizations. Entered in /admin, found in
+-- news (etl/deals_news.py) or on investors' portfolio pages (etl/pe_portfolios.py), or SBA-financed purchases.
+create table if not exists transactions (
+  id          bigserial primary key,
+  biz_key     text not null,
+  deal_date   date,
+  buyer       text not null,
+  deal_type   text not null default 'acquisition',  -- acquisition | majority investment | minority investment | investment | recapitalization | merger | management buyout
+  price       numeric,                               -- private unless is_public
+  multiple    numeric,                               -- EBITDA multiple paid, if known
+  summary     text,
+  source      text not null default 'admin',         -- admin | news | portfolio
+  source_url  text,
+  is_public   boolean not null default true,         -- false: shown only in /admin
+  created_at  timestamptz not null default now(),
+  unique (biz_key, buyer)
+);
+create index if not exists transactions_date_idx on transactions (deal_date desc);
+-- Investors whose portfolio pages are checked for Oklahoma companies (etl/pe_portfolios.py).
+create table if not exists investors (
+  name        text primary key,
+  url         text not null,              -- portfolio page (or homepage; a Portfolio link is followed)
+  checked_at  timestamptz
+);
+insert into investors (name, url) values ('Achieve Capital', 'https://achieve-capital.com/') on conflict do nothing;
+insert into transactions (biz_key, deal_date, buyer, deal_type, summary, source, source_url)
+select biz_key, '2025-08-01', 'Achieve Capital', 'investment',
+       'Strategic investment through Achieve Capital Industrial Fund I (its first investment); terms not disclosed.',
+       'news', 'https://achieve-capital.com/achieve-capital-announces-strategic-investment-in-vantage-point-itad-through-industrial-fund-i/'
+from businesses where name ilike 'vantage point itad%' and coalesce(est_method, '') <> 'branch'
+order by est_revenue_mid desc nulls last limit 1
+on conflict (biz_key, buyer) do nothing;

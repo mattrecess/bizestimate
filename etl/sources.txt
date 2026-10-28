@@ -13,6 +13,8 @@ fmcsa
 website_profile paid   (AI reads company websites; runs in the Public records workflow only)
 website_offering paid   (AI reads company websites: what it does, products, markets, named customers/suppliers)
 owner_search paid   (Google results via Serper for owners we lack; Public records workflow only)
+deals_news paid   (acquisitions/investments in Google results via Serper + AI; Public records workflow only)
+pe_portfolios paid   (investors' portfolio pages read by AI for Oklahoma companies; Public records workflow only)
 linkedin paid   (LinkedIn links and company size via Google/Serper; Public records workflow only)
 people_search paid   (web search for CFOs and outside counsel; runs in the Public records workflow only)
 founded

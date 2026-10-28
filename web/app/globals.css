@@ -469,3 +469,7 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 .prospects { margin: 8px 0; }
 .prospects .k { font-size: 12px; font-weight: 650; color: var(--muted); margin-bottom: 4px; }
 @media (max-width: 640px) { .offer-row, .cs-grid { grid-template-columns: 1fr; } }
+.deal-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.deal-list .muted { color: var(--muted); font-size: 13px; }
+.deal-list a { font-size: 13px; }
+.admin-form select { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 11px; }

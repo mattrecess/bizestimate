@@ -65,9 +65,16 @@ export async function getProfileCore(id: string) {
 }
 
 async function coreParts(id: string) {
-  const [loans, headcounts, sources] = await Promise.all([getLoans(id), getHeadcounts(id), getSources(id)]);
-  return { loans, headcounts, sources };
+  const [loans, headcounts, sources, transactions] = await Promise.all([getLoans(id), getHeadcounts(id), getSources(id), getTransactions(id)]);
+  return { loans, headcounts, sources, transactions };
 }
+
+// Public ownership transactions (acquisitions, investments); price and multiple only when marked public.
+export type Transaction = { deal_date: string | null; buyer: string; deal_type: string; summary: string | null; source_url: string | null };
+const getTransactions = (id: string) => sql<Transaction[]>`
+  select to_char(t.deal_date, 'YYYY-MM-DD') as deal_date, t.buyer, t.deal_type, t.summary, t.source_url
+  from transactions t join businesses b on b.biz_key = t.biz_key
+  where b.id = ${id} and t.is_public order by t.deal_date desc nulls last`.catch(() => [] as Transaction[]);
 
 // The slower part (comparables search, bank and location roll-ups), loaded just after.
 export async function relatedParts(biz: Business, opts: { locations?: boolean } = {}) {

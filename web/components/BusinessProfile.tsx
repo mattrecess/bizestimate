@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import type { Business, Comparable, Headcount, LenderLink, Loan, Location, Prospect } from "@/lib/business";
+import type { Business, Comparable, Headcount, LenderLink, Loan, Location, Prospect, Transaction } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import ContactCard from "./ContactCard";
 import SaveButton from "./SaveButton";
@@ -18,7 +18,7 @@ import MiniMap from "./MiniMap";
 import RangeBar from "./RangeBar";
 
 export type Profile = Business & { loans: Loan[]; comps?: Comparable[]; headcounts?: Headcount[]; sources?: SourceRecord[]; lenders?: LenderLink[]; locations?: Location[];
-  prospects?: { market: string; items: Prospect[] }[] };
+  prospects?: { market: string; items: Prospect[] }[]; transactions?: Transaction[] };
 
 // "https://www.blastrac.com/" -> "blastrac.com"
 function siteLabel(url: string) {
@@ -240,6 +240,21 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <p className="disclaimer">No PPP loan on record: these are typical figures for {b.industry} businesses in
               Oklahoma, not this business&apos;s own. <button className="link-btn" onClick={() => setTab("financials")}>How we estimate</button></p>
           )}
+          {b.transactions?.length ? (
+            <div className="section">
+              <h2><Icon name="briefcase" size={16} />Ownership &amp; transactions</h2>
+              <ul className="deal-list">
+                {b.transactions.map((t) => (
+                  <li key={t.buyer}>
+                    <b>{t.deal_type === "acquisition" || t.deal_type === "merger" ? `Acquired by ${t.buyer}` : `${t.deal_type[0].toUpperCase()}${t.deal_type.slice(1)} from ${t.buyer}`}</b>
+                    {t.deal_date && <span className="muted"> · {new Date(t.deal_date + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short" })}</span>}
+                    {t.summary && <div className="muted">{t.summary}</div>}
+                    {t.source_url && <a href={t.source_url} target="_blank" rel="nofollow noopener noreferrer">Source</a>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <WhatTheyDo offering={src.website_offering} industry={industryLabel(b.naics) ?? b.industry} />
           {(() => {
             // Value over time: needs a headcount basis for today's estimate (PPP grown since, or the latest 401(k) count).
