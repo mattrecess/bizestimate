@@ -1,4 +1,4 @@
-# Names to explain in the data-load log (substring of the PPP borrower name), one per line.
+# Names to explain in the data-load log (substring of a PPP borrower or map listing name), one per line.
 TRU SOLUTION
 TRUE SOLUTION
 TRUSOLUTION
@@ -9,3 +9,4 @@ J & K JANITORIAL
 J.K. JANITORIAL
 JK CLEANING
 J K CLEANING
+CANDY CREEK

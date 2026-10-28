@@ -144,6 +144,11 @@ FRANCHISE_HEAVY = ("72", "8121", "447", "457", "4451", "445")
 MAX_BRANCHES = 25          # more same-name places than this is a brand or chain, not one local company
 
 
+def trace(queries, name, reason):
+    if any(q in name.upper() for q in queries):
+        print(f"LOOKUP place {name!r}: {reason}", flush=True)
+
+
 def branch_row(get, name, code, bench, state, zip5, lat, lon, parent):
     """A location of a listed company: no estimate of its own; the profile points to the parent."""
     blank = {k: "" for k in ("est_payroll", "est_revenue_low", "est_revenue_mid", "est_revenue_high", "est_ebitda_low",
@@ -196,6 +201,9 @@ def main():
         name_counts[full_name(n or "")] += 1
 
     added, skipped = [], defaultdict(int)
+    # Names listed in etl/lookup.txt: say in the log what happened to their map listings.
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lookup.txt")) as f:
+        traced = [q.strip().upper() for q in f if q.strip() and not q.startswith("#")]
     seen = {}   # (name tokens, ~100 m cell) -> index in added, to drop duplicate Overture records
     for i in range(places.num_rows):
         get = lambda c: cols[c][i] if c in cols else None  # noqa: E731
@@ -206,22 +214,27 @@ def main():
             continue
         if get("status") == "permanently_closed" or (get("confidence") or 0) < MIN_CONFIDENCE:
             skipped["closed or low confidence"] += 1
+            trace(traced, name, f"closed or low confidence ({get('status')}, confidence {get('confidence')})")
             continue
         code = naics_for(get("category"), get("category_detail"))
         tokens = name_tokens(name)
         if not code or not tokens or lat is None:
             skipped["not a business category"] += 1
+            trace(traced, name, f"category not mapped to an industry ({get('category')} / {get('category_detail')})")
             continue
         if borrowers.matches(tokens, lat, lon, zip5):
             skipped["already in PPP data"] += 1
+            trace(traced, name, "matched to a PPP borrower (listed from the loan data instead)")
             continue
         avg = next((averages[code[:n]] for n in (4, 3, 2) if code[:n] in averages), None)
         if avg is None:
             skipped["no industry average"] += 1
+            trace(traced, name, f"no industry average for {code}")
             continue
         key = (tokens, round(lat, 3), round(lon, 3))
         if key in seen:
             skipped["duplicate place"] += 1
+            trace(traced, name, "duplicate map listing")
             continue
         _, bench = lookup(benchmarks, code)
         parents = by_full.get(full_name(name), [])
