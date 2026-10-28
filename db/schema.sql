@@ -288,3 +288,30 @@ create table if not exists record_listings (
   data jsonb not null,
   updated_at timestamptz not null default now()
 );
+
+-- Visitor accounts (Sign in with Google) and what they save. Saved businesses keep their name and
+-- city so the list still reads correctly if a listing is later removed.
+create table if not exists users (
+  id bigserial primary key,
+  google_sub text unique not null,
+  email text not null,
+  name text,
+  picture text,
+  created_at timestamptz not null default now(),
+  last_sign_in timestamptz not null default now()
+);
+create table if not exists user_saved_businesses (
+  user_id bigint not null references users(id) on delete cascade,
+  business_id text not null,
+  name text not null,
+  city text,
+  created_at timestamptz not null default now(),
+  primary key (user_id, business_id)
+);
+create table if not exists user_saved_searches (
+  user_id bigint not null references users(id) on delete cascade,
+  query text not null,
+  label text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, query)
+);

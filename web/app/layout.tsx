@@ -4,6 +4,7 @@ import Link from "next/link";
 import "@fontsource-variable/inter";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
+import AccountMenu from "@/components/AccountMenu";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav>
             <Link href="/saved">Saved</Link>
             <Link href="/terms" className="hide-sm">Terms</Link>
+            <AccountMenu />
           </nav>
         </header>
         {children}

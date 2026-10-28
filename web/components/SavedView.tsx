@@ -3,19 +3,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CompareRow } from "@/lib/compare";
 import { money } from "@/lib/format";
-import { removeSearch, savedBusinesses, savedSearches, toggleSaved, type SavedBiz, type SavedSearch } from "@/lib/saved";
+import { account, removeSearch, savedBusinesses, savedSearches, toggleSaved, type SavedBiz, type SavedSearch } from "@/lib/saved";
 
 const MAX_COMPARE = 5;
 
-// Saved businesses (with their current estimates) and saved searches, from this browser's storage.
+// Saved businesses (with their current estimates) and saved searches, kept in this browser and, when signed in, in the account.
 export default function SavedView() {
   const [list, setList] = useState<SavedBiz[]>([]);
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   const [rows, setRows] = useState<Record<string, CompareRow>>({});
   const [picked, setPicked] = useState<string[]>([]);
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
-    const sync = () => { setList(savedBusinesses()); setSearches(savedSearches()); };
+    const sync = () => { setList(savedBusinesses()); setSearches(savedSearches()); setSignedIn(!!account()); };
     sync();
     window.addEventListener("saved-changed", sync);
     return () => window.removeEventListener("saved-changed", sync);
@@ -30,7 +31,8 @@ export default function SavedView() {
   return (
     <>
       <h1>Saved</h1>
-      <p className="disclaimer">Kept in this browser only. Tick up to {MAX_COMPARE} businesses to compare them side by side.</p>
+      <p className="disclaimer">{signedIn ? "Saved to your account, so they're on every device you sign in on."
+        : "Kept in this browser only. Sign in with Google to keep them on every device."} Tick up to {MAX_COMPARE} businesses to compare them side by side.</p>
       <div className="section">
         <div className="saved-head">
           <h2>Businesses</h2>

@@ -33,6 +33,10 @@ export default function Terms() {
             business can <Link href="/contact-request">ask for its contact details to be removed or corrected</Link>.
             Contact details must not be used for unsolicited bulk email, robocalls or texts, or anything that breaks
             the CAN-SPAM Act, the Telephone Consumer Protection Act or the National Do Not Call Registry rules.</p>
+          <p>If you sign in with Google, we receive your name, email address and profile photo from Google, and keep
+            them with the businesses and searches you save, so your lists follow you between devices. We don&apos;t sell
+            this, share it, or email you without asking. You can delete your account and lists at any time from the
+            account menu.</p>
         </div>
         <div className="section">
           <h2>No warranty</h2>
