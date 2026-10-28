@@ -59,6 +59,8 @@ export default function FilterBar({ value, onChange, cities }: {
 
   return (
     <div className="pills" ref={bar}>
+      {/* Phones: panels open as a bottom sheet over a dimmed page (see globals.css); tapping outside closes. */}
+      {open && <div className="sheet-backdrop" onClick={() => setOpen("")} aria-hidden />}
       <div className="pill-wrap">
         <button className={`pill ${value.sector ? "active" : ""}`} aria-expanded={open === "industry"} onClick={() => toggle("industry")}>
           {value.sector || "Industry"}<Icon name="chevron" size={14} className="chev" />

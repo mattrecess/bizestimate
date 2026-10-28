@@ -436,3 +436,18 @@ table.mini td { padding: 3px 4px; }
 .pipeline-box .notes .when { color: var(--muted); font-size: 12px; margin-right: 4px; }
 .note-cell { max-width: 320px; font-size: 13px; color: var(--muted); }
 a.chip { text-decoration: none; display: inline-flex; align-items: center; }
+.sheet-backdrop { display: none; }
+@media (max-width: 860px) {
+  .sheet-backdrop { display: block; position: fixed; inset: 0; background: rgba(15, 23, 42, .45); z-index: 900; }
+  .pills .popover, .pills .popover.wide, .pills .popover.more-pop, .pills .popover.naics-pop {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: 100%; max-width: none; max-height: 82dvh; overflow-y: auto;
+    border-radius: 18px 18px 0 0; z-index: 1000; padding: 18px 16px calc(14px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, .2);
+  }
+  .pills .popover::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 4px; background: var(--border-strong); margin: -8px auto 12px; }
+  .pills .popover .check-list, .pills .naics-tree { max-height: 50dvh; }
+  .more-body { max-height: 60dvh; }
+  .more-body .checks { grid-template-columns: 1fr; }
+}
+/* An open sheet lifts the toolbar above the header and the map/list button, so the dimmed backdrop covers them. */
+@media (max-width: 860px) { .toolbar:has(.sheet-backdrop) { z-index: 50; } }
