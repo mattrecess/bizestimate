@@ -12,7 +12,9 @@ for b in rows:
     print(f"{b['name'][:34]:34} rev {float(b['est_revenue_mid'] or 0)/1e9:7.2f}B  {b['est_method']:16} naics {b['naics']} "
           f"'{p.get('industry')}' rpe {p.get('revenue_per_employee')} ppp_jobs {b.get('jobs_reported')} infl {p.get('est_inflation')} "
           f"5500 {hc[-3:]} src {srcs}")
-for n in ["Lavicky", "Minick", "AAA Landscape", "Red Dirt Septic", "Vantage Point"]:
+for n in ["Lavicky", "Minick", "AAA Landscape", "Red Dirt Septic", "Vantage Point", "Earnheart"]:
     hits = get(f"/api/businesses?q={urllib.request.quote(n)}&limit=1")["results"]
     for b in hits:
         print(f"CHECK {b['name'][:34]:34} rev ${float(b['est_revenue_mid'] or 0)/1e6:,.1f}M  {b['est_method']}  owner {b.get('owner_name')}")
+p = get("/api/businesses/1311985?core=1")
+print(f"CHECK id 1311985: {p.get('name')} owner {p.get('owner_name')} ({p.get('owner_source')})")
