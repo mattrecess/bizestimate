@@ -50,7 +50,10 @@ def apply(cur, state):
     updates, staffing = [], 0
     for key, naics, source, filed_naics, employees, method, cur_rev, cur_ebitda, cur_industry in cur.fetchall():
         naics = naics or ""
-        if filed_naics and (len(naics) < 6 or source == "overture"):
+        # The filing's code is more specific than a map listing's, but plan paperwork often carries a
+        # parent's or a generic code (an engineering contractor filed as a petroleum wholesaler), so it
+        # only replaces ours within the same sector.
+        if filed_naics and (len(naics) < 6 or source == "overture") and (not naics or naics[:2] == filed_naics[:2]):
             naics = filed_naics
         if naics.startswith(STAFFING):
             staffing += 1
