@@ -17,7 +17,7 @@ data, since the revenue per employee and margin depend on it.
 """
 from datetime import date
 
-from benchmarks import load_benchmarks, lookup
+from benchmarks import correct_naics, load_benchmarks, lookup
 from adjust import Adjust
 from margins import Margins
 from size_factors import SizeFactors
@@ -38,7 +38,7 @@ def apply(cur, state):
             order by biz_key, year desc
         )
         select b.biz_key, b.naics, b.source, l.naics, l.employees, b.est_method, b.est_revenue_mid,
-               b.est_ebitda_mid, b.industry
+               b.est_ebitda_mid, b.industry, b.name
         from businesses b join latest l on l.biz_key = b.biz_key
         where b.state = %(state)s and l.employees >= %(min)s
           and coalesce(b.est_method, '') not in ('reported', 'verified', 'branch')   -- actual figures win
@@ -48,13 +48,14 @@ def apply(cur, state):
     margins, bench, adjust, sizes = Margins(), load_benchmarks(), Adjust(), SizeFactors()
     lo, hi = RANGE
     updates, staffing = [], 0
-    for key, naics, source, filed_naics, employees, method, cur_rev, cur_ebitda, cur_industry in cur.fetchall():
+    for key, naics, source, filed_naics, employees, method, cur_rev, cur_ebitda, cur_industry, name in cur.fetchall():
         naics = naics or ""
         # The filing's code is more specific than a map listing's, but plan paperwork often carries a
         # parent's or a generic code (an engineering contractor filed as a petroleum wholesaler), so it
         # only replaces ours within the same sector.
         if filed_naics and (len(naics) < 6 or source == "overture") and (not naics or naics[:2] == filed_naics[:2]):
             naics = filed_naics
+        naics = correct_naics(name, naics)
         if naics.startswith(STAFFING):
             staffing += 1
             continue

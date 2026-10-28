@@ -79,6 +79,18 @@ def load_benchmarks():
     return out
 
 
+DRILLING = re.compile(r"\b(DRILLING|DRILLERS?|WELL SERVIC\w*|WELL SERVICES|RIG)\b", re.I)
+
+
+def correct_naics(name, naics):
+    """Fix industry codes that are often wrong in filings: drilling contractors coded as oil and gas
+    producers (211) have a fraction of a producer's revenue per employee."""
+    naics = (naics or "").strip()
+    if naics.startswith("211") and DRILLING.search(name or ""):
+        return "213111"
+    return naics
+
+
 def lookup(benchmarks, naics):
     """Most specific benchmark matching the NAICS code (6 digits down to 2)."""
     naics = (naics or "").strip()

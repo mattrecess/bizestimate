@@ -13,7 +13,7 @@ import json
 import re
 
 from adjust import Adjust
-from benchmarks import load_benchmarks, lookup
+from benchmarks import correct_naics, load_benchmarks, lookup
 from geocode import jitter, zip_centroids
 from margins import Margins
 from matching import full_name
@@ -63,7 +63,7 @@ def stage(cur, state, cols):
     out, skipped = [], 0
     for key, source, d in records:
         zip5 = str(d.get("zip") or "")[:5]
-        naics = d.get("naics") or ("4841" if source == "fmcsa" else "")
+        naics = correct_naics(d["name"], d.get("naics") or ("4841" if source == "fmcsa" else ""))
         ident = (full_name(d["name"]), zip5)
         if ident in listed or zip5 not in zips or naics.startswith(STAFFING):
             skipped += 1

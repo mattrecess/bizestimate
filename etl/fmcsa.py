@@ -8,6 +8,8 @@ Company Census File). Power units and drivers are a direct measure of a carrier'
 import argparse
 import json
 import re
+import time
+import urllib.error
 import urllib.parse
 
 import psycopg
@@ -55,8 +57,17 @@ def main():
     rows, offset = [], 0
     while True:
         q = urllib.parse.urlencode({"$where": f"phy_state='{state}'", "$limit": PAGE, "$offset": offset, "$order": ":id"})
-        with urlopen(URL + q, timeout=300) as r:
-            batch = json.loads(r.read())
+        for attempt in range(1, 6):
+            try:
+                with urlopen(URL + q, timeout=300) as r:
+                    batch = json.loads(r.read())
+                break
+            except urllib.error.HTTPError as e:
+                # The open-data portal rate-limits shared GitHub runners: wait and try again.
+                if e.code != 429 or attempt == 5:
+                    raise
+                print(f"fmcsa: rate limited, waiting {60 * attempt}s", flush=True)
+                time.sleep(60 * attempt)
         rows += batch
         if len(batch) < PAGE:
             break

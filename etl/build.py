@@ -24,7 +24,7 @@ import re
 from collections import defaultdict
 from datetime import datetime
 
-from benchmarks import load_benchmarks, lookup
+from benchmarks import load_benchmarks, lookup, correct_naics
 from adjust import Adjust
 from margins import Margins
 from size_factors import SizeFactors
@@ -219,7 +219,7 @@ def main():
             # First draws are sized on 2019 payroll; prefer the largest of those.
             primary = max(loans, key=lambda l: (l["draw"] == "first", l["amount"]))
             r = primary["_row"]
-            naics = (r.get("NAICSCode") or "").strip()
+            naics = correct_naics(r.get("BorrowerName"), r.get("NAICSCode"))
             jobs = max((l["jobs_reported"] or 0) for l in loans) or None
             btype = (r.get("BusinessType") or "").strip()
             _, bench = lookup(bench_all, naics)

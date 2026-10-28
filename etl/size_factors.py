@@ -11,7 +11,8 @@ estimate uses the figure for companies of the business's own size:
     revenue per employee = national figure for its size band x local adjustment
 
 where the local adjustment is the industry benchmark (Oklahoma's figure where we have one) over the
-national all-sizes figure, kept within LOCAL_BOUNDS so one large local firm can't dominate.
+national all-sizes figure, kept within LOCAL_BOUNDS so one large local firm can't dominate, and the
+size band's figure is kept within BAND_BOUNDS of the all-sizes one.
 """
 import argparse
 import csv
@@ -28,6 +29,9 @@ REFRESH_DAYS = 180
 BANDS = {"02": 0, "03": 5, "26": 10, "34": 20, "35": 100, "36": 500}
 MIN_EMPLOYMENT = 50          # a band with fewer employees nationally is too thin to use
 LOCAL_BOUNDS = (0.8, 1.25)
+# The national 500+ band is set by the giants (an Oklahoma firm of 2,000 isn't Exxon or McKesson), so the
+# size adjustment is kept within BAND_BOUNDS of the industry's all-sizes figure.
+BAND_BOUNDS = (0.6, 1.6)
 
 
 def fetch():
@@ -78,7 +82,9 @@ class SizeFactors:
             if entry and entry.get("total") and entry["bands"].get(band):
                 lo, hi = LOCAL_BOUNDS
                 local = min(hi, max(lo, bench_rpe / entry["total"]))
-                return entry["bands"][band] * local
+                b_lo, b_hi = BAND_BOUNDS
+                size = min(b_hi, max(b_lo, entry["bands"][band] / entry["total"]))
+                return entry["total"] * size * local
         return bench_rpe
 
 

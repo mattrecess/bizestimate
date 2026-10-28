@@ -71,7 +71,7 @@ CATEGORY_NAICS = {
     "shipping_or_delivery_service": "492", "b2b_transportation_and_storage_service": "48",
     "travel_service": "5615", "b2b_service": "56", "corporate_or_business_office": "56",
     "event_or_party_service": "5619", "environmental_or_ecological_service": "562",
-    "b2b_energy_and_utility_service": "21", "specialty_school": "6116", "preschool": "6244",
+    "b2b_energy_and_utility_service": "2131",   # mostly oilfield services, not producers "specialty_school": "6116", "preschool": "6244",
     "family_service": "8122", "brewery": "3121", "winery": "3121", "lounge": "7224", "dance_club": "7224",
     "musical_instrument_and_pro_audio_store": "451", "toys_and_games_store": "451", "tutoring_service": "6116",
     "security_service": "5616", "telecommunications_service": "517", "urgent_care_clinic": "6211",
