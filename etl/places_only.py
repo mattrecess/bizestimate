@@ -251,6 +251,61 @@ def group_chains(added, cities, margins):
     return folded
 
 
+SUMMED = ("est_revenue_low", "est_revenue_mid", "est_revenue_high", "est_ebitda_low", "est_ebitda_mid",
+          "est_ebitda_high", "jobs_reported", "est_payroll", "est_revenue_by_employees", "est_revenue_by_payroll",
+          "total_ppp_amount")
+
+
+def group_ppp_siblings(rows, cities):
+    """One company registered as a separate LLC per store ("COOK FEED AND OUTDOOR NORMAN LLC", "... YUKON
+    LLC"): the largest becomes the company, with the others' figures added to it, and the rest become its
+    locations. Linked when the names differ only by a town, or they share a website or phone; franchise-heavy
+    trades are left alone (their per-town LLCs are usually different owners)."""
+    def num(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+    groups = defaultdict(list)
+    for r in rows:
+        if (r.get("geo_precision") in LISTED and r.get("is_individual") != "True" and num(r.get("est_revenue_mid"))
+                and r.get("est_method") not in ("branch",) and not (r.get("naics") or "").startswith(FRANCHISE_HEAVY)):
+            brand = brand_key(r["name"], cities)
+            if len(brand.split()) >= 2:
+                groups[brand].append(r)
+    folded = 0
+    for brand, members in groups.items():
+        if not 2 <= len(members) <= MAX_BRANCHES:
+            continue
+        by_town = [r for r in members if full_name(r["name"]) != brand]   # a town was dropped from the name
+        links = defaultdict(list)
+        for r in members:
+            for k in filter(None, (site_domain(r.get("website")), re.sub(r"\D", "", r.get("phone") or ""))):
+                links[k].append(r)
+        linked = max(links.values(), key=len, default=[])
+        chain = members if by_town else linked
+        if len(chain) < 2:
+            continue
+        head = max(chain, key=lambda r: num(r.get("est_revenue_mid")) or 0)
+        for f in SUMMED:
+            vals = [num(r.get(f)) for r in chain]
+            if any(v is not None for v in vals):
+                head[f] = round(sum(v for v in vals if v is not None))
+        if num(head.get("est_revenue_mid")):
+            head["est_ebitda_margin"] = round(num(head["est_ebitda_mid"]) / num(head["est_revenue_mid"]), 4)
+        head["website"] = head.get("website") or next((r["website"] for r in chain if r.get("website")), "")
+        head["phone"] = head.get("phone") or next((r["phone"] for r in chain if r.get("phone")), "")
+        for r in chain:
+            if r is head:
+                continue
+            for f in SUMMED + ("est_ebitda_margin",):
+                if f not in ("jobs_reported", "total_ppp_amount", "est_payroll"):
+                    r[f] = ""
+            r.update(est_method="branch", est_confidence="", parent_key=head["biz_key"], parent_name=head["name"])
+            folded += 1
+    return folded
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--state", default="OK")
@@ -276,6 +331,8 @@ def main():
     # Listed PPP companies by full name, to recognise their other locations ("Minick Materials" in
     # Norman is a branch of MINICK MATERIALS COMPANY in Oklahoma City, not a separate business).
     cities = {(r.get("city") or "").strip().upper() for r in rows if r.get("city")}
+    siblings = group_ppp_siblings(rows, cities)
+    print(f"Places-only: {siblings:,} PPP-listed companies folded into a sister company as its locations", flush=True)
     by_brand = defaultdict(dict)
     for r in rows:
         if r.get("geo_precision") in LISTED and r.get("est_revenue_mid") and r.get("is_individual") != "True":
