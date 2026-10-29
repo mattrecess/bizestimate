@@ -1,20 +1,25 @@
-"""Inspect the largest estimates on the live site: method, headcounts, industry, figures."""
-import json
+"""Fetch public industry valuation-multiple tables (plain requests, saved as text) for the multiples research."""
+import html
+import re
 import urllib.request
 
-SITE = "https://bizestimate-six.vercel.app"
-get = lambda p: json.loads(urllib.request.urlopen(SITE + p, timeout=60).read())  # noqa: E731
-rows = get("/api/businesses?limit=25")["results"]
-for b in rows:
-    p = get(f"/api/businesses/{b['id']}?core=1")
-    hc = [(h["year"], h["employees"]) for h in p.get("headcounts") or []]
-    srcs = sorted(s["source"] for s in p.get("sources") or [])
-    print(f"{b['name'][:34]:34} rev {float(b['est_revenue_mid'] or 0)/1e9:7.2f}B  {b['est_method']:16} naics {b['naics']} "
-          f"'{p.get('industry')}' rpe {p.get('revenue_per_employee')} ppp_jobs {b.get('jobs_reported')} infl {p.get('est_inflation')} "
-          f"5500 {hc[-3:]} src {srcs}")
-for n in ["Lavicky", "Minick", "AAA Landscape", "Red Dirt Septic", "Vantage Point", "Earnheart"]:
-    hits = get(f"/api/businesses?q={urllib.request.quote(n)}&limit=1")["results"]
-    for b in hits:
-        print(f"CHECK {b['name'][:34]:34} rev ${float(b['est_revenue_mid'] or 0)/1e6:,.1f}M  {b['est_method']}  owner {b.get('owner_name')}")
-p = get("/api/businesses/1311985?core=1")
-print(f"CHECK id 1311985: {p.get('name')} owner {p.get('owner_name')} ({p.get('owner_source')})")
+URLS = [
+    "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/vebitda.html",
+    "https://firstpagesage.com/business/ebitda-multiples-by-industry/",
+    "https://www.bizbuysell.com/insight-report/",
+    "https://www.ibba.org/market-pulse/",
+    "https://bschool.pepperdine.edu/institutes-centers/pcmi/",
+]
+for url in URLS:
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "BizEstimate research (python urllib)"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            raw = r.read().decode("utf-8", "replace")
+        text = re.sub(r"(?is)<(script|style).*?</\1>", " ", raw)
+        text = re.sub(r"(?i)</(tr|p|li|h\d|div)>", "\n", text)
+        text = re.sub(r"(?i)</t[dh]>", " | ", text)
+        text = html.unescape(re.sub(r"<[^>]+>", " ", text))
+        text = "\n".join(re.sub(r"[ \t]+", " ", l).strip() for l in text.splitlines() if l.strip())
+        print(f"===== {url} (HTTP {r.status}, {len(text):,} chars)\n{text[:25000]}\n", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"===== {url} FAILED {e!r}\n", flush=True)
