@@ -39,7 +39,7 @@ export default function Home() {
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
   // Continuous scroll: how far the list has been extended, for which search (a new search starts over).
   const [more, setMore] = useState({ key: "", offset: 0 });
-  const [data, setData] = useState<{ key: string; total: number; capped?: boolean; results: Biz[]; q: string; industry?: string | null } | null>(null);
+  const [data, setData] = useState<{ key: string; total: number; capped?: boolean; approx?: number | null; results: Biz[]; q: string; industry?: string | null } | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [pinsLoading, setPinsLoading] = useState(true);
@@ -194,7 +194,7 @@ export default function Home() {
           } else {
             // Next batch: append to the same search's list.
             setData((prev) => (prev && prev.key === listKey
-              ? { ...prev, total: d.total, capped: d.capped, results: [...prev.results, ...d.results] } : prev));
+              ? { ...prev, total: d.total, capped: d.capped, approx: d.approx, results: [...prev.results, ...d.results] } : prev));
           }
           setLoading(false);
         })
@@ -246,7 +246,9 @@ export default function Home() {
   const anyFilter = debouncedQ || sector || city || minRev || maxRev;
   const total = data?.total ?? 0;
   // Past 5,000 the server stops counting (it took seconds for a whole city): "5,000+".
-  const totalText = `${total.toLocaleString()}${data?.capped ? "+" : ""}`;
+  // A big map view's total comes from the per-square counts: "about 37,500".
+  const totalText = data?.approx ? `about ${(Math.round(data.approx / 100) * 100).toLocaleString()}`
+    : `${total.toLocaleString()}${data?.capped ? "+" : ""}`;
 
   return (
     <>

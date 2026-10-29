@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { industryLabel, matchIndustry } from "@/lib/industries";
-import { CACHE, naicsQuery, parseFilters, publicAddress, relevance, valueSql, where } from "@/lib/queries";
+import { CACHE, cellCount, naicsQuery, parseFilters, publicAddress, relevance, valueSql, where } from "@/lib/queries";
 
 // Each ends with id, so ties (equal revenue) keep one order and continuous scrolling never repeats
 // or skips a business between batches.
@@ -29,6 +29,9 @@ export async function GET(req: NextRequest) {
 
   // The page and the total run side by side; without a window count, the page can come straight
   // off an index instead of sorting every matching business.
+  // A big plain map view is counted from the per-square totals (instant); the exact, capped count
+  // runs only when the view is small enough for it to be quick.
+  const approx = await cellCount(f);
   const [rows, [{ count }]] = await Promise.all([
     sql`
       select id, name, ${publicAddress}, city, state, zip, naics, industry, jobs_reported, is_nonprofit, to_jsonb(businesses) ->> 'parent_name' as parent_name,
@@ -44,7 +47,8 @@ export async function GET(req: NextRequest) {
       from businesses
       where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
     // Counting every business in a city-sized view took seconds; past COUNT_CAP the list says "5,000+".
-    sql`select count(*)::int as count from (select 1 from businesses where ${w} limit ${COUNT_CAP + 1}) t`,
+    approx !== null && approx > COUNT_CAP ? Promise.resolve([{ count: COUNT_CAP + 1 }])
+      : sql`select count(*)::int as count from (select 1 from businesses where ${w} limit ${COUNT_CAP + 1}) t`,
   ]);
   // Let Vercel's CDN answer repeat requests (the default view especially) without the database.
   // Tell the page when a search reads as an industry ("janitorial", "janitorial tulsa"), so it can
@@ -54,12 +58,12 @@ export async function GET(req: NextRequest) {
     const [b] = await sql`select label from industry_benchmarks where ${code.code} like naics_prefix || '%'
                           order by length(naics_prefix) desc limit 1`.catch(() => []);
     const label = industryLabel(code.code) ?? b?.label;
-    return NextResponse.json({ total: Math.min(count, COUNT_CAP), capped: count > COUNT_CAP, results: rows, industry: `NAICS ${code.code}${label ? ` · ${label}` : ""}` },
+    return NextResponse.json({ total: Math.min(count, COUNT_CAP), capped: count > COUNT_CAP, approx: count > COUNT_CAP ? approx : null, results: rows, industry: `NAICS ${code.code}${label ? ` · ${label}` : ""}` },
       { headers: { "Cache-Control": CACHE } });
   }
   const m = f.q ? matchIndustry(f.q) : null;
   const industry = !m ? null
     : !m.rest || (await sql`select 1 from businesses where lower(city) = ${m.rest} limit 1`).length
       ? m.industry.label : null;
-  return NextResponse.json({ total: Math.min(count, COUNT_CAP), capped: count > COUNT_CAP, results: rows, industry }, { headers: { "Cache-Control": CACHE } });
+  return NextResponse.json({ total: Math.min(count, COUNT_CAP), capped: count > COUNT_CAP, approx: count > COUNT_CAP ? approx : null, results: rows, industry }, { headers: { "Cache-Control": CACHE } });
 }

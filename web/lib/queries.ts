@@ -1,7 +1,6 @@
 import { sql } from "./db";
 import { matchIndustry } from "./industries";
 import { SECTORS } from "./sectors";
-import { INDUSTRY, SIZE } from "./valuation";
 
 export type Filters = {
   q?: string;
@@ -28,16 +27,8 @@ const BASIS: Record<string, string[]> = {
   reported: ["reported", "verified"], k401: ["retirement_plan"], ppp: ["employees", "blend", "payroll", "owner_earnings"], avg: ["industry_average"],
 };
 
-// Estimated value in SQL, from the same size and industry multiples as lib/valuation.ts.
-const multipleSql = (() => {
-  const size = [...SIZE].reverse().map(([floor, m]) => sql`when est_ebitda_mid >= ${floor} then ${m}::numeric`)
-    .reduce((a, b) => sql`${a} ${b}`);
-  const adj = [...INDUSTRY].sort((a, b) => b[0].length - a[0].length)
-    .map(([prefix, f]) => sql`when naics like ${prefix + "%"} then ${f}::numeric`).reduce((a, b) => sql`${a} ${b}`);
-  return sql`round((case ${size} else ${SIZE[0][1]}::numeric end) * (case ${adj} else 1 end), 1)`;
-})();
-export const valueSql = sql`(case when est_ebitda_mid > 0 and not is_nonprofit and coalesce(naics, '') not like '5221%'
-  and coalesce(naics, '') not like '813%' then est_ebitda_mid * ${multipleSql} end)`;
+// Estimated value, stored by the data load from the same multiples as lib/valuation.ts (multiples.json).
+export const valueSql = sql`est_value_mid`;
 
 // Latest headcount: the newest 401(k) filing, else the PPP application.
 const employeesSql = sql`coalesce((select h.employees from headcounts h where h.biz_key = businesses.biz_key
@@ -183,3 +174,46 @@ export const CACHE = "public, max-age=60, s-maxage=600, stale-while-revalidate=8
 
 // Never expose a street address for individuals (sole props, self-employed).
 export const publicAddress = sql`case when is_individual then null else address end as address`;
+
+// Fast paths over the precomputed map tables (etl/map_tables.py) for the common case: a map view,
+// optionally narrowed by sector, industry code, revenue, value or estimate basis. Anything else
+// (a search, city, lender, owner, ...) uses the full table.
+export function mapSimple(f: Filters) {
+  return !f.q && !f.city && !f.lender?.length && f.minEbitda === undefined && f.maxEbitda === undefined
+    && f.minEmp === undefined && f.maxEmp === undefined && !f.sell && !f.years && !f.owner && !f.phone && !f.email
+    && !f.website && !f.contractor && !f.noFranchise && !f.area;
+}
+
+export function mapWhere(f: Filters) {
+  const prefixes = SECTORS.find((s) => s.label === f.sector)?.prefixes;
+  const conds = [sql`true`];
+  if (prefixes) conds.push(sql`left(naics, 2) in ${sql(prefixes)}`);
+  if (f.naics?.length) conds.push(sql`(${industryMatch(f.naics)})`);
+  if (f.minRev !== undefined) conds.push(sql`est_revenue_mid >= ${f.minRev}`);
+  if (f.maxRev !== undefined) conds.push(sql`est_revenue_mid <= ${f.maxRev}`);
+  if (f.minValue !== undefined) conds.push(sql`est_value_mid >= ${f.minValue}`);
+  if (f.maxValue !== undefined) conds.push(sql`est_value_mid <= ${f.maxValue}`);
+  if (f.basis?.length) conds.push(sql`est_method in ${sql(f.basis.flatMap((b) => BASIS[b]))}`);
+  if (f.noBranch) conds.push(sql`est_method <> 'branch'`);
+  if (f.noNonprofit) conds.push(sql`not is_nonprofit`);
+  if (f.bbox) {
+    const [w, s, e, n] = f.bbox;
+    conds.push(sql`lat between ${s} and ${n} and lon between ${w} and ${e}`);
+  }
+  return conds.reduce((acc, c) => sql`${acc} and ${c}`);
+}
+
+// Businesses in view from the per-square counts: only for a plain map view (or one sector), where
+// the squares carry everything needed. Squares cut by the edge of the view count whole, so this is
+// approximate; the list uses it only for large areas. Null when it doesn't apply.
+export async function cellCount(f: Filters): Promise<number | null> {
+  const plain = mapSimple(f) && !f.naics?.length && f.minRev === undefined && f.maxRev === undefined
+    && f.minValue === undefined && f.maxValue === undefined && !f.basis?.length && !f.noNonprofit;
+  if (!plain || !f.bbox) return null;
+  const [w, s, e, n] = f.bbox;
+  const prefixes = SECTORS.find((x) => x.label === f.sector)?.prefixes;
+  const [r] = await sql`select coalesce(sum(n), 0)::int as n from map_cells
+    where cx between ${Math.floor(w * 100)} and ${Math.floor(e * 100)} and cy between ${Math.floor(s * 100)} and ${Math.floor(n * 100)}
+    ${prefixes ? sql`and sector in ${sql(prefixes)}` : sql``}`.catch(() => [null]);
+  return r ? Number(r.n) : null;
+}
