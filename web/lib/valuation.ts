@@ -13,14 +13,23 @@ export const SIZE: [number, number][] = [
   [0, 2.5], [250e3, 3.0], [500e3, 3.75], [1e6, 4.5], [2e6, 5.5], [5e6, 6.5], [10e6, 7.5], [25e6, 8.5],
 ];
 
-// Industry adjustments by NAICS prefix (longest wins): recurring-revenue and specialist businesses
-// sell for more, project-based and commodity ones for less.
+// Industry adjustments by NAICS prefix (longest wins), relative to the typical small private company.
+// Rebuilt Oct 2026 from First Page Sage's meta-analysis of private M&A deals by industry and size
+// (Jan 2025 report, deals Q3 2022-Q1 2025): each industry's average multiple over the all-industry
+// median in the $0-1M and $1-3M EBITDA bands, pulled part-way toward 1 where those deal samples are
+// thin. Damodaran's US EV/EBITDA by sector (Jan 2026; public companies) was used only to check the
+// ranking. Industries neither covers (retail, restaurants, wholesale, personal and building services)
+// keep the broker-survey adjustments used before.
 export const INDUSTRY: [string, number][] = [
-  ["5415", 1.3], ["5182", 1.3], ["5132", 1.35], ["5242", 1.3], ["562", 1.15], ["6212", 1.2], ["6211", 1.1],
-  ["6213", 1.1], ["6216", 1.15], ["5412", 1.15], ["5411", 0.95], ["5413", 1.0], ["238220", 1.05],
-  ["238210", 1.0], ["5617", 0.95], ["561720", 0.9], ["23", 0.85], ["31", 1.05], ["32", 1.05], ["33", 1.1],
-  ["42", 0.95], ["44", 0.8], ["45", 0.8], ["7225", 0.7], ["7224", 0.75], ["721", 0.9], ["484", 0.8], ["811192", 1.3],
-  ["211", 0.8], ["213", 0.75], ["8111", 0.9], ["812", 0.85], ["54", 1.0], ["62", 1.05],
+  // From the deal data
+  ["23", 0.75], ["238210", 0.8], ["238220", 0.8], ["5413", 1.15], ["31", 1.0], ["32", 1.0], ["33", 1.05],
+  ["3254", 1.5], ["3364", 1.4], ["211", 0.85], ["213", 0.8], ["48", 1.0], ["484", 0.85], ["488", 1.05],
+  ["492", 1.05], ["62", 1.0], ["6211", 1.1], ["6212", 1.2], ["6213", 1.0], ["6216", 1.15], ["5613", 1.0],
+  ["5411", 0.75], ["523", 0.75], ["5242", 1.2], ["5415", 1.2], ["5182", 1.2], ["5132", 1.1], ["541511", 1.0],
+  ["531", 0.8], ["562", 1.05], ["721", 1.3], ["71", 0.9], ["611", 1.05],
+  // Broker-survey adjustments (no deal-data coverage)
+  ["5412", 1.15], ["5617", 0.95], ["561720", 0.9], ["42", 0.95], ["44", 0.8], ["45", 0.8], ["7225", 0.7],
+  ["7224", 0.75], ["811192", 1.3], ["8111", 0.9], ["812", 0.85], ["54", 1.0],
 ];
 
 export type Valuation = { low: number; mid: number; high: number; multiple: number };

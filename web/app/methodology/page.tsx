@@ -47,12 +47,27 @@ export default function Methodology() {
             the middle value, with a range covering the middle half. They say nothing about that particular business.</p>
         </div>
         <div className="section">
-          <h2>Which businesses are listed</h2>
-          <p>We only list businesses whose address could be matched to an exact street location by the U.S. Census
-            geocoder, so every map pin sits at the business&apos;s own address. Sole proprietors, self-employed
-            individuals and independent contractors are not listed, since their address is often a home.</p>
+          <h2>Companies known from public records</h2>
+          <p>Trucking companies registered with the Federal Motor Carrier Safety Administration, and employers that file
+            a Form 5500 for their 401(k) plan, are listed even without a loan or map listing. Carriers are sized from the
+            drivers and trucks on their registration (<strong>Fleet data</strong>), plan sponsors from the employees in
+            their plan. Only registered companies (LLC, Inc., Corp. and similar) are listed this way.</p>
         </div>
-        <p className="disclaimer">Source data: SBA PPP FOIA release, DOL Form 5500 filings and IRS Statistics of Income (public records). All figures are statistical
+        <div className="section">
+          <h2>Estimated value</h2>
+          <p>Value is EBITDA times a typical sale multiple for a company of that size, adjusted for its industry.
+            Multiples rise with size: small owner-run firms sell for 2–3× EBITDA, companies earning $10M or more for 7×
+            or more. Industry adjustments come from published private-company deal data (First Page Sage&apos;s analysis
+            of M&amp;A deals by industry and size, 2022–2025), cross-checked against Damodaran&apos;s sector multiples for
+            public companies. Nonprofits, banks and public companies get no value estimate.</p>
+        </div>
+        <div className="section">
+          <h2>Which businesses are listed</h2>
+          <p>Most businesses are pinned at their own street address. When an address can&apos;t be matched to a map location,
+            the business is placed in its ZIP code and its page says the location is approximate. Sole proprietors,
+            self-employed individuals and independent contractors are not listed, since their address is often a home.</p>
+        </div>
+        <p className="disclaimer">Source data: SBA PPP FOIA release, DOL Form 5500 filings, FMCSA motor carrier census, Overture Maps and IRS Statistics of Income (public records). All figures are statistical
           estimates, not reported financials; PPP-based ones reflect 2019–2020 payroll.</p>
       </main>
       <Footer />
