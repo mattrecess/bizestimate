@@ -334,3 +334,7 @@ create table if not exists estimate_corrections (
   status text not null default 'new',   -- new, applied, dismissed
   created_at timestamptz not null default now()
 );
+
+-- Each business's estimated value (EBITDA x multiple; etl/map_tables.py), for fast sorting and filtering.
+alter table businesses add column if not exists est_value_mid numeric;
+create index if not exists businesses_value_idx on businesses (est_value_mid desc nulls last);

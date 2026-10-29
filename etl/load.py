@@ -19,6 +19,7 @@ import psycopg
 import enrich
 import headcount_estimates
 from benchmarks import load_benchmarks
+import map_tables
 import records_only
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -220,6 +221,11 @@ def main():
             vac.execute("vacuum (analyze) businesses")
     except psycopg.Error as e:
         print(f"Vacuum after load failed (non-fatal): {e}", flush=True)
+    try:
+        with psycopg.connect(database_url()) as conn:
+            map_tables.refresh(conn, state.upper())
+    except psycopg.Error as e:
+        print(f"Map tables failed (non-fatal): {e}", flush=True)
 
 
 if __name__ == "__main__":

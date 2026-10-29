@@ -6,12 +6,12 @@
 // higher multiple of EBITDA); GF Data's $10-25M enterprise-value deals ~5.9x and PE deals overall ~7x.
 // Sales the admin records (/admin) show actual vs. modelled multiples, to tune these over time.
 
+import multiples from "./multiples.json";
+
 type Num = string | number | null | undefined;
 
 // EBITDA floor of each band -> typical multiple.
-export const SIZE: [number, number][] = [
-  [0, 2.5], [250e3, 3.0], [500e3, 3.75], [1e6, 4.5], [2e6, 5.5], [5e6, 6.5], [10e6, 7.5], [25e6, 8.5],
-];
+export const SIZE = multiples.size as [number, number][];
 
 // Industry adjustments by NAICS prefix (longest wins), relative to the typical small private company.
 // Rebuilt Oct 2026 from First Page Sage's meta-analysis of private M&A deals by industry and size
@@ -20,17 +20,8 @@ export const SIZE: [number, number][] = [
 // thin. Damodaran's US EV/EBITDA by sector (Jan 2026; public companies) was used only to check the
 // ranking. Industries neither covers (retail, restaurants, wholesale, personal and building services)
 // keep the broker-survey adjustments used before.
-export const INDUSTRY: [string, number][] = [
-  // From the deal data
-  ["23", 0.75], ["238210", 0.8], ["238220", 0.8], ["5413", 1.15], ["31", 1.0], ["32", 1.0], ["33", 1.05],
-  ["3254", 1.5], ["3364", 1.4], ["211", 0.85], ["213", 0.8], ["48", 1.0], ["484", 0.85], ["488", 1.05],
-  ["492", 1.05], ["62", 1.0], ["6211", 1.1], ["6212", 1.2], ["6213", 1.0], ["6216", 1.15], ["5613", 1.0],
-  ["5411", 0.75], ["523", 0.75], ["5242", 1.2], ["5415", 1.2], ["5182", 1.2], ["5132", 1.1], ["541511", 1.0],
-  ["531", 0.8], ["562", 1.05], ["721", 1.3], ["71", 0.9], ["611", 1.05],
-  // Broker-survey adjustments (no deal-data coverage)
-  ["5412", 1.15], ["5617", 0.95], ["561720", 0.9], ["42", 0.95], ["44", 0.8], ["45", 0.8], ["7225", 0.7],
-  ["7224", 0.75], ["811192", 1.3], ["8111", 0.9], ["812", 0.85], ["54", 1.0],
-];
+// Values live in multiples.json (shared with the data load, which stores each business's value).
+export const INDUSTRY = multiples.industry as [string, number][];
 
 export type Valuation = { low: number; mid: number; high: number; multiple: number };
 
