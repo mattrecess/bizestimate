@@ -1,25 +1,15 @@
-"""Fetch public industry valuation-multiple tables (plain requests, saved as text) for the multiples research."""
-import html
-import re
+"""Inspect how a multi-location business is listed on the live site."""
+import json
+import urllib.parse
 import urllib.request
 
-URLS = [
-    "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/vebitda.html",
-    "https://firstpagesage.com/business/ebitda-multiples-by-industry/",
-    "https://www.bizbuysell.com/insight-report/",
-    "https://www.ibba.org/market-pulse/",
-    "https://bschool.pepperdine.edu/institutes-centers/pcmi/",
-]
-for url in URLS:
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "BizEstimate research (python urllib)"})
-        with urllib.request.urlopen(req, timeout=60) as r:
-            raw = r.read().decode("utf-8", "replace")
-        text = re.sub(r"(?is)<(script|style).*?</\1>", " ", raw)
-        text = re.sub(r"(?i)</(tr|p|li|h\d|div)>", "\n", text)
-        text = re.sub(r"(?i)</t[dh]>", " | ", text)
-        text = html.unescape(re.sub(r"<[^>]+>", " ", text))
-        text = "\n".join(re.sub(r"[ \t]+", " ", l).strip() for l in text.splitlines() if l.strip())
-        print(f"===== {url} (HTTP {r.status}, {len(text):,} chars)\n{text[:25000]}\n", flush=True)
-    except Exception as e:  # noqa: BLE001
-        print(f"===== {url} FAILED {e!r}\n", flush=True)
+SITE = "https://bizestimate-six.vercel.app"
+get = lambda p: json.loads(urllib.request.urlopen(SITE + p, timeout=60).read())  # noqa: E731
+for q in ["cook feed", "cooks feed"]:
+    r = get(f"/api/businesses?q={urllib.parse.quote(q)}&limit=40")
+    print(f"== {q!r}: {r['total']} results")
+    for b in r["results"]:
+        p = get(f"/api/businesses/{b['id']}?core=1")
+        print(f"  {b['id']} {b['name']!r} | {b.get('address')}, {b['city']} {b['zip']} | {b['est_method']} | naics {b['naics']} "
+              f"| rev {float(b['est_revenue_mid'] or 0)/1e6:.1f}M | parent {b.get('parent_name')} | locs {b.get('locations')} "
+              f"| ppp loans {len(p.get('loans') or [])} | key {p.get('key_source')} | site {p.get('website')}")
