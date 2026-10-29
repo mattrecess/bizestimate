@@ -34,13 +34,12 @@ export async function GET(req: NextRequest) {
              est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
              coalesce(owner_name, '') <> '' as has_owner,
              coalesce(website, '') <> '' as has_website, to_jsonb(businesses) ->> 'sell_score' as sell_score,
-             coalesce(loc.n, 0) as locations
+             (select count(*)::int from businesses c where c.parent_key = businesses.biz_key) as locations
              ${f.lender?.length ? sql`, (select json_agg(json_build_object('lender', bl.lender, 'program', bl.program, 'year', bl.year)
                  order by bl.year desc nulls last) from business_lenders bl
                  where bl.business_id = businesses.id and bl.lender_key in ${sql(f.lender)}) as lenders` : sql``}
-      -- One pass over the locations (rather than a lookup per row, which needs an index the database may not have yet).
-      from businesses left join (select parent_key, count(*)::int as n from businesses where parent_key is not null group by 1) loc
-        on loc.parent_key = businesses.biz_key
+      -- Location counts per row on the page only, via businesses_parent_idx (not a count over every listing).
+      from businesses
       where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
     sql`select count(*)::int as count from businesses where ${w}`,
   ]);
