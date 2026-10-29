@@ -216,8 +216,8 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
                 <div className="v">{money(value.mid)}</div>
               </div>
               <div className="value-meta">
-                <span>{moneyRange(value.low, value.high)}</span>
-                <span>about {value.multiple}× EBITDA</span>
+                <span className="value-hi">Up to {money(value.high)}</span>
+                <span>from {money(value.low)} · about {value.multiple}× EBITDA</span>
               </div>
             </div>
           )}
@@ -355,7 +355,10 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               {Math.round(Number(b.est_calibration) * 100)}% of the industry-average estimate, to match what businesses in this industry
               actually report.</p>
           )}
-          {(Number(b.est_inflation) > 1.001 || Math.abs(Number(b.est_growth || 1) - 1) > 0.001) && (
+          {b.est_growth_rate != null ? (
+            <p className="disclaimer">Brought up to date assuming revenue has grown {(Number(b.est_growth_rate) * 100).toFixed(0)}% a year
+              since 2020, when the PPP figures were reported; included above.</p>
+          ) : (Number(b.est_inflation) > 1.001 || Math.abs(Number(b.est_growth || 1) - 1) > 0.001) && (
             <p className="disclaimer">Brought up to date: {Number(b.est_inflation) > 1.001 && <>
               prices are {Math.round((Number(b.est_inflation) - 1) * 100)}% higher than in the benchmark&apos;s year</>}
               {Number(b.est_inflation) > 1.001 && Math.abs(Number(b.est_growth || 1) - 1) > 0.001 && " and "}

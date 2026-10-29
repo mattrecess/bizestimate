@@ -13,6 +13,7 @@ Three layers, strongest first:
 Learning uses the raw estimates (est_revenue_by_employees / _by_payroll, never calibrated), so a
 correction doesn't feed on itself from one load to the next.
 """
+import datetime
 import math
 import statistics as st
 from collections import defaultdict
@@ -25,6 +26,12 @@ SHRINK = 20            # factor = exp(median log ratio x n / (n + SHRINK)): few 
 BOUNDS = (0.5, 2.0)
 BLEND_WITHIN = 3.0     # same rule as build.py: headcount and payroll combined when within 3x
 CALIBRATED = ("employees", "blend", "payroll", "industry_average", "retirement_plan", "fleet")
+# PPP-era estimates (2020 headcount and payroll, and the industry averages drawn from them) are brought
+# up to date at the admin's annual growth rate (estimate_settings 'annual_growth', default 8%), in place
+# of inflation and Oklahoma industry job growth. Calibration then measures the result against real figures.
+PPP_ERA = ("employees", "blend", "payroll", "owner_earnings", "industry_average")
+DEFAULT_GROWTH = 0.08
+PPP_YEAR_MID = datetime.date(2020, 7, 1)
 
 
 def raw_estimate(by_emp, by_pay):
@@ -35,8 +42,9 @@ def raw_estimate(by_emp, by_pay):
     return e or p
 
 
-def learn(cur, state):
-    """Recompute industry_calibration from businesses with real revenue."""
+def learn(cur, state, growth_factor=None):
+    """Recompute industry_calibration from businesses with real revenue. growth_factor(job_growth): for
+    estimates loaded before the annual growth setting, the factor that brings them to it."""
     cur.execute("""
         with truth as (
           select b.biz_key, (s.data ->> 'revenue')::numeric as revenue, (s.data ->> 'year')::int as year,
@@ -46,16 +54,19 @@ def learn(cur, state):
           union all
           select b.biz_key, k.revenue, k.year, b.is_nonprofit from known_financials k join businesses b on b.biz_key = k.biz_key
           where b.state = %(state)s and k.revenue > 0)
-        select distinct on (t.biz_key) b.naics, t.nonprofit, t.revenue, t.year, b.est_revenue_by_employees, b.est_revenue_by_payroll
+        select distinct on (t.biz_key) b.naics, t.nonprofit, t.revenue, t.year, b.est_revenue_by_employees, b.est_revenue_by_payroll,
+               (to_jsonb(b) ->> 'est_growth_rate') is null, b.est_growth
         from truth t join businesses b on b.biz_key = t.biz_key
         where coalesce(b.naics, '') <> '' and (b.est_revenue_by_employees > 0 or b.est_revenue_by_payroll > 0)
         order by t.biz_key""", {"state": state})
     groups = defaultdict(list)
     adjust = Adjust()
-    for naics, nonprofit, revenue, year, by_emp, by_pay in cur.fetchall():
+    for naics, nonprofit, revenue, year, by_emp, by_pay, before_growth, job_growth in cur.fetchall():
         raw = raw_estimate(by_emp, by_pay)
         if not raw:
             continue
+        if before_growth and growth_factor:
+            raw *= growth_factor(float(job_growth or 1))
         segment = "nonprofit" if nonprofit else "for_profit"
         # Our estimates are in today's dollars; a filing is for its own year, so bring it up to date first.
         actual_now = float(revenue) * (adjust.inflation(year) if year else 1)
@@ -87,6 +98,15 @@ class Calibration:
         cur.execute("select naics_prefix, revenue_per_employee, ebitda_margin, multiple from industry_overrides")
         self.overrides = {p: (rpe, margin, mult) for p, rpe, margin, mult in cur.fetchall()}
         self.bench, self.adjust = load_benchmarks(), Adjust()
+        cur.execute("select value from estimate_settings where key = 'annual_growth'")
+        row = cur.fetchone()
+        self.growth = float(row[0]) if row else DEFAULT_GROWTH
+
+    def growth_factor(self, job_growth):
+        """Multiplier taking a PPP-era estimate from (inflation since its base year x Oklahoma industry job
+        growth) to (2020 dollars x the annual growth rate since mid-2020): the base year cancels out."""
+        years = (datetime.date.today() - PPP_YEAR_MID).days / 365.25
+        return (1 + self.growth) ** years / (self.adjust.inflation(2020) * (job_growth or 1))
 
     def _override(self, naics):
         code = naics or ""
@@ -113,6 +133,23 @@ class Calibration:
     def margin(self, naics):
         o = self._override(naics)
         return float(o[1]) if o and o[1] else None
+
+    def apply_growth(self, cur):
+        """Bring PPP-era staged estimates up to date at the annual growth rate (before calibration, and
+        including the raw headcount and payroll figures, so calibration measures the growth too)."""
+        cur.execute("select biz_key, est_inflation, est_growth, est_revenue_low, est_revenue_mid, est_revenue_high, "
+                    "est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_revenue_by_employees, est_revenue_by_payroll "
+                    "from stage_biz where est_method = any(%s)", (list(PPP_ERA),))
+        updates = []
+        for key, _inflation, job_growth, *vals in cur.fetchall():
+            g = self.growth_factor(float(job_growth or 1))
+            vals = [round(float(v) * g) if v not in (None, "") else None for v in vals]
+            updates.append((*vals, self.growth, key))
+        cur.executemany("""update stage_biz set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
+                             est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s,
+                             est_revenue_by_employees = %s, est_revenue_by_payroll = %s, est_growth_rate = %s
+                           where biz_key = %s""", updates)
+        print(f"Growth: {len(updates):,} PPP-era estimates brought up to date at {self.growth:.0%} a year", flush=True)
 
     def apply_stage(self, cur):
         """Calibrate the staged (raw) estimates before they're loaded."""

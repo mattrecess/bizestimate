@@ -10,7 +10,7 @@ export default function RangeBar({ low, mid, high }: { low: Num; mid: Num; high:
   return (
     <div className="range" aria-label={`Range ${money(lo)} to ${money(hi)}, estimate ${money(m)}`}>
       <div className="range-track"><div className="range-dot" style={{ left: `${pct}%` }} /></div>
-      <div className="range-labels"><span>{money(lo)}</span><span>{money(hi)}</span></div>
+      <div className="range-labels"><span>{money(lo)}</span><span className="range-hi">up to {money(hi)}</span></div>
     </div>
   );
 }

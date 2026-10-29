@@ -360,3 +360,10 @@ create table if not exists industry_overrides (
   updated_at timestamptz not null default now()
 );
 alter table businesses add column if not exists est_calibration numeric;
+-- Estimate settings set in /admin/industries (e.g. annual_growth for PPP-era estimates).
+create table if not exists estimate_settings (
+  key text primary key,
+  value numeric not null,
+  updated_at timestamptz not null default now()
+);
+alter table businesses add column if not exists est_growth_rate numeric;

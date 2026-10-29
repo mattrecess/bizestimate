@@ -44,6 +44,17 @@ async function save(form: FormData) {
   redirect("/admin/industries?saved=1");
 }
 
+async function saveGrowth(form: FormData) {
+  "use server";
+  await guard();
+  const g = share(form.get("growth"));
+  if (g === null || g > 0.5) redirect("/admin/industries?error=growth");
+  await sql`insert into estimate_settings (key, value, updated_at) values ('annual_growth', ${g}, now())
+    on conflict (key) do update set value = excluded.value, updated_at = now()`;
+  revalidatePath("/admin/industries");
+  redirect("/admin/industries?saved=1");
+}
+
 async function remove(form: FormData) {
   "use server";
   await guard();
@@ -62,6 +73,8 @@ export default async function Industries({ searchParams }: { searchParams: Promi
            (select revenue_per_employee from industry_benchmarks where o.naics_prefix like naics_prefix || '%' order by length(naics_prefix) desc limit 1) as bench_rpe,
            (select count(*)::int from businesses where naics like o.naics_prefix || '%') as businesses
     from industry_overrides o order by o.naics_prefix`.catch(() => [] as Override[]);
+  const [growthRow] = await sql<{ value: string }[]>`select value from estimate_settings where key = 'annual_growth'`.catch(() => []);
+  const growth = growthRow ? Number(growthRow.value) : 0.08;
   const learned = await sql<Learned[]>`
     select c.naics_prefix, c.segment, c.revenue_factor, c.n, c.typical_miss,
            (select label from industry_benchmarks where c.naics_prefix like naics_prefix || '%' order by length(naics_prefix) desc limit 1) as label
@@ -72,13 +85,23 @@ export default async function Industries({ searchParams }: { searchParams: Promi
         <h1>Industry figures</h1>
         <div className="admin-nav"><a href="/admin">Verified figures</a><a href="/admin/corrections">Owner corrections</a><a href="/admin/pipeline">My pipeline</a></div>
       </div>
+      {p.saved && <p className="badge good">Saved. It takes effect on the next data load.</p>}
+      {p.error === "naics" && <p className="badge warn">Enter a NAICS code of 2 to 6 digits.</p>}
+      {p.error === "empty" && <p className="badge warn">Enter at least one figure.</p>}
+      {p.error === "growth" && <p className="badge warn">Enter a growth rate between 0% and 50%.</p>}
+      <h2>Growth since 2020</h2>
+      <p className="disclaimer">Estimates built from 2020 PPP figures (headcount, payroll, and the industry averages drawn from them)
+        are brought up to today at this rate a year, in place of inflation and Oklahoma job growth. Currently{" "}
+        <b>{(growth * 100).toFixed(1).replace(/\.0$/, "")}%</b>. Calibration below measures the result against real figures each load.</p>
+      <form action={saveGrowth} className="admin-form">
+        <input name="growth" placeholder="Annual growth (e.g. 8%)" defaultValue={`${(growth * 100).toFixed(1).replace(/\.0$/, "")}%`} />
+        <button className="btn primary">Save growth rate</button>
+      </form>
+      <h2>Your industry figures</h2>
       <p className="disclaimer">Your own figures for an industry, by NAICS code (2–6 digits; a longer code is more specific, e.g.
         23 construction, 2382 building equipment contractors, 238220 plumbing &amp; HVAC). They replace ours on the next data load
         (overnight): revenue per employee scales every estimate in the industry, EBITDA margin replaces ours, and the multiple is
         for a typical company with about $1M of EBITDA (smaller and larger ones still scale with size). Leave a field empty to keep ours.</p>
-      {p.saved && <p className="badge good">Saved. It takes effect on the next data load.</p>}
-      {p.error === "naics" && <p className="badge warn">Enter a NAICS code of 2 to 6 digits.</p>}
-      {p.error === "empty" && <p className="badge warn">Enter at least one figure.</p>}
       <form action={save} className="admin-form">
         <input name="naics" placeholder="NAICS code (e.g. 238220)" required inputMode="numeric" />
         <input name="rpe" placeholder="Revenue per employee (e.g. 180k)" />
@@ -89,7 +112,7 @@ export default async function Industries({ searchParams }: { searchParams: Promi
       </form>
       {overrides.length > 0 && (
         <table>
-          <thead><tr><th>Industry</th><th className="num">Revenue / employee (yours vs Census)</th><th className="num">EBITDA margin</th><th className="num">Multiple</th><th /></tr></thead>
+          <thead><tr><th>Industry</th><th className="num">Revenue / employee (yours, today vs Census, survey year)</th><th className="num">EBITDA margin</th><th className="num">Multiple</th><th /></tr></thead>
           <tbody>
             {overrides.map((o) => (
               <tr key={o.naics_prefix}>
