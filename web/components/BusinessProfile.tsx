@@ -350,6 +350,11 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
             </tbody></table>
           )}
+          {b.est_calibration != null && Math.abs(Number(b.est_calibration) - 1) >= 0.01 && (
+            <p className="disclaimer">Calibrated: revenue {Number(b.est_calibration) < 1 ? "lowered" : "raised"} to{" "}
+              {Math.round(Number(b.est_calibration) * 100)}% of the industry-average estimate, to match what businesses in this industry
+              actually report.</p>
+          )}
           {(Number(b.est_inflation) > 1.001 || Math.abs(Number(b.est_growth || 1) - 1) > 0.001) && (
             <p className="disclaimer">Brought up to date: {Number(b.est_inflation) > 1.001 && <>
               prices are {Math.round((Number(b.est_inflation) - 1) * 100)}% higher than in the benchmark&apos;s year</>}

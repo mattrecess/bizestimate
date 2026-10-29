@@ -36,15 +36,18 @@ function multipleFor(naics: string | null | undefined, ebitda: number) {
   return Math.round(size * adj * 10) / 10;
 }
 
-/** Null when a sale value doesn't apply: nonprofits, banks, public companies, or no positive EBITDA. */
+/** Null when a sale value doesn't apply: nonprofits, banks, public companies, or no positive EBITDA.
+ *  est_value_mid, when given, is the value the data load stored (it includes industry multiples set in
+ *  /admin/industries) and wins over this file's multiples. */
 export function estimateValue(b: {
   naics?: string | null; est_ebitda_low?: Num; est_ebitda_mid?: Num; est_ebitda_high?: Num;
-  is_nonprofit?: boolean | null; est_method?: string | null; public_company?: boolean;
+  is_nonprofit?: boolean | null; est_method?: string | null; public_company?: boolean; est_value_mid?: Num;
 }): Valuation | null {
   const mid = Number(b.est_ebitda_mid);
   if (!Number.isFinite(mid) || mid <= 0 || b.is_nonprofit || b.public_company) return null;
   if (b.naics?.startsWith("5221") || b.naics?.startsWith("813")) return null;
-  const multiple = multipleFor(b.naics, mid);
+  const stored = Number(b.est_value_mid);
+  const multiple = stored > 0 ? Math.round((stored / mid) * 10) / 10 : multipleFor(b.naics, mid);
   const low = Number(b.est_ebitda_low) || mid * 0.8;
   const high = Number(b.est_ebitda_high) || mid * 1.2;
   // Wider than the EBITDA range: the multiple itself varies a turn or two either way.

@@ -19,6 +19,7 @@ import psycopg
 import enrich
 import headcount_estimates
 from benchmarks import load_benchmarks
+import calibration
 import map_tables
 import records_only
 
@@ -33,7 +34,7 @@ BIZ_COLS = [
     "est_ebitda_low", "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees", "est_revenue_by_payroll",
     "est_method", "est_confidence", "total_ppp_amount", "website", "owner_name", "owner_title", "owner_source",
     "source", "est_ebitda_margin", "est_inflation", "est_growth", "parent_key", "parent_name",
-    "phone", "site_phone", "site_email", "contact_page",
+    "phone", "site_phone", "site_email", "contact_page", "est_calibration",
 ]
 LOAN_COLS = ["loan_number", "biz_key", "draw", "date_approved", "amount", "payroll_proceed",
              "forgiveness_amount", "loan_status", "lender", "jobs_reported"]
@@ -120,6 +121,13 @@ def main():
         with cur.copy(f"copy stage_biz ({', '.join(BIZ_COLS)}) from stdin") as cp:
             for r in extra:
                 cp.write_row([None if r[c] in ("", None) else str(r[c]) for c in BIZ_COLS])
+        # Calibrate the raw estimates: the admin's industry figures, else corrections learned from real ones.
+        try:
+            with conn.transaction():
+                calibration.learn(cur, state)
+                calibration.Calibration(cur).apply_stage(cur)
+        except psycopg.Error as e:
+            print(f"Calibration failed (non-fatal): {e}", flush=True)
         cur.execute("select count(*) from stage_biz where geo_precision = 'zip'")
         print(f"listed at an approximate (ZIP) location: {cur.fetchone()[0]:,}")
         # Safety net: a truncated input file must never wipe the site. Refuse to shrink a state's

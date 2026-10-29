@@ -14,6 +14,7 @@ import re
 
 from adjust import Adjust
 from benchmarks import correct_naics, load_benchmarks, lookup
+from calibration import Calibration
 from geocode import jitter, zip_centroids
 from margins import Margins
 from matching import full_name
@@ -59,7 +60,7 @@ def stage(cur, state, cols):
     except OSError as e:
         print(f"record-only listings: ZIP centroids unavailable ({e!r}); none added", flush=True)
         return []
-    bench, adjust, margins, sizes = load_benchmarks(), Adjust(), Margins(), SizeFactors()
+    bench, adjust, margins, sizes, cal = load_benchmarks(), Adjust(), Margins(), SizeFactors(), Calibration(cur)
     out, skipped = [], 0
     for key, source, d in records:
         zip5 = str(d.get("zip") or "")[:5]
@@ -75,14 +76,15 @@ def stage(cur, state, cols):
         listed.add(ident)
         employees = float(d["employees"])
         inflation = adjust.inflation(b.get("year"))
-        revenue = employees * sizes.rpe(naics, employees, b["revenue_per_employee"]) * inflation
+        factor = cal.factor(naics, False)
+        revenue = employees * sizes.rpe(naics, employees, b["revenue_per_employee"]) * inflation * factor
         if revenue > MAX_REVENUE:
             # Too big to be an unknown company: more likely a parent's plan or a wrong industry code.
             print(f"record-only listings: skipped {d['name']} ({source}, {employees:,.0f} employees, "
                   f"${revenue / 1e9:.1f}B estimated)", flush=True)
             skipped += 1
             continue
-        margin = margins.margin(naics, revenue)
+        margin = cal.margin(naics) or margins.margin(naics, revenue)
         lo, hi = RANGE[source]
         lat, lon = zips[zip5]
         dlat, dlon = jitter(key)
@@ -95,7 +97,7 @@ def stage(cur, state, cols):
             "est_revenue_low": round(revenue * lo), "est_revenue_mid": round(revenue), "est_revenue_high": round(revenue * hi),
             "est_ebitda_low": round(revenue * lo * margin), "est_ebitda_mid": round(revenue * margin),
             "est_ebitda_high": round(revenue * hi * margin), "est_ebitda_margin": margin if margins.data else "",
-            "est_inflation": inflation, "est_growth": 1, "est_confidence": "low",
+            "est_inflation": inflation, "est_growth": 1, "est_confidence": "low", "est_calibration": round(factor, 4),
             "est_method": "fleet" if source == "fmcsa" else "retirement_plan",
             "phone": d.get("phone") or "", "source": source,
         })

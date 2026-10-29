@@ -18,6 +18,7 @@ data, since the revenue per employee and margin depend on it.
 from datetime import date
 
 from benchmarks import correct_naics, load_benchmarks, lookup
+from calibration import Calibration
 from adjust import Adjust
 from margins import Margins
 from size_factors import SizeFactors
@@ -38,7 +39,7 @@ def apply(cur, state):
             order by biz_key, year desc
         )
         select b.biz_key, b.naics, b.source, l.naics, l.employees, b.est_method, b.est_revenue_mid,
-               b.est_ebitda_mid, b.industry, b.name
+               b.est_ebitda_mid, b.industry, b.name, b.is_nonprofit
         from businesses b join latest l on l.biz_key = b.biz_key
         where b.state = %(state)s and l.employees >= %(min)s
           and coalesce(b.est_method, '') not in ('reported', 'verified', 'branch')   -- actual figures win
@@ -46,9 +47,10 @@ def apply(cur, state):
                or l.employees between 0.5 * b.jobs_reported and %(max_growth)s * b.jobs_reported)""",
                 {"since": since, "state": state, "min": MIN_PARTICIPANTS, "max_growth": MAX_GROWTH})
     margins, bench, adjust, sizes = Margins(), load_benchmarks(), Adjust(), SizeFactors()
+    cal = Calibration(cur)
     lo, hi = RANGE
     updates, staffing = [], 0
-    for key, naics, source, filed_naics, employees, method, cur_rev, cur_ebitda, cur_industry, name in cur.fetchall():
+    for key, naics, source, filed_naics, employees, method, cur_rev, cur_ebitda, cur_industry, name, nonprofit in cur.fetchall():
         naics = naics or ""
         # The filing's code is more specific than a map listing's, but plan paperwork often carries a
         # parent's or a generic code (an engineering contractor filed as a petroleum wholesaler), so it
@@ -64,19 +66,20 @@ def apply(cur, state):
             continue
         # Recent headcount, so only prices need bringing up to date (benchmark year -> now).
         inflation = adjust.inflation(b.get("year"))
-        revenue = float(employees) * sizes.rpe(naics, employees, b["revenue_per_employee"]) * inflation
-        margin = margins.margin(naics, revenue)
+        factor = cal.factor(naics, nonprofit)
+        revenue = float(employees) * sizes.rpe(naics, employees, b["revenue_per_employee"]) * inflation * factor
+        margin = cal.margin(naics) or margins.margin(naics, revenue)
         ebitda = revenue * margin
         if method == "retirement_plan" and cur_rev is not None and round(revenue) == round(float(cur_rev)) \
                 and cur_ebitda is not None and round(ebitda) == round(float(cur_ebitda)) and cur_industry == b["label"]:
             continue   # already current: don't rewrite the row
         updates.append((round(revenue * lo), round(revenue), round(revenue * hi),
                         round(ebitda * lo), round(ebitda), round(ebitda * hi),
-                        margin if margins.data else None, naics, b["label"], inflation, key))
+                        margin if margins.data else None, naics, b["label"], inflation, round(factor, 4), key))
     cur.executemany("""
         update businesses set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
             est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_ebitda_margin = %s,
-            naics = %s, industry = %s, est_inflation = %s, est_growth = 1,
+            naics = %s, industry = %s, est_inflation = %s, est_calibration = %s, est_growth = 1,
             est_method = 'retirement_plan', est_confidence = 'medium'
         where biz_key = %s""", updates)
     print(f"Estimates re-based on recent retirement-plan headcounts: {len(updates):,} updated "
@@ -92,15 +95,16 @@ def apply_fleet(cur, state):
     registration where that's more than the 2020 PPP headcount, or where there was none (a map listing
     on an industry average). Actual and 401(k) figures win."""
     cur.execute("""
-        select b.biz_key, b.naics, b.name, b.jobs_reported, b.est_growth,
+        select b.biz_key, b.naics, b.name, b.jobs_reported, b.est_growth, b.is_nonprofit,
                (s.data ->> 'drivers')::numeric, (s.data ->> 'power_units')::numeric
         from businesses b join business_sources s on s.biz_key = b.biz_key and s.source = 'fmcsa'
         where b.state = %s and b.naics ~ '^(484|4854|4855|4859)'
           and coalesce(b.est_method, '') not in ('reported', 'verified', 'branch', 'retirement_plan', 'fleet')""", (state,))
     margins, bench, adjust, sizes = Margins(), load_benchmarks(), Adjust(), SizeFactors()
+    cal = Calibration(cur)
     lo, hi = FLEET_RANGE
     updates = []
-    for key, naics, name, jobs, growth, drivers, units in cur.fetchall():
+    for key, naics, name, jobs, growth, nonprofit, drivers, units in cur.fetchall():
         fleet = max(float(drivers or 0), float(units or 0))
         ppp_now = float(jobs or 0) * float(growth or 1)
         if fleet < 2 or (ppp_now and fleet < 1.2 * ppp_now):
@@ -110,14 +114,15 @@ def apply_fleet(cur, state):
         if not b.get("revenue_per_employee"):
             continue
         inflation = adjust.inflation(b.get("year"))
-        revenue = fleet * sizes.rpe(naics, fleet, b["revenue_per_employee"]) * inflation
-        margin = margins.margin(naics, revenue)
+        factor = cal.factor(naics, nonprofit)
+        revenue = fleet * sizes.rpe(naics, fleet, b["revenue_per_employee"]) * inflation * factor
+        margin = cal.margin(naics) or margins.margin(naics, revenue)
         updates.append((round(revenue * lo), round(revenue), round(revenue * hi),
                         round(revenue * margin * lo), round(revenue * margin), round(revenue * margin * hi),
-                        margin if margins.data else None, inflation, key))
+                        margin if margins.data else None, inflation, round(factor, 4), key))
     cur.executemany("""
         update businesses set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
             est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_ebitda_margin = %s,
-            est_inflation = %s, est_growth = 1, est_method = 'fleet', est_confidence = 'medium'
+            est_inflation = %s, est_calibration = %s, est_growth = 1, est_method = 'fleet', est_confidence = 'medium'
         where biz_key = %s""", updates)
     print(f"Estimates re-based on current FMCSA fleets: {len(updates):,} trucking companies", flush=True)

@@ -338,3 +338,25 @@ create table if not exists estimate_corrections (
 -- Each business's estimated value (EBITDA x multiple; etl/map_tables.py), for fast sorting and filtering.
 alter table businesses add column if not exists est_value_mid numeric;
 create index if not exists businesses_value_idx on businesses (est_value_mid desc nulls last);
+
+-- Estimate calibration (etl/calibration.py). Learned: per industry and segment (nonprofit / for-profit),
+-- how far our raw PPP-based revenue lands from reported or known revenue, recomputed every load.
+-- Overrides: figures the admin sets per industry (/admin/industries); they win over learned ones.
+create table if not exists industry_calibration (
+  naics_prefix text not null,
+  segment text not null,          -- nonprofit, for_profit
+  revenue_factor numeric not null,
+  n int not null,
+  typical_miss numeric,
+  updated_at timestamptz not null default now(),
+  primary key (naics_prefix, segment)
+);
+create table if not exists industry_overrides (
+  naics_prefix text primary key,
+  revenue_per_employee numeric,
+  ebitda_margin numeric,
+  multiple numeric,
+  note text,
+  updated_at timestamptz not null default now()
+);
+alter table businesses add column if not exists est_calibration numeric;

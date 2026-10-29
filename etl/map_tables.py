@@ -16,15 +16,21 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 MULTIPLES = os.path.join(HERE, "..", "web", "lib", "multiples.json")
 CELL = 100   # cells per degree
+REFERENCE_EBITDA = 1_000_000   # the admin's multiple for an industry is for a company of about this size
 
 
-def value_sql():
-    """SQL for estimated value, mirroring estimateValue() in web/lib/valuation.ts."""
+def value_sql(overrides=()):
+    """SQL for estimated value, mirroring estimateValue() in web/lib/valuation.ts. overrides: the admin's
+    (NAICS prefix, multiple) pairs from industry_overrides: the multiple for a company with about $1M of
+    EBITDA in that industry, replacing our industry adjustment; the size curve still scales it."""
     with open(MULTIPLES) as f:
         m = json.load(f)
     size = " ".join(f"when est_ebitda_mid >= {floor} then {mult}" for floor, mult in reversed(m["size"]))
-    ind = " ".join(f"when starts_with(naics, '{prefix}') then {f}"
-                   for prefix, f in sorted(m["industry"], key=lambda r: -len(r[0])))
+    reference = max(mult for floor, mult in m["size"] if floor <= REFERENCE_EBITDA)
+    # The admin's industries first (they win over ours whatever the code length), then ours, longest first.
+    own = [(p, float(x) / reference) for p, x in sorted(overrides, key=lambda r: -len(r[0]))]
+    ind = " ".join(f"when starts_with(naics, '{prefix}') then {round(f, 4)}"
+                   for prefix, f in own + sorted(m["industry"], key=lambda r: -len(r[0])))
     multiple = f"round((case {size} else {m['size'][0][1]} end) * (case {ind} else 1 end), 1)"
     return (f"(case when est_ebitda_mid > 0 and not is_nonprofit and not starts_with(coalesce(naics, ''), '5221') "
             f"and not starts_with(coalesce(naics, ''), '813') then round(est_ebitda_mid * {multiple}) end)")
@@ -39,7 +45,8 @@ def swap(cur, name):
 
 def refresh(conn, state):
     with conn.cursor() as cur:
-        v = value_sql()
+        cur.execute("select naics_prefix, multiple from industry_overrides where multiple > 0 and naics_prefix ~ '^[0-9]{2,6}$'")
+        v = value_sql(cur.fetchall())
         cur.execute(f"update businesses set est_value_mid = {v} where state = %s and est_value_mid is distinct from {v}", (state,))
         print(f"Map tables: stored values changed for {cur.rowcount:,} businesses", flush=True)
         conn.commit()
