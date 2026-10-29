@@ -23,11 +23,15 @@ export default function Methodology() {
             margin scaled to its estimated revenue.</p>
         </div>
         <div className="section">
-          <h2>3. Cross-check from the PPP loan</h2>
+          <h2>3. Revenue from the PPP payroll, combined with step 1</h2>
           <p>PPP loans were sized at 2.5× average monthly payroll (3.5× for second-draw loans to restaurants and
-            hotels), so the loan implies an annual payroll, and dividing by the industry&apos;s payroll-to-revenue ratio
-            gives a second revenue estimate. When the two differ by more than 2× we mark the estimate low confidence.
-            When a business reported no employees, this payroll method is used instead.</p>
+            hotels), so the loan implies an annual payroll. Dividing it by payroll&apos;s share of revenue for companies of
+            the same size in the industry (Census Statistics of U.S. Businesses; small firms spend more of their revenue
+            on pay) gives a second revenue estimate. When the two are within 3× of each other, the estimate combines
+            them (their geometric mean), since each misses in its own way: a headcount mixes in part-timers, and PPP
+            payroll leaves out pay over $100,000 a year. Further apart, one is probably wrong and the headcount is used.
+            When they differ by more than 2× we mark the estimate low confidence. When a business reported no
+            employees, the payroll estimate is used on its own.</p>
         </div>
         <div className="section">
           <h2>Newer headcounts from 401(k) filings</h2>

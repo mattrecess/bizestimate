@@ -1,6 +1,6 @@
 """Revenue per employee by company size, from the Census Statistics of U.S. Businesses (SUSB 2022).
 
-    python etl/size_factors.py --fetch   # refresh data/cache/susb_rpe.json
+    python etl/size_factors.py --fetch   # refresh data/cache/susb_rpe_v2.json
     python etl/size_factors.py           # print examples
 
 An industry's average revenue per employee is pulled up by its largest firms (national distributors,
@@ -22,7 +22,7 @@ import os
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CACHE = os.path.join(HERE, "..", "data", "cache", "susb_rpe.json")
+CACHE = os.path.join(HERE, "..", "data", "cache", "susb_rpe_v2.json")   # v2 adds payroll shares
 URL = "https://www2.census.gov/programs-surveys/susb/tables/2022/us_state_6digitnaics_2022.txt"
 REFRESH_DAYS = 180
 # Enterprise employment size codes in the file -> lower bound of the band.
@@ -46,15 +46,19 @@ def fetch():
                 continue
             try:
                 empl, rcpt = int(row["EMPL"]), float(row["RCPT"]) * 1000   # receipts in $1,000s
-            except ValueError:
+                payr = float(row["PAYR"]) * 1000
+            except (ValueError, KeyError):
                 continue
             if empl < MIN_EMPLOYMENT or rcpt <= 0:
                 continue
-            entry = out.setdefault(row["NAICS"], {"total": None, "bands": {}})
+            entry = out.setdefault(row["NAICS"], {"total": None, "bands": {}, "pay_total": None, "pay": {}})
+            share = round(payr / rcpt, 4) if payr > 0 else None
             if size == "01":
-                entry["total"] = round(rcpt / empl)
+                entry["total"], entry["pay_total"] = round(rcpt / empl), share
             else:
                 entry["bands"][str(BANDS[size])] = round(rcpt / empl)
+                if share:
+                    entry["pay"][str(BANDS[size])] = share
     os.makedirs(os.path.dirname(CACHE), exist_ok=True)
     with open(CACHE + ".tmp", "w") as f:
         json.dump(out, f)
@@ -86,6 +90,23 @@ class SizeFactors:
                 size = min(b_hi, max(b_lo, entry["bands"][band] / entry["total"]))
                 return entry["total"] * size * local
         return bench_rpe
+
+
+    def payroll_share(self, naics, employees, bench_share):
+        """Payroll as a share of revenue for a company of this size (small firms spend more of their
+        revenue on payroll); bench_share when SUSB has nothing usable. Same bounds as rpe()."""
+        if not bench_share or not employees or not self.data:
+            return bench_share
+        code, band = str(naics or ""), self._band(employees)
+        for n in range(min(len(code), 6), 1, -1):
+            entry = self.data.get(code[:n])
+            if entry and entry.get("pay_total") and entry.get("pay", {}).get(band):
+                lo, hi = LOCAL_BOUNDS
+                local = min(hi, max(lo, bench_share / entry["pay_total"]))
+                b_lo, b_hi = BAND_BOUNDS
+                size = min(b_hi, max(b_lo, entry["pay"][band] / entry["pay_total"]))
+                return entry["pay_total"] * size * local
+        return bench_share
 
 
 if __name__ == "__main__":

@@ -80,6 +80,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
     : fleet && src.fmcsa ? `${Math.round(src.fmcsa.drivers || 0).toLocaleString()} drivers and ${Math.round(src.fmcsa.power_units).toLocaleString()} trucks on its federal motor carrier registration`
     : fleet ? "the drivers and trucks on its federal motor carrier registration"
     : b.est_method === "employees" ? `${b.jobs_reported} employees reported for PPP in ${pppYear(b.loans)}, grown at the industry's Oklahoma rate since`
+    : b.est_method === "blend" ? `its ${b.jobs_reported} employees and its payroll, both reported for PPP in ${pppYear(b.loans)} and brought up to date`
     : b.est_method === "payroll" ? `PPP payroll (${pppYear(b.loans)})`
     : b.est_method === "owner_earnings" ? `owner earnings on its PPP loan (${pppYear(b.loans)})`
     : "typical figures for its industry (2022 Economic Census), not its own records";
@@ -267,7 +268,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             const ppp = b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null;
             const plan = b.headcounts ?? [];
             const employeesNow = b.est_method === "retirement_plan" && plan.length ? plan[plan.length - 1].employees
-              : b.est_method === "employees" && b.jobs_reported ? b.jobs_reported * (Number(b.est_growth) || 1) : null;
+              : (b.est_method === "employees" || b.est_method === "blend") && b.jobs_reported ? b.jobs_reported * (Number(b.est_growth) || 1) : null;
             const points = valueHistory({ valueNow: value?.mid ?? null, employeesNow, ppp, plan });
             return points ? <ValueChart points={points} /> : null;
           })()}
@@ -325,6 +326,16 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               <tr><td>EBITDA margin{irsMargin ? " (industry, adjusted for size)" : " (industry)"}</td><td className="num">{pct(margin)}</td></tr>
               <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
               <tr><td>Cross-check: revenue implied by PPP payroll</td><td className="num">{money(b.est_revenue_by_payroll)}</td></tr>
+            </tbody></table>
+          )}
+          {b.est_method === "blend" && (
+            <table><tbody>
+              <tr><td>Employees reported to the SBA</td><td className="num">{b.jobs_reported}</td></tr>
+              <tr><td>Revenue from headcount (employees × revenue per employee for companies this size)</td><td className="num">{money(b.est_revenue_by_employees)}</td></tr>
+              <tr><td>Revenue from PPP payroll (payroll ÷ payroll&apos;s share of revenue for companies this size)</td><td className="num">{money(b.est_revenue_by_payroll)}</td></tr>
+              <tr><td>Estimate: the two combined (geometric mean)</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
+              <tr><td>EBITDA margin{irsMargin ? " (industry, adjusted for size)" : " (industry)"}</td><td className="num">{pct(margin)}</td></tr>
+              <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
             </tbody></table>
           )}
           {(Number(b.est_inflation) > 1.001 || Math.abs(Number(b.est_growth || 1) - 1) > 0.001) && (
@@ -390,7 +401,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <tr><td>EBITDA range</td><td className="num">{moneyRange(b.est_ebitda_low, b.est_ebitda_high)}</td></tr>
             <tr><td>Industry (NAICS)</td><td className="num">{b.industry} ({b.naics ? <a href={`/?q=${b.naics}`} title="Every business with this NAICS code">{b.naics}</a> : "n/a"})</td></tr>
           </tbody></table>
-          {b.est_confidence === "low" && b.est_method === "employees" && (
+          {b.est_confidence === "low" && (b.est_method === "employees" || b.est_method === "blend") && (
             <p className="disclaimer">Low confidence: the employee-based and payroll-based estimates differ by more than 2×.</p>
           )}
           {irsMargin && (

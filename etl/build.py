@@ -38,6 +38,12 @@ SOLE_PROP_NET_MARGIN = 0.30          # owner earnings / revenue for one-person b
 PAYROLL_RANGE = (0.75, 1.35)         # payroll excludes comp over $100k/yr, so skew high
 OWNER_RANGE = (0.6, 1.6)
 EMPLOYEE_RANGE = (0.7, 1.4)          # reported jobs are a point-in-time headcount
+# Headcount and payroll each miss in their own way (a headcount mixes part-timers in; PPP payroll
+# leaves out pay over $100k), so where the two agree to within BLEND_WITHIN of each other the estimate
+# is their weighted geometric mean; further apart, one of them is likely wrong and the headcount wins.
+PAYROLL_WEIGHT = 0.5
+BLEND_WITHIN = 3.0
+BLEND_RANGE = (0.75, 1.3)
 SUFFIXES = re.compile(r"\b(LLC|L L C|INC|INCORPORATED|CORP|CORPORATION|CO|COMPANY|LTD|PLLC|PC|LP|LLP|DBA)\b")
 
 
@@ -79,7 +85,9 @@ def estimate(loan_amount, draw, naics, jobs, business_type, bench, margins, adju
         payroll_revenue = annual / SOLE_PROP_NET_MARGIN * adjust.inflation(2019)
         payroll_ebitda = annual * adjust.inflation(2019)
     else:
-        payroll_revenue = annual / bench["payroll_to_revenue"] * pay_factor
+        # Payroll's share of revenue for a company of this size (small firms spend more of it on pay).
+        share = sizes.payroll_share(naics, jobs, bench["payroll_to_revenue"]) if sizes and jobs else bench["payroll_to_revenue"]
+        payroll_revenue = annual / share * pay_factor
         payroll_ebitda = payroll_revenue * margins.margin(naics, payroll_revenue)
     est = {
         "est_payroll": None if owner_only else round(annual),
@@ -91,12 +99,20 @@ def estimate(loan_amount, draw, naics, jobs, business_type, bench, margins, adju
     # industry (size_factors.py).
     if jobs and jobs > 0 and bench.get("revenue_per_employee"):
         rpe = sizes.rpe(naics, jobs, bench["revenue_per_employee"]) if sizes else bench["revenue_per_employee"]
-        revenue = jobs * rpe * emp_factor
+        by_employees = jobs * rpe * emp_factor
+        ratio = payroll_revenue / by_employees
+        if 1 / BLEND_WITHIN <= ratio <= BLEND_WITHIN:
+            revenue = by_employees * ratio ** PAYROLL_WEIGHT
+            lo, hi = BLEND_RANGE
+            method = "blend"
+        else:
+            revenue = by_employees
+            lo, hi = EMPLOYEE_RANGE
+            method = "employees"
         ebitda = revenue * margins.margin(naics, revenue)   # industry margin, adjusted for size
-        lo, hi = EMPLOYEE_RANGE
         # When the two methods disagree by more than 2x, flag the estimate as shaky.
-        agree = 0.5 <= revenue / payroll_revenue <= 2
-        est.update(est_revenue_by_employees=round(revenue), est_method="employees",
+        agree = 0.5 <= ratio <= 2
+        est.update(est_revenue_by_employees=round(by_employees), est_method=method,
                    est_confidence="medium" if agree else "low")
     else:
         revenue, ebitda = payroll_revenue, payroll_ebitda
@@ -108,7 +124,7 @@ def estimate(loan_amount, draw, naics, jobs, business_type, bench, margins, adju
         est_ebitda_mid=round(ebitda), est_ebitda_high=round(ebitda * hi),
         # Recorded only when it came from IRS data, so the site never credits the IRS for a default.
         est_ebitda_margin=round(ebitda / revenue, 4) if revenue and margins.data and not owner_only else None,
-        est_inflation=adjust.inflation(bench.get("year") if est["est_method"] == "employees" else 2019),
+        est_inflation=adjust.inflation(bench.get("year") if est["est_method"] in ("employees", "blend") else 2019),
         est_growth=1.0 if owner_only else growth,
     )
     return est

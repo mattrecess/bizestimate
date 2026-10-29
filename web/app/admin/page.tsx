@@ -11,6 +11,7 @@ export const metadata = { title: "Admin | BizEstimate", robots: { index: false, 
 type Row = {
   id: string; name: string; city: string; revenue: string | null; ebitda: string | null; year: number | null;
   note: string | null; is_public: boolean; est_revenue_mid: string | null; est_ebitda_mid: string | null; est_method: string;
+  est_revenue_by_employees: string | null; est_revenue_by_payroll: string | null;
   sale_price: string | null; sale_year: number | null; naics: string | null; is_nonprofit: boolean;
 };
 
@@ -121,12 +122,15 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
     from known_owners k join businesses b on b.biz_key = k.biz_key order by k.updated_at desc`.catch(() => []);
   const rows = await sql<Row[]>`
     select b.id, b.name, b.city, k.revenue, k.ebitda, k.year, k.note, k.is_public,
-           b.est_revenue_mid, b.est_ebitda_mid, b.est_method, k.sale_price, k.sale_year, b.naics, b.is_nonprofit
+           b.est_revenue_mid, b.est_ebitda_mid, b.est_method, b.est_revenue_by_employees, b.est_revenue_by_payroll, k.sale_price, k.sale_year, b.naics, b.is_nonprofit
     from known_financials k join businesses b on b.biz_key = k.biz_key order by k.updated_at desc`.catch(() => [] as Row[]);
   // Accuracy of what the site would show without these figures (private rows only: public ones
   // already replace the estimate).
   const rev = rows.filter((r) => !r.is_public).map((r) => ratio(r.est_revenue_mid, r.revenue)).filter((x): x is number => x != null);
   const ebi = rows.filter((r) => !r.is_public).map((r) => ratio(r.est_ebitda_mid, r.ebitda)).filter((x): x is number => x != null);
+  // The two PPP-based methods on their own, to see which to lean on (the blend weights them equally).
+  const byEmp = rows.filter((r) => !r.is_public).map((r) => ratio(r.est_revenue_by_employees, r.revenue)).filter((x): x is number => x != null);
+  const byPay = rows.filter((r) => !r.is_public).map((r) => ratio(r.est_revenue_by_payroll, r.revenue)).filter((x): x is number => x != null);
   const off = (xs: number[]) => median(xs.map((x) => Math.abs(Math.log(x))));
   // Typical miss as a factor: 1.5× means the estimate is usually within 1.5× of the actual, either way.
   const factor = (x: number | null) => (x == null ? "—" : `${Math.exp(x).toFixed(1)}×`);
@@ -188,6 +192,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
             <div className="tile"><div className="k">Businesses</div><div className="v">{rows.length}</div></div>
             <div className="tile"><div className="k">Revenue: typically off by</div><div className="v">{factor(off(rev))}</div><div className="r">typically {bias(rev)} vs actual</div></div>
             <div className="tile"><div className="k">EBITDA: typically off by</div><div className="v">{factor(off(ebi))}</div><div className="r">typically {bias(ebi)} vs actual</div></div>
+            <div className="tile"><div className="k">Revenue from headcount alone</div><div className="v">{factor(off(byEmp))}</div><div className="r">{byEmp.length} with PPP jobs · {bias(byEmp)}</div></div>
+            <div className="tile"><div className="k">Revenue from PPP payroll alone</div><div className="v">{factor(off(byPay))}</div><div className="r">{byPay.length} with PPP payroll · {bias(byPay)}</div></div>
           </div>
           <table>
             <thead><tr><th>Business</th><th className="num">Revenue (est / actual)</th><th className="num">EBITDA (est / actual)</th><th>Sale (multiple: actual / ours)</th><th>Shown</th><th /></tr></thead>

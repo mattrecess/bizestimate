@@ -25,7 +25,7 @@ export type Filters = {
 
 // Estimate basis -> est_method values.
 const BASIS: Record<string, string[]> = {
-  reported: ["reported", "verified"], k401: ["retirement_plan"], ppp: ["employees", "payroll", "owner_earnings"], avg: ["industry_average"],
+  reported: ["reported", "verified"], k401: ["retirement_plan"], ppp: ["employees", "blend", "payroll", "owner_earnings"], avg: ["industry_average"],
 };
 
 // Estimated value in SQL, from the same size and industry multiples as lib/valuation.ts.

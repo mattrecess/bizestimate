@@ -81,3 +81,43 @@ def apply(cur, state):
         where biz_key = %s""", updates)
     print(f"Estimates re-based on recent retirement-plan headcounts: {len(updates):,} updated "
           f"({staffing:,} staffing firms/PEOs skipped)", flush=True)
+
+
+TRUCKING = ("484", "4854", "4855", "4859")
+FLEET_RANGE = (0.7, 1.4)
+
+
+def apply_fleet(cur, state):
+    """Trucking and bus companies: size from the drivers (or trucks) on their current FMCSA
+    registration where that's more than the 2020 PPP headcount, or where there was none (a map listing
+    on an industry average). Actual and 401(k) figures win."""
+    cur.execute("""
+        select b.biz_key, b.naics, b.name, b.jobs_reported, b.est_growth,
+               (s.data ->> 'drivers')::numeric, (s.data ->> 'power_units')::numeric
+        from businesses b join business_sources s on s.biz_key = b.biz_key and s.source = 'fmcsa'
+        where b.state = %s and b.naics ~ '^(484|4854|4855|4859)'
+          and coalesce(b.est_method, '') not in ('reported', 'verified', 'branch', 'retirement_plan', 'fleet')""", (state,))
+    margins, bench, adjust, sizes = Margins(), load_benchmarks(), Adjust(), SizeFactors()
+    lo, hi = FLEET_RANGE
+    updates = []
+    for key, naics, name, jobs, growth, drivers, units in cur.fetchall():
+        fleet = max(float(drivers or 0), float(units or 0))
+        ppp_now = float(jobs or 0) * float(growth or 1)
+        if fleet < 2 or (ppp_now and fleet < 1.2 * ppp_now):
+            continue   # the PPP count (office and shop staff included) is the better headcount
+        naics = correct_naics(name, naics)
+        _, b = lookup(bench, naics)
+        if not b.get("revenue_per_employee"):
+            continue
+        inflation = adjust.inflation(b.get("year"))
+        revenue = fleet * sizes.rpe(naics, fleet, b["revenue_per_employee"]) * inflation
+        margin = margins.margin(naics, revenue)
+        updates.append((round(revenue * lo), round(revenue), round(revenue * hi),
+                        round(revenue * margin * lo), round(revenue * margin), round(revenue * margin * hi),
+                        margin if margins.data else None, inflation, key))
+    cur.executemany("""
+        update businesses set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
+            est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_ebitda_margin = %s,
+            est_inflation = %s, est_growth = 1, est_method = 'fleet', est_confidence = 'medium'
+        where biz_key = %s""", updates)
+    print(f"Estimates re-based on current FMCSA fleets: {len(updates):,} trucking companies", flush=True)

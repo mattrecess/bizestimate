@@ -181,6 +181,11 @@ def main():
                 headcount_estimates.apply(cur, state.upper())
         except psycopg.Error as e:
             print(f"Re-basing on retirement-plan headcounts failed (non-fatal): {e}", flush=True)
+        try:
+            with conn.transaction():
+                headcount_estimates.apply_fleet(cur, state.upper())
+        except psycopg.Error as e:
+            print(f"Re-basing trucking companies on their fleets failed (non-fatal): {e}", flush=True)
         # Reported figures (SEC, bank call reports, Form 990) beat any estimate.
         try:
             with conn.transaction():
