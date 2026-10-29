@@ -113,13 +113,18 @@ def main():
         # vs the listed site), an exact name match to one listed business in the state will do.
         by_name = {}
         for b in biz:
-            by_name.setdefault(full_name(b["name"]), []).append(b["biz_key"])
+            by_name.setdefault(full_name(b["name"]), []).append(b)
         for cik, e in entities.items():
             if cik in matches:
                 continue
-            keys = {k for n in e["names"] for k in by_name.get(full_name(n), [])}
-            if len(keys) == 1:
-                matches[cik] = keys.pop()
+            found = {b["biz_key"]: b for n in e["names"] for b in by_name.get(full_name(n), [])}
+            if len(found) > 1:
+                # Several listings with the name (offices, yards): the one in the headquarters city, if just one.
+                hq = {city for _, city, _ in e["places"]}
+                found = {k: b for k, b in found.items() if b["city"].upper() in hq and not k.startswith("OV|")} or \
+                        {k: b for k, b in found.items() if b["city"].upper() in hq}
+            if len(found) == 1:
+                matches[cik] = next(iter(found))
         rows = {}
         for cik, key in matches.items():
             if key not in rows or entities[cik]["data"]["revenue"] > rows[key]["revenue"]:
