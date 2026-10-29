@@ -534,6 +534,3 @@ header.top nav { align-items: center; }
 .contact-form .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
 .contact-form .check input { width: auto; }
 .glance { margin-top: 4px; font-weight: 600; font-size: 14px; color: var(--text); }
-/* The upper end of a range, shown more prominently than the lower */
-.range-labels .range-hi { font-weight: 650; color: var(--text); }
-.value-meta .value-hi { font-size: 16px; font-weight: 700; color: var(--text); }

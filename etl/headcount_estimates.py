@@ -70,16 +70,17 @@ def apply(cur, state):
         revenue = float(employees) * sizes.rpe(naics, employees, b["revenue_per_employee"]) * inflation * factor
         margin = cal.margin(naics) or margins.margin(naics, revenue)
         ebitda = revenue * margin
-        if method == "retirement_plan" and cur_rev is not None and round(revenue) == round(float(cur_rev)) \
-                and cur_ebitda is not None and round(ebitda) == round(float(cur_ebitda)) and cur_industry == b["label"]:
+        shown, shown_ebitda = cal.tilted(revenue, revenue * hi), cal.tilted(ebitda, ebitda * hi)   # up the range
+        if method == "retirement_plan" and cur_rev is not None and round(shown) == round(float(cur_rev)) \
+                and cur_ebitda is not None and round(shown_ebitda) == round(float(cur_ebitda)) and cur_industry == b["label"]:
             continue   # already current: don't rewrite the row
-        updates.append((round(revenue * lo), round(revenue), round(revenue * hi),
-                        round(ebitda * lo), round(ebitda), round(ebitda * hi),
-                        margin if margins.data else None, naics, b["label"], inflation, round(factor, 4), key))
+        updates.append((round(revenue * lo), round(shown), round(revenue * hi),
+                        round(ebitda * lo), round(shown_ebitda), round(ebitda * hi),
+                        margin if margins.data else None, naics, b["label"], inflation, round(factor, 4), cal.tilt, key))
     cur.executemany("""
         update businesses set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
             est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_ebitda_margin = %s,
-            naics = %s, industry = %s, est_inflation = %s, est_calibration = %s, est_growth = 1,
+            naics = %s, industry = %s, est_inflation = %s, est_calibration = %s, est_tilt = %s, est_growth = 1,
             est_method = 'retirement_plan', est_confidence = 'medium'
         where biz_key = %s""", updates)
     print(f"Estimates re-based on recent retirement-plan headcounts: {len(updates):,} updated "
@@ -117,12 +118,13 @@ def apply_fleet(cur, state):
         factor = cal.factor(naics, nonprofit)
         revenue = fleet * sizes.rpe(naics, fleet, b["revenue_per_employee"]) * inflation * factor
         margin = cal.margin(naics) or margins.margin(naics, revenue)
-        updates.append((round(revenue * lo), round(revenue), round(revenue * hi),
-                        round(revenue * margin * lo), round(revenue * margin), round(revenue * margin * hi),
-                        margin if margins.data else None, inflation, round(factor, 4), key))
+        ebitda = revenue * margin
+        updates.append((round(revenue * lo), round(cal.tilted(revenue, revenue * hi)), round(revenue * hi),
+                        round(ebitda * lo), round(cal.tilted(ebitda, ebitda * hi)), round(ebitda * hi),
+                        margin if margins.data else None, inflation, round(factor, 4), cal.tilt, key))
     cur.executemany("""
         update businesses set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
             est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_ebitda_margin = %s,
-            est_inflation = %s, est_calibration = %s, est_growth = 1, est_method = 'fleet', est_confidence = 'medium'
+            est_inflation = %s, est_calibration = %s, est_tilt = %s, est_growth = 1, est_method = 'fleet', est_confidence = 'medium'
         where biz_key = %s""", updates)
     print(f"Estimates re-based on current FMCSA fleets: {len(updates):,} trucking companies", flush=True)

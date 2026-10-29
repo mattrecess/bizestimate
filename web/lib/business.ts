@@ -10,7 +10,7 @@ export type Business = {
   geo_precision: string | null; est_payroll: Num; est_revenue_low: Num; est_revenue_mid: Num;
   est_revenue_high: Num; est_ebitda_low: Num; est_ebitda_mid: Num; est_ebitda_high: Num;
   est_revenue_by_employees: Num; est_revenue_by_payroll: Num; est_method: string; est_confidence: string; total_ppp_amount: Num; key_source?: string;
-  est_value_mid?: Num; est_calibration?: Num; est_growth_rate?: Num;
+  est_value_mid?: Num; est_calibration?: Num; est_growth_rate?: Num; est_tilt?: Num;
   website: string | null; owner_name: string | null; owner_title: string | null;
   owner_source: string | null; payroll_to_revenue: Num; revenue_per_employee: Num; ebitda_margin: Num; benchmark_source: string | null;
   est_ebitda_margin: Num; est_inflation: Num; est_growth: Num;
@@ -38,7 +38,7 @@ export async function getBusinessRow(id: string): Promise<Business | null> {
            to_jsonb(b) ->> 'est_ebitda_margin' as est_ebitda_margin,
            to_jsonb(b) ->> 'est_inflation' as est_inflation, to_jsonb(b) ->> 'est_growth' as est_growth,
            to_jsonb(b) ->> 'est_value_mid' as est_value_mid, to_jsonb(b) ->> 'est_calibration' as est_calibration,
-           to_jsonb(b) ->> 'est_growth_rate' as est_growth_rate,
+           to_jsonb(b) ->> 'est_growth_rate' as est_growth_rate, to_jsonb(b) ->> 'est_tilt' as est_tilt,
            to_jsonb(b) ->> 'parent_name' as parent_name,
            (to_jsonb(b) ->> 'sell_score')::int as sell_score, to_jsonb(b) -> 'sell_signals' as sell_signals,
            (select p.id from businesses p where p.biz_key = to_jsonb(b) ->> 'parent_key') as parent_id,

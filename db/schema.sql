@@ -367,3 +367,4 @@ create table if not exists estimate_settings (
   updated_at timestamptz not null default now()
 );
 alter table businesses add column if not exists est_growth_rate numeric;
+alter table businesses add column if not exists est_tilt numeric;

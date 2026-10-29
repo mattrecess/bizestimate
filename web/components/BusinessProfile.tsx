@@ -216,8 +216,8 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
                 <div className="v">{money(value.mid)}</div>
               </div>
               <div className="value-meta">
-                <span className="value-hi">Up to {money(value.high)}</span>
-                <span>from {money(value.low)} · about {value.multiple}× EBITDA</span>
+                <span>{moneyRange(value.low, value.high)}</span>
+                <span>about {value.multiple}× EBITDA</span>
               </div>
             </div>
           )}
@@ -354,6 +354,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <p className="disclaimer">Calibrated: revenue {Number(b.est_calibration) < 1 ? "lowered" : "raised"} to{" "}
               {Math.round(Number(b.est_calibration) * 100)}% of the industry-average estimate, to match what businesses in this industry
               actually report.</p>
+          )}
+          {Number(b.est_tilt) > 0 && (
+            <p className="disclaimer">Figures are shown toward the upper part of their range rather than at its middle.</p>
           )}
           {b.est_growth_rate != null ? (
             <p className="disclaimer">Brought up to date assuming revenue has grown {(Number(b.est_growth_rate) * 100).toFixed(0)}% a year

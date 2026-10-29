@@ -34,6 +34,13 @@ export default function Methodology() {
             employees, the payroll estimate is used on its own.</p>
         </div>
         <div className="section">
+          <h2>Bringing figures up to date, and where in the range we show them</h2>
+          <p>PPP figures describe 2020. Estimates built from them are brought up to today assuming revenue has grown at a
+            steady annual rate since then. Each estimate has a range, and the figure we show sits toward the upper part of
+            that range rather than at its middle. Estimates are also calibrated by industry against businesses whose actual
+            revenue we know, such as nonprofits&apos; Form 990 filings and public companies&apos; SEC filings.</p>
+        </div>
+        <div className="section">
           <h2>Newer headcounts from 401(k) filings</h2>
           <p>Employers with a retirement plan file a Form 5500 with the U.S. Department of Labor every year, reporting
             how many employees are in the plan. We match those filings to listed businesses by name and address and

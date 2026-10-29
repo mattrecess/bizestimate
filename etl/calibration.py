@@ -31,6 +31,10 @@ CALIBRATED = ("employees", "blend", "payroll", "industry_average", "retirement_p
 # of inflation and Oklahoma industry job growth. Calibration then measures the result against real figures.
 PPP_ERA = ("employees", "blend", "payroll", "owner_earnings", "industry_average")
 DEFAULT_GROWTH = 0.08
+# The shown estimate is moved toward the top of its range by this share of the way, measured on a
+# log scale (estimate_settings 'range_tilt'; 0 = middle, 1 = top). Learning keeps using the raw figures.
+DEFAULT_TILT = 0.5
+TILTED = CALIBRATED + ("owner_earnings",)
 PPP_YEAR_MID = datetime.date(2020, 7, 1)
 
 
@@ -101,6 +105,15 @@ class Calibration:
         cur.execute("select value from estimate_settings where key = 'annual_growth'")
         row = cur.fetchone()
         self.growth = float(row[0]) if row else DEFAULT_GROWTH
+        cur.execute("select value from estimate_settings where key = 'range_tilt'")
+        row = cur.fetchone()
+        self.tilt = min(1.0, max(0.0, float(row[0]))) if row else DEFAULT_TILT
+
+    def tilted(self, mid, high):
+        """The estimate moved toward the top of its range."""
+        if mid is None or high is None or mid <= 0 or high <= mid:
+            return mid
+        return mid * (high / mid) ** self.tilt
 
     def growth_factor(self, job_growth):
         """Multiplier taking a PPP-era estimate from (inflation since its base year x Oklahoma industry job
@@ -152,26 +165,30 @@ class Calibration:
         print(f"Growth: {len(updates):,} PPP-era estimates brought up to date at {self.growth:.0%} a year", flush=True)
 
     def apply_stage(self, cur):
-        """Calibrate the staged (raw) estimates before they're loaded."""
+        """Calibrate the staged (raw) estimates before they're loaded, then tilt them up their range."""
         cur.execute("select biz_key, naics, is_nonprofit, est_method, est_revenue_low, est_revenue_mid, est_revenue_high, "
-                    "est_ebitda_low, est_ebitda_mid, est_ebitda_high from stage_biz where est_method = any(%s)", (list(CALIBRATED),))
-        updates = []
+                    "est_ebitda_low, est_ebitda_mid, est_ebitda_high from stage_biz where est_method = any(%s)", (list(TILTED),))
+        updates, calibrated = [], 0
         for key, naics, nonprofit, method, *vals in cur.fetchall():
-            f = self.factor(naics, str(nonprofit).lower() in ("true", "t"))
-            margin = self.margin(naics)
-            if abs(f - 1) < 0.005 and margin is None:
-                continue
             rl, rm, rh, el, em, eh = (float(v) if v not in (None, "") else None for v in vals)
             if rm is None:
                 continue
-            rl, rm, rh = (round(x * f) if x is not None else None for x in (rl, rm, rh))
+            f, margin = 1.0, None
+            if method in CALIBRATED:
+                f = self.factor(naics, str(nonprofit).lower() in ("true", "t"))
+                margin = self.margin(naics)
+                calibrated += abs(f - 1) >= 0.005 or margin is not None
+            rl, rm, rh = (x * f if x is not None else None for x in (rl, rm, rh))
             if margin is not None:
-                el, em, eh = (round(x * margin) if x is not None else None for x in (rl, rm, rh))
+                el, em, eh = (x * margin if x is not None else None for x in (rl, rm, rh))
             else:
-                el, em, eh = (round(x * f) if x is not None else None for x in (el, em, eh))
-            updates.append((rl, rm, rh, el, em, eh, round(f, 4), margin, key))
+                el, em, eh = (x * f if x is not None else None for x in (el, em, eh))
+            rm, em = self.tilted(rm, rh), self.tilted(em, eh)
+            updates.append((*(round(x) if x is not None else None for x in (rl, rm, rh, el, em, eh)),
+                            round(f, 4), margin, self.tilt, key))
         cur.executemany("""update stage_biz set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
                              est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_calibration = %s,
-                             est_ebitda_margin = coalesce(%s::text, est_ebitda_margin)
+                             est_ebitda_margin = coalesce(%s::text, est_ebitda_margin), est_tilt = %s
                            where biz_key = %s""", updates)
-        print(f"Calibration: {len(updates):,} estimates adjusted", flush=True)
+        print(f"Calibration: {calibrated:,} estimates adjusted; {len(updates):,} moved {self.tilt:.0%} of the way "
+              f"up their range", flush=True)

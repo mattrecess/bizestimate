@@ -55,6 +55,18 @@ async function saveGrowth(form: FormData) {
   redirect("/admin/industries?saved=1");
 }
 
+async function saveTilt(form: FormData) {
+  "use server";
+  await guard();
+  const t = share(form.get("tilt"));
+  const v = String(form.get("tilt") ?? "").trim() === "0" || String(form.get("tilt") ?? "").trim() === "0%" ? 0 : t;
+  if (v === null || v > 1) redirect("/admin/industries?error=tilt");
+  await sql`insert into estimate_settings (key, value, updated_at) values ('range_tilt', ${v}, now())
+    on conflict (key) do update set value = excluded.value, updated_at = now()`;
+  revalidatePath("/admin/industries");
+  redirect("/admin/industries?saved=1");
+}
+
 async function remove(form: FormData) {
   "use server";
   await guard();
@@ -75,6 +87,8 @@ export default async function Industries({ searchParams }: { searchParams: Promi
     from industry_overrides o order by o.naics_prefix`.catch(() => [] as Override[]);
   const [growthRow] = await sql<{ value: string }[]>`select value from estimate_settings where key = 'annual_growth'`.catch(() => []);
   const growth = growthRow ? Number(growthRow.value) : 0.08;
+  const [tiltRow] = await sql<{ value: string }[]>`select value from estimate_settings where key = 'range_tilt'`.catch(() => []);
+  const tilt = tiltRow ? Number(tiltRow.value) : 0.5;
   const learned = await sql<Learned[]>`
     select c.naics_prefix, c.segment, c.revenue_factor, c.n, c.typical_miss,
            (select label from industry_benchmarks where c.naics_prefix like naics_prefix || '%' order by length(naics_prefix) desc limit 1) as label
@@ -89,6 +103,7 @@ export default async function Industries({ searchParams }: { searchParams: Promi
       {p.error === "naics" && <p className="badge warn">Enter a NAICS code of 2 to 6 digits.</p>}
       {p.error === "empty" && <p className="badge warn">Enter at least one figure.</p>}
       {p.error === "growth" && <p className="badge warn">Enter a growth rate between 0% and 50%.</p>}
+      {p.error === "tilt" && <p className="badge warn">Enter a tilt between 0% (middle) and 100% (top of the range).</p>}
       <h2>Growth since 2020</h2>
       <p className="disclaimer">Estimates built from 2020 PPP figures (headcount, payroll, and the industry averages drawn from them)
         are brought up to today at this rate a year, in place of inflation and Oklahoma job growth. Currently{" "}
@@ -96,6 +111,14 @@ export default async function Industries({ searchParams }: { searchParams: Promi
       <form action={saveGrowth} className="admin-form">
         <input name="growth" placeholder="Annual growth (e.g. 8%)" defaultValue={`${(growth * 100).toFixed(1).replace(/\.0$/, "")}%`} />
         <button className="btn primary">Save growth rate</button>
+      </form>
+      <h2>Tilt toward the top of the range</h2>
+      <p className="disclaimer">How far up its range each estimate is shown: 0% is the middle, 100% the top of the range. Currently{" "}
+        <b>{Math.round(tilt * 100)}%</b> (with a typical range of 0.7×–1.4×, 50% shows about 18% above the middle). Applies to
+        every estimate with a range (not reported or verified figures); calibration keeps measuring the untilted figures.</p>
+      <form action={saveTilt} className="admin-form">
+        <input name="tilt" placeholder="Tilt (e.g. 50%)" defaultValue={`${Math.round(tilt * 100)}%`} />
+        <button className="btn primary">Save tilt</button>
       </form>
       <h2>Your industry figures</h2>
       <p className="disclaimer">Your own figures for an industry, by NAICS code (2–6 digits; a longer code is more specific, e.g.
