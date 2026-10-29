@@ -11,13 +11,14 @@ NAICS prefix with enough of them), with the 25th-75th percentile as the range.
 import argparse
 import csv
 import math
+import re
 import os
 import statistics
 from collections import defaultdict
 
 from benchmarks import load_benchmarks, lookup
 from margins import Margins
-from matching import name_score, name_tokens, full_name
+from matching import full_name, name_score, name_tokens, parse_address
 from overture import _meters, load_layers, pick_phone, pick_website
 from csvio import write_rows
 
@@ -160,6 +161,27 @@ FRANCHISE_HEAVY = ("72", "8121", "447", "457", "4451", "445")
 MAX_BRANCHES = 25          # more same-name places than this is a brand or chain, not one local company
 
 
+def brand_key(name, cities):
+    """A company's name without legal endings or a trailing town ("COOK FEED AND OUTDOOR YUKON LLC" ->
+    "COOK FEED AND OUTDOOR"), so a map listing matches the company registered for one of its stores."""
+    words = full_name(name or "").split()
+    changed = True
+    while changed and len(words) > 2:
+        changed = False
+        for n in (2, 1):   # two-word towns first ("BROKEN ARROW", "OKLAHOMA CITY")
+            if (len(words) - n >= 2 and " ".join(words[-n:]) in cities | {"OK", "OKLAHOMA", "OKC"}
+                    and words[-n - 1] not in ("OF", "AND", "THE", "AT", "IN", "OK", "OKLAHOMA")):
+                words = words[:-n]
+                changed = True
+                break
+    return " ".join(words)
+
+
+def site_domain(url):
+    m = re.match(r"^(?:https?://)?(?:www\.)?([^/:?#]+)", (url or "").strip().lower())
+    return m.group(1) if m else ""
+
+
 def trace(queries, name, reason):
     if any(q in name.upper() for q in queries):
         print(f"LOOKUP place {name!r}: {reason}", flush=True)
@@ -180,6 +202,53 @@ def branch_row(get, name, code, bench, state, zip5, lat, lon, parent):
         "phone": pick_phone(get("phones")) or "",
         "parent_key": parent["biz_key"], "parent_name": parent["name"],
     }
+
+
+MAX_CHAIN_SCALE = 10      # a map-only company's estimate counts at most this many locations
+
+
+def group_chains(added, cities, margins):
+    """Map-only listings of one company (same name, and a shared website or phone): the first becomes
+    the company, sized as an industry-average store times its locations; the rest become its locations."""
+    groups = defaultdict(list)
+    for r in added:
+        if r["est_method"] != "industry_average" or r["naics"].startswith(FRANCHISE_HEAVY):
+            continue
+        brand = brand_key(r["name"], cities)
+        if len(brand.split()) >= 2:
+            groups[brand].append(r)
+    folded = 0
+    for brand, members in groups.items():
+        if not 2 <= len(members) <= MAX_BRANCHES:
+            continue
+        # Same name alone isn't enough ("Quality Plumbing" in two towns are usually two companies).
+        sites = defaultdict(list)
+        for r in members:
+            for k in filter(None, (site_domain(r.get("website")), re.sub(r"\D", "", r.get("phone") or ""))):
+                sites[k].append(r)
+        chain = max(sites.values(), key=len, default=[])
+        if len(chain) < 2:
+            continue
+        chain_ids = {id(r) for r in chain}
+        chain = chain + [r for r in members if id(r) not in chain_ids and not (r.get("website") or r.get("phone"))]
+        head = max(chain, key=lambda r: (bool(r.get("website")), bool(r.get("phone"))))
+        n = min(len(chain), MAX_CHAIN_SCALE)
+        for f in ("est_revenue_low", "est_revenue_mid", "est_revenue_high"):
+            head[f] = round(head[f] * n)
+        margin = margins.margin(head["naics"], head["est_revenue_mid"])
+        for f, g in (("est_ebitda_low", "est_revenue_low"), ("est_ebitda_mid", "est_revenue_mid"), ("est_ebitda_high", "est_revenue_high")):
+            head[f] = round(head[g] * margin)
+        head["est_ebitda_margin"] = margin if margins.data else ""
+        for r in chain:
+            if r is head:
+                continue
+            for f in ("est_revenue_low", "est_revenue_mid", "est_revenue_high", "est_ebitda_low", "est_ebitda_mid",
+                      "est_ebitda_high", "est_ebitda_margin"):
+                r[f] = ""
+            r.update(est_method="branch", est_confidence="", parent_key=head["biz_key"], parent_name=head["name"],
+                     naics=head["naics"], industry=head["industry"])
+            folded += 1
+    return folded
 
 
 def main():
@@ -206,15 +275,16 @@ def main():
     borrowers = BorrowerIndex(rows)
     # Listed PPP companies by full name, to recognise their other locations ("Minick Materials" in
     # Norman is a branch of MINICK MATERIALS COMPANY in Oklahoma City, not a separate business).
-    by_full = defaultdict(list)
+    cities = {(r.get("city") or "").strip().upper() for r in rows if r.get("city")}
+    by_brand = defaultdict(dict)
     for r in rows:
-        if r.get("geo_precision") in LISTED and r.get("est_revenue_mid"):
-            by_full[full_name(r["name"])].append(r)
+        if r.get("geo_precision") in LISTED and r.get("est_revenue_mid") and r.get("is_individual") != "True":
+            by_brand[brand_key(r["name"], cities)][r["biz_key"]] = r
     _, _, _, places = load_layers(state)
     cols = {c: places.column(c).to_pylist() for c in places.column_names}
     name_counts = defaultdict(int)
     for n in cols["name"]:
-        name_counts[full_name(n or "")] += 1
+        name_counts[brand_key(n, cities)] += 1
 
     added, skipped, unmapped, moved = [], defaultdict(int), defaultdict(int), 0
     # Names listed in etl/lookup.txt: say in the log what happened to their map listings.
@@ -257,15 +327,19 @@ def main():
             skipped["no industry average"] += 1
             trace(traced, name, f"no industry average for {code}")
             continue
-        key = (tokens, round(lat, 3), round(lon, 3))
+        # The same store listed twice ("Cook Feed & Outdoor", "Cook Feed and Outdoor"): same name at the
+        # same street address, or within the same ~100 m.
+        addr = parse_address(get("street"))
+        key = (tokens, zip5, addr) if addr else (tokens, round(lat, 3), round(lon, 3))
         if key in seen:
             skipped["duplicate place"] += 1
             trace(traced, name, "duplicate map listing")
             continue
         _, bench = lookup(benchmarks, code)
-        parents = by_full.get(full_name(name), [])
-        if (len(parents) == 1 and len(tokens) >= 2 and not code.startswith(FRANCHISE_HEAVY)
-                and name_counts[full_name(name)] <= MAX_BRANCHES):
+        brand = brand_key(name, cities)
+        parents = list(by_brand.get(brand, {}).values())
+        if (len(parents) == 1 and len(brand.split()) >= 2 and not code.startswith(FRANCHISE_HEAVY)
+                and name_counts[brand] <= MAX_BRANCHES):
             p = parents[0]
             seen[key] = len(added)
             added.append(branch_row(get, name, code, bench, state, zip5, lat, lon, p))
@@ -287,9 +361,11 @@ def main():
             "phone": pick_phone(get("phones")) or "", "source": "overture",
         })
 
+    grouped = group_chains(added, cities, margins)
     write_rows(BIZ_CSV, fields, rows + added)
     print(f"Places-only: added {len(added):,} businesses without loan data; skipped {dict(skipped)}; "
-          f"{moved:,} ZIP-placed borrowers moved to their map listing", flush=True)
+          f"{moved:,} ZIP-placed borrowers moved to their map listing; {grouped:,} map listings folded into "
+          f"multi-location companies", flush=True)
     top = sorted(unmapped.items(), key=lambda kv: -kv[1])[:25]
     print("Places-only: most common categories not listed: " + ", ".join(f"{c}/{d} {n:,}" for (c, d), n in top), flush=True)
 
