@@ -16,7 +16,7 @@ import psycopg
 
 import enrich
 from load import database_url
-from matching import match_entities
+from matching import full_name, match_entities
 from netutil import urlopen
 
 # The SEC requires a contact email it accepts (it refuses no-reply addresses), set as the
@@ -65,7 +65,7 @@ def main():
         print("sec: skipped; add a SEC_USER_AGENT secret (\"BizEstimate you@example.com\") to enable", flush=True)
         return
     ciks = {}
-    for start in range(0, 2000, 100):
+    for start in range(0, 20_000, 100):   # every page: EDGAR lists filers alphabetically
         html = get(LIST.format(state=state, start=start))
         found = re.findall(r'CIK=(\d+)[^>]*>\d+</a></td>\s*<td[^>]*>([^<]+)', html)
         for cik, name in found:
@@ -109,6 +109,17 @@ def main():
     with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
         biz = enrich.businesses(cur, state)
         matches = match_entities(entities, biz)
+        # A public company's name is unique enough on its own: when the address doesn't match (headquarters
+        # vs the listed site), an exact name match to one listed business in the state will do.
+        by_name = {}
+        for b in biz:
+            by_name.setdefault(full_name(b["name"]), []).append(b["biz_key"])
+        for cik, e in entities.items():
+            if cik in matches:
+                continue
+            keys = {k for n in e["names"] for k in by_name.get(full_name(n), [])}
+            if len(keys) == 1:
+                matches[cik] = keys.pop()
         rows = {}
         for cik, key in matches.items():
             if key not in rows or entities[cik]["data"]["revenue"] > rows[key]["revenue"]:
