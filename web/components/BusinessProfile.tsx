@@ -101,6 +101,17 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
     } catch { /* share sheet dismissed */ }
   }
 
+  // One line a reader can take in at a glance: size, headcount, age, ownership, locations, sale signals.
+  const employeesNow = fromPlan && latest ? latest.employees : b.jobs_reported;
+  const glance = b.est_method === "branch" ? [] : [
+    b.est_revenue_mid != null && `~${money(b.est_revenue_mid)} revenue`,
+    employeesNow ? `${Number(employeesNow).toLocaleString()} employees` : null,
+    founded && `founded ${founded}`,
+    src.website_profile?.family_owned && "family-owned",
+    b.locations?.length ? `${b.locations.length + 1} locations` : null,
+    Number(b.sell_score) >= 40 && "likely to sell",
+  ].filter(Boolean) as string[];
+
   return (
     <div className={compact ? "profile" : "profile full"}>
       <div className="p-head">
@@ -111,6 +122,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             {[b.address, b.city, `OK ${b.zip}`].filter(Boolean).join(", ")}
             {approximate && <span className="muted" title="We couldn't map this address, so the pin is placed in its ZIP code"> · approximate map location</span>}
           </div>
+          {glance.length > 0 && <div className="glance">{glance.join(" · ")}</div>}
           <div className="badges">
             {industryLabel(b.naics)
               ? <a className="badge info" href={`/oklahoma/${slug(industryLabel(b.naics)!)}${b.city ? `/${slug(b.city)}` : ""}`}>{industryLabel(b.naics)}</a>
@@ -209,7 +221,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               </div>
             </div>
           )}
-          <p className="as-of">Based on {basis}</p>
+          <p className="as-of">Based on {basis}. <Link href={`/correct?business=${b.id}`}>Own this business? Correct these figures</Link></p>
           <div className="tiles">
             <div className="tile">
               <div className="k">Est. revenue</div>

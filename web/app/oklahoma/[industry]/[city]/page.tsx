@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Footer from "@/components/Footer";
 import Landing from "@/components/Landing";
-import { cityBySlug, industryBySlug, slug, summary, top } from "@/lib/landing";
+import { cityBySlug, deals, industryBySlug, sellers, slug, summary, top } from "@/lib/landing";
 import { money } from "@/lib/format";
 
 export const revalidate = 86400;
@@ -35,6 +35,6 @@ export default async function CityPage({ params }: P) {
     if (ind) redirect(`/oklahoma/${slug(ind.label)}`);
     notFound();
   }
-  const [s, rows] = await Promise.all([summary(r.ind, r.city), top(r.ind, r.city)]);
-  return (<><Landing ind={r.ind} city={r.city} s={s} rows={rows} /><Footer /></>);
+  const [s, rows, sell, recent] = await Promise.all([summary(r.ind, r.city), top(r.ind, r.city), sellers(r.ind, r.city), deals(r.ind, r.city)]);
+  return (<><Landing ind={r.ind} city={r.city} s={s} rows={rows} sellers={sell} deals={recent} /><Footer /></>);
 }

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
 import Landing from "@/components/Landing";
-import { cities, industryBySlug, MIN_LISTED, slug, summary, top } from "@/lib/landing";
+import { cities, deals, industryBySlug, MIN_LISTED, sellers, slug, summary, top } from "@/lib/landing";
 import { money } from "@/lib/format";
 
 export const revalidate = 86400;
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ industry:
 export default async function IndustryPage({ params }: { params: Promise<{ industry: string }> }) {
   const ind = industryBySlug((await params).industry);
   if (!ind) notFound();
-  const [s, rows, list] = await Promise.all([summary(ind), top(ind), cities(ind)]);
+  const [s, rows, list, sell, recent] = await Promise.all([summary(ind), top(ind), cities(ind), sellers(ind), deals(ind)]);
   if (s.count < MIN_LISTED) notFound();
-  return (<><Landing ind={ind} s={s} rows={rows} cities={list} /><Footer /></>);
+  return (<><Landing ind={ind} s={s} rows={rows} cities={list} sellers={sell} deals={recent} /><Footer /></>);
 }

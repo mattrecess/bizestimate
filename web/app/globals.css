@@ -514,3 +514,23 @@ header.top nav { align-items: center; }
   .signin-btn { padding: 5px 10px; gap: 6px; }
 }
 .account-menu button.danger { color: var(--muted) !important; font-size: 12px; }
+
+/* Likely-to-sell list */
+.sell-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.sell-filters select, .sell-filters input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel); color: var(--text); font: inherit; min-width: 0; }
+.sell-filters input { width: 140px; }
+.signals { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.signals li { margin: 1px 0; }
+.sell-table td { vertical-align: top; }
+
+/* Market reports */
+.bands { display: grid; gap: 6px; }
+.band { display: grid; grid-template-columns: 90px 1fr 60px; align-items: center; gap: 10px; font-size: 14px; }
+.band-bar { height: 12px; background: var(--panel-2); border-radius: 6px; overflow: hidden; }
+.band-bar span { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
+.band-n { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.report-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.contact-form .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.contact-form .check input { width: auto; }
+.glance { margin-top: 4px; font-weight: 600; font-size: 14px; color: var(--text); }

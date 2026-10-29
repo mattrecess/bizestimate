@@ -315,3 +315,20 @@ create table if not exists user_saved_searches (
   created_at timestamptz not null default now(),
   primary key (user_id, query)
 );
+
+-- Figures sent in by owners through /correct, reviewed in /admin/corrections before they're used.
+create table if not exists estimate_corrections (
+  id bigserial primary key,
+  biz_key text not null,
+  relationship text not null,
+  name text,
+  email text not null,
+  revenue numeric,
+  ebitda numeric,
+  employees int,
+  year int,
+  show_publicly boolean not null default false,
+  message text,
+  status text not null default 'new',   -- new, applied, dismissed
+  created_at timestamptz not null default now()
+);
