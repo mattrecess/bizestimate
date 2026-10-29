@@ -1,0 +1,28 @@
+name: DB probe
+# Times the live list and map requests and prints the database's query plans (read-only).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/db_probe.py", ".github/workflows/db-probe.yml"]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install "psycopg[binary]"
+      - run: python tools/db_probe.py 2>&1 | tee "$RUNNER_TEMP/db.log"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b db-logs
+          cp "$RUNNER_TEMP/db.log" db.log 2>/dev/null || echo none > db.log
+          git add db.log && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" db-logs
