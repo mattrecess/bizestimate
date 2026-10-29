@@ -213,6 +213,13 @@ def main():
         except psycopg.Error as e:
             print(f"Sell signals failed (non-fatal): {e}", flush=True)
         cur.execute("analyze businesses; analyze ppp_loans;")
+    # After the load commits: vacuum refreshes the visibility map, so map-area counts can be answered from
+    # businesses_geo_cover_idx alone instead of reading every row (7s -> well under 1s for Oklahoma City).
+    try:
+        with psycopg.connect(database_url(), autocommit=True) as vac:
+            vac.execute("vacuum (analyze) businesses")
+    except psycopg.Error as e:
+        print(f"Vacuum after load failed (non-fatal): {e}", flush=True)
 
 
 if __name__ == "__main__":

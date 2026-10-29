@@ -74,6 +74,8 @@ create index if not exists businesses_name_norm_trgm_idx on businesses using gin
 create index if not exists businesses_city_lower_idx on businesses (lower(city));
 create index if not exists businesses_sector_idx on businesses (left(naics, 2));
 create index if not exists businesses_latlon_idx on businesses (lat, lon);
+-- Covers the map-area count (lat/lon plus the always-on filters), so it can skip reading rows.
+create index if not exists businesses_geo_cover_idx on businesses (lat, lon) include (is_individual, est_method, est_revenue_mid);
 create index if not exists businesses_rev_idx on businesses (est_revenue_mid desc);
 -- Matches the list's "order by est_revenue_mid desc nulls last", so the top 50 come off the index.
 create index if not exists businesses_rev_nl_idx on businesses (est_revenue_mid desc nulls last);

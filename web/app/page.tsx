@@ -39,7 +39,7 @@ export default function Home() {
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
   // Continuous scroll: how far the list has been extended, for which search (a new search starts over).
   const [more, setMore] = useState({ key: "", offset: 0 });
-  const [data, setData] = useState<{ key: string; total: number; results: Biz[]; q: string; industry?: string | null } | null>(null);
+  const [data, setData] = useState<{ key: string; total: number; capped?: boolean; results: Biz[]; q: string; industry?: string | null } | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [pinsLoading, setPinsLoading] = useState(true);
@@ -194,7 +194,7 @@ export default function Home() {
           } else {
             // Next batch: append to the same search's list.
             setData((prev) => (prev && prev.key === listKey
-              ? { ...prev, total: d.total, results: [...prev.results, ...d.results] } : prev));
+              ? { ...prev, total: d.total, capped: d.capped, results: [...prev.results, ...d.results] } : prev));
           }
           setLoading(false);
         })
@@ -245,6 +245,8 @@ export default function Home() {
 
   const anyFilter = debouncedQ || sector || city || minRev || maxRev;
   const total = data?.total ?? 0;
+  // Past 5,000 the server stops counting (it took seconds for a whole city): "5,000+".
+  const totalText = `${total.toLocaleString()}${data?.capped ? "+" : ""}`;
 
   return (
     <>
@@ -252,7 +254,7 @@ export default function Home() {
         {/* Suggestions are the top of the list query, so typing costs one request, not two. */}
         <SearchBox value={q} onChange={setQ} onPick={openBusiness} busy={updating && !!q}
           suggestions={data && data.q
-            ? { q: data.q, items: data.results.slice(0, 6), industry: data.industry, total: data.total } : null} />
+            ? { q: data.q, items: data.results.slice(0, 6), industry: data.industry, total: data.total, capped: data.capped } : null} />
         <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
       </div>
       <div className="explorer" data-view={view}>
@@ -294,7 +296,7 @@ export default function Home() {
               <span className="count" aria-live="polite">
                 {failed ? "Couldn't load businesses"
                   : updating ? <><span className="spinner" aria-hidden /> {q ? "Searching…" : "Updating…"}</>
-                  : data ? `${total.toLocaleString()} ${total === 1 ? "business" : "businesses"}` : <><span className="spinner" aria-hidden /> Loading businesses…</>}
+                  : data ? `${totalText} ${total === 1 ? "business" : "businesses"}` : <><span className="spinner" aria-hidden /> Loading businesses…</>}
               </span>
               <span className="sub">
                 {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : "in map view"} · estimates
@@ -340,7 +342,9 @@ export default function Home() {
                 {failed ? (
                   <button className="btn" onClick={() => setAttempt((a) => a + 1)}>Couldn&apos;t load more. Retry</button>
                 ) : data.results.length < total ? (
-                  <span><span className="spinner" aria-hidden /> Loading more… ({data.results.length.toLocaleString()} of {total.toLocaleString()})</span>
+                  <span><span className="spinner" aria-hidden /> Loading more… ({data.results.length.toLocaleString()} of {totalText})</span>
+                ) : data.capped ? (
+                  <span>First {total.toLocaleString()} shown. Zoom in or add a filter to see the rest.</span>
                 ) : total > PAGE ? (
                   <span>All {total.toLocaleString()} shown</span>
                 ) : null}

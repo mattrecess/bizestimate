@@ -12,7 +12,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
   busy?: boolean;   // a search is on its way: the magnifier becomes a spinner
   onChange: (q: string) => void;
   onPick: (id: number) => void;
-  suggestions: { q: string; items: Suggestion[]; industry?: string | null; total?: number } | null;
+  suggestions: { q: string; items: Suggestion[]; industry?: string | null; total?: number; capped?: boolean } | null;
 }) {
   const [text, setText] = useState(value);
   const [open, setOpen] = useState(false);
@@ -64,7 +64,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
             <li>
               <button className="s-industry" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen(false)}>
                 <span className="s-name"><Icon name="search" size={14} />{industry.startsWith("NAICS") ? `All businesses in ${industry}` : `All ${industry.toLowerCase()} businesses`}</span>
-                <span className="s-meta">{current?.total?.toLocaleString()} found</span>
+                <span className="s-meta">{current?.total?.toLocaleString()}{current?.capped ? "+" : ""} found</span>
               </button>
             </li>
           )}

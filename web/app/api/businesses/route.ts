@@ -15,6 +15,8 @@ const SORTS = {
   sell_desc: sql`sell_score desc nulls last, est_revenue_mid desc nulls last, id`,
 };
 
+const COUNT_CAP = 5000;
+
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
   const f = parseFilters(p);
@@ -41,7 +43,8 @@ export async function GET(req: NextRequest) {
       -- Location counts per row on the page only, via businesses_parent_idx (not a count over every listing).
       from businesses
       where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
-    sql`select count(*)::int as count from businesses where ${w}`,
+    // Counting every business in a city-sized view took seconds; past COUNT_CAP the list says "5,000+".
+    sql`select count(*)::int as count from (select 1 from businesses where ${w} limit ${COUNT_CAP + 1}) t`,
   ]);
   // Let Vercel's CDN answer repeat requests (the default view especially) without the database.
   // Tell the page when a search reads as an industry ("janitorial", "janitorial tulsa"), so it can
@@ -51,12 +54,12 @@ export async function GET(req: NextRequest) {
     const [b] = await sql`select label from industry_benchmarks where ${code.code} like naics_prefix || '%'
                           order by length(naics_prefix) desc limit 1`.catch(() => []);
     const label = industryLabel(code.code) ?? b?.label;
-    return NextResponse.json({ total: count, results: rows, industry: `NAICS ${code.code}${label ? ` · ${label}` : ""}` },
+    return NextResponse.json({ total: Math.min(count, COUNT_CAP), capped: count > COUNT_CAP, results: rows, industry: `NAICS ${code.code}${label ? ` · ${label}` : ""}` },
       { headers: { "Cache-Control": CACHE } });
   }
   const m = f.q ? matchIndustry(f.q) : null;
   const industry = !m ? null
     : !m.rest || (await sql`select 1 from businesses where lower(city) = ${m.rest} limit 1`).length
       ? m.industry.label : null;
-  return NextResponse.json({ total: count, results: rows, industry }, { headers: { "Cache-Control": CACHE } });
+  return NextResponse.json({ total: Math.min(count, COUNT_CAP), capped: count > COUNT_CAP, results: rows, industry }, { headers: { "Cache-Control": CACHE } });
 }
