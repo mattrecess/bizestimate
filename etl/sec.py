@@ -111,8 +111,12 @@ def main():
         matches = match_entities(entities, biz)
         # A public company's name is unique enough on its own: when the address doesn't match (headquarters
         # vs the listed site), an exact name match to one listed business in the state will do.
+        cur.execute("select biz_key from businesses where state = %s and est_method = 'branch'", (state,))
+        branches = {k for (k,) in cur.fetchall()}
         by_name = {}
         for b in biz:
+            if b["biz_key"] in branches:   # a company's other locations: match the company itself
+                continue
             by_name.setdefault(full_name(b["name"]), []).append(b)
         for cik, e in entities.items():
             if cik in matches:
