@@ -109,6 +109,9 @@ def main():
         with cur.copy(f"copy stage_biz ({', '.join(BIZ_COLS)}) from stdin") as cp:
             for r in rows(os.path.join(DATA_DIR, "businesses.csv"), BIZ_COLS):
                 cp.write_row(r)
+        # Calibration updates staged rows one by one: without this index each update scanned the whole
+        # table (180k x 180k rows), which kept a load running for hours and starved the site.
+        cur.execute("create index on stage_biz (biz_key)")
         # Businesses pinned at their own geocoded street address are listed as is. Companies whose
         # address the Census couldn't match are listed at their ZIP (a jittered point, shown as an
         # approximate location). Sole proprietors are never listed.
