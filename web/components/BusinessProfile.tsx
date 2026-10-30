@@ -12,6 +12,7 @@ import { CustomersSuppliers, WhatTheyDo } from "./Offering";
 import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
 import { estimateValue } from "@/lib/valuation";
+import { displayName } from "@/lib/seo";
 import { industryLabel, slug } from "@/lib/industries";
 import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
@@ -155,13 +156,15 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
     }
     if (value) mathRows.push({ label: `× ${value.multiple} sale multiple = value`, value: money(value.mid), kind: "value" });
   }
-  const kicker = [industryLabel(b.naics) ?? b.industry, b.city ? `${b.city}, OK` : null].filter(Boolean).join(" · ");
-  const subline = [
-    [b.address, b.city].filter(Boolean).join(", ") || null,
-    b.locations?.length ? `${b.locations.length + 1} locations` : null,
-    src.website_profile?.family_owned ? `Family-owned${src.website_profile.generation ? `, ${ordinal(src.website_profile.generation)} generation` : ""}` : null,
-    founded ? `Since ${founded}` : null,
-  ].filter(Boolean).join(" · ");
+  const industryText = industryLabel(b.naics) ?? b.industry;
+  // Quick facts under the name, each with its icon.
+  const meta: [string, string, string?][] = [
+    ["pin", [b.address, b.city].filter(Boolean).join(", ") + (b.city ? ", OK" : ""),
+      approximate ? "We couldn't map this address, so the map pin is placed in its ZIP code" : undefined],
+    ...(b.locations?.length ? [["map", `${b.locations.length + 1} locations`] as [string, string]] : []),
+    ...(founded ? [["calendar", `Since ${founded}`] as [string, string]] : []),
+    ...(src.website_profile?.family_owned ? [["user", `Family-owned${src.website_profile.generation ? `, ${ordinal(src.website_profile.generation)} generation` : ""}`] as [string, string]] : []),
+  ];
 
   return (
     <div className={compact ? "profile" : "profile full"}>
@@ -170,16 +173,22 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <RadarButton id={String(b.id)} name={b.name} city={b.city} />
           <button className="btn" onClick={share}><Icon name="share" size={15} />{copied ? "Link copied" : "Share"}</button>
         </div>
-        <div className="bp-kicker">
-          {industryLabel(b.naics)
-            ? <a href={`/oklahoma/${slug(industryLabel(b.naics)!)}${b.city ? `/${slug(b.city)}` : ""}`}>{kicker}</a>
-            : kicker}
+        <div className="bp-title">
+          <div className="ind-icon" aria-hidden><Icon name={industryIcon(b.naics)} size={22} /></div>
+          <div className="bp-title-text">
+            <h1>{displayName(b.name)}</h1>
+            {industryText && <div className="bp-industry">
+              {industryLabel(b.naics)
+                ? <a href={`/oklahoma/${slug(industryLabel(b.naics)!)}${b.city ? `/${slug(b.city)}` : ""}`}>{industryText}</a>
+                : industryText}
+            </div>}
+          </div>
         </div>
-        <h1>{b.name}</h1>
-        <div className="bp-sub">
-          {subline}
-          {approximate && <span title="We couldn't map this address, so the pin is placed in its ZIP code"> · approximate map location</span>}
-        </div>
+        <ul className="bp-meta">
+          {meta.filter(([, text]) => text).map(([icon, text, title]) => (
+            <li key={icon} title={title}><Icon name={icon} size={14} />{text}{title ? " (approx.)" : ""}</li>
+          ))}
+        </ul>
         {(ownershipChange || src.sec || src.contracts || b.is_nonprofit) && (
           <div className="badges">
             {ownershipChange && <span className="badge warn">New owners FY{ownershipChange}</span>}
