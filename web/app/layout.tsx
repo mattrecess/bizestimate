@@ -45,7 +45,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav>
             <Link href="/likely-to-sell" className="hide-sm">Likely to sell</Link>
             <Link href="/radar" className="nav-radar"><Icon name="radar" size={16} />My Radar</Link>
-            <Link href="/terms" className="hide-sm">Terms</Link>
             <AccountMenu />
           </nav>
         </header>

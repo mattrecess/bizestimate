@@ -11,7 +11,11 @@ type Row = { code: string; title: string; count: number; legacy?: boolean };
 
 const MAX_SEARCH_ROWS = 400;
 
-export default function NaicsPicker({ selected, onChange }: { selected: string[]; onChange: (codes: string[]) => void }) {
+// With `search` given, the caller owns the search box (the Industry panel's) and this shows matching
+// codes, or the full tree when the search is empty and `browse` is on.
+export default function NaicsPicker({ selected, onChange, search, browse = true }: {
+  selected: string[]; onChange: (codes: string[]) => void; search?: string; browse?: boolean;
+}) {
   const [titles, setTitles] = useState<Record<string, string> | null>(null);
   const [inUse, setInUse] = useState<{ code: string; label: string; count: number }[]>([]);
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -79,12 +83,13 @@ export default function NaicsPicker({ selected, onChange }: { selected: string[]
     return out;
   }
 
-  const q = query.trim().toLowerCase();
+  const q = (search ?? query).trim().toLowerCase();
+  if (search !== undefined && !q && !browse) return null;
   const matches = q ? rows.filter((r) => r.code.startsWith(q) || r.title.toLowerCase().includes(q)).slice(0, MAX_SEARCH_ROWS) : [];
   return (
     <>
-      <input className="filter-input" placeholder="Search all NAICS codes: 2382, janitorial…" value={query} autoFocus={!isTouch()} enterKeyHint="done" onKeyDown={blurOnEnter}
-        onChange={(e) => setQuery(e.target.value)} />
+      {search === undefined && <input className="filter-input" placeholder="Search all NAICS codes: 2382, janitorial…" value={query} autoFocus={!isTouch()} enterKeyHint="done" onKeyDown={blurOnEnter}
+        onChange={(e) => setQuery(e.target.value)} />}
       <div className="check-list naics-tree">
         {!titles && <div className="naics-row">Loading…</div>}
         {q

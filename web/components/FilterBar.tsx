@@ -1,28 +1,25 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { SECTORS } from "@/lib/sectors";
-import Icon from "./Icon";
-import NaicsPicker from "./NaicsPicker";
-import MoreFilters from "./MoreFilters";
+import { activeChips, industryName, type FilterState } from "@/lib/filters";
 import { moreCount } from "@/lib/more-filters";
-import { blurOnEnter, isTouch } from "@/lib/touch";
+import FilterPanel from "./FilterPanel";
+import Icon from "./Icon";
+import IndustryPicker from "./IndustryPicker";
 
-export type FilterState = { sector: string; city: string; minRev: string; maxRev: string; sort: string; naics: string; lender: string; more: string };
+export type { FilterState };
 
-const SORTS: [string, string][] = [
-  ["value_desc", "Value: high to low"], ["revenue_desc", "Revenue: high to low"], ["revenue_asc", "Revenue: low to high"],
-  ["ebitda_desc", "EBITDA: high to low"], ["jobs_desc", "Most employees"], ["sell_desc", "Likely to sell"], ["name", "Name A–Z"],
-];
+const SIZE_KEYS = ["min_value", "max_value", "min_ebitda", "max_ebitda", "min_emp", "max_emp"];
+const titleCase = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
-// Pill buttons that open small panels, Zillow-style, instead of a row of dropdowns.
+// The filters: Industry, Size, a one-tap "Likely to sell", and More, with whatever is set shown
+// underneath as chips to remove. Phones get one "Filters" button that opens every section in a sheet.
 export default function FilterBar({ value, onChange, cities }: {
   value: FilterState;
   onChange: (next: Partial<FilterState>) => void;
   cities: { city: string; count: number }[];
 }) {
-  const [open, setOpen] = useState<"" | "industry" | "city" | "naics" | "more">("");
-  const [cityQuery, setCityQuery] = useState("");
-  const naicsSel = value.naics ? value.naics.split(",") : [];
+  const [open, setOpen] = useState<"" | "industry" | "size" | "more" | "all">("");
+  const [lenderNames, setLenderNames] = useState<Record<string, string>>({});
   const bar = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,81 +29,87 @@ export default function FilterBar({ value, onChange, cities }: {
     document.addEventListener("keydown", esc);
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
   }, []);
+  useEffect(() => {
+    if (!value.lender || Object.keys(lenderNames).length) return;
+    fetch("/api/lenders").then((r) => r.json())
+      .then((l: { key: string; name: string }[]) => setLenderNames(Object.fromEntries(l.map((x) => [x.key, x.name])))).catch(() => {});
+  }, [value.lender, lenderNames]);
 
   const toggle = (k: typeof open) => setOpen(open === k ? "" : k);
-  const anyFilter = value.sector || value.city || value.minRev || value.maxRev || value.naics || value.lender || value.more;
-  // Revenue and lender live in the More panel too, so they count toward its badge.
-  const moreN = moreCount(value.more) + (value.minRev || value.maxRev ? 1 : 0) + (value.lender ? 1 : 0);
-  const naicsLabel = !naicsSel.length ? "NAICS" : naicsSel.length === 1 ? `NAICS ${naicsSel[0]}` : `NAICS (${naicsSel.length})`;
-  const shownCities = cities.filter((c) => c.city.toLowerCase().includes(cityQuery.toLowerCase())).slice(0, 80);
+  const more = new URLSearchParams(value.more);
+  const sizeN = (value.minRev || value.maxRev ? 1 : 0) + [["min_value", "max_value"], ["min_ebitda", "max_ebitda"], ["min_emp", "max_emp"]]
+    .filter(([a, b]) => more.get(a) || more.get(b)).length;
+  const moreOnly = new URLSearchParams(value.more);
+  SIZE_KEYS.forEach((k) => moreOnly.delete(k));
+  const moreN = moreCount(moreOnly.toString()) + (value.lender ? 1 : 0) + (value.city ? 1 : 0);
+  const chips = activeChips(value, (k) => lenderNames[k] ?? titleCase(k));
+  const industryLabel = value.sector || industryName(value.naics) || "Industry";
+  const selling = !!more.get("sell");
+  const setSell = () => {
+    const n = new URLSearchParams(value.more);
+    if (selling) n.delete("sell"); else n.set("sell", "40");
+    onChange({ more: n.toString() });
+  };
+  const clearAll = () => onChange({ sector: "", city: "", minRev: "", maxRev: "", naics: "", lender: "", more: "" });
+  const panel = (sections: ("industry" | "size" | "more")[]) =>
+    <FilterPanel state={value} sections={sections} cities={cities} onApply={onChange} onClose={() => setOpen("")} />;
 
   return (
-    <div className="pills" ref={bar}>
-      {/* Phones: panels open as a bottom sheet over a dimmed page (see globals.css); tapping outside closes. */}
-      {open && <div className="sheet-backdrop" onClick={() => setOpen("")} aria-hidden />}
-      <div className="pill-wrap">
-        <button className={`pill ${value.sector ? "active" : ""}`} aria-expanded={open === "industry"} onClick={() => toggle("industry")}>
-          {value.sector || "Industry"}<Icon name="chevron" size={14} className="chev" />
-        </button>
-        {open === "industry" && (
-          <div className="popover">
-            <h4>Industry</h4>
-            <button className={`option ${!value.sector ? "selected" : ""}`} onClick={() => { onChange({ sector: "" }); setOpen(""); }}>All industries</button>
-            {SECTORS.map((s) => (
-              <button key={s.label} className={`option ${value.sector === s.label ? "selected" : ""}`}
-                onClick={() => { onChange({ sector: s.label }); setOpen(""); }}>{s.label}</button>
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="filters" ref={bar}>
+      <div className="pills">
+        {/* Phones: panels open as a bottom sheet over a dimmed page (see globals.css); tapping outside closes. */}
+        {open && <div className="sheet-backdrop" onClick={() => setOpen("")} aria-hidden />}
 
-      <div className="pill-wrap">
-        <button className={`pill ${value.city ? "active" : ""}`} aria-expanded={open === "city"} onClick={() => toggle("city")}>
-          {value.city || "City"}<Icon name="chevron" size={14} className="chev" />
-        </button>
-        {open === "city" && (
-          <div className="popover">
-            <input className="filter-input" placeholder="Find a city" value={cityQuery} autoFocus={!isTouch()} enterKeyHint="done" onKeyDown={blurOnEnter} onChange={(e) => setCityQuery(e.target.value)} />
-            <button className={`option ${!value.city ? "selected" : ""}`} onClick={() => { onChange({ city: "" }); setOpen(""); }}>All cities</button>
-            {shownCities.map((c) => (
-              <button key={c.city} className={`option ${value.city === c.city ? "selected" : ""}`}
-                onClick={() => { onChange({ city: c.city }); setOpen(""); }}>
-                {c.city}<span className="count">{c.count.toLocaleString()}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+        <div className="pill-wrap show-phone">
+          <button className={`pill ${chips.length ? "active" : ""}`} aria-expanded={open === "all"} onClick={() => toggle("all")}>
+            <Icon name="sliders" size={15} />Filters{chips.length ? <span className="pill-n">{chips.length}</span> : null}
+          </button>
+          {open === "all" && panel(["industry", "size", "more"])}
+        </div>
 
-      <div className="pill-wrap">
-        <button className={`pill ${naicsSel.length ? "active" : ""}`} aria-expanded={open === "naics"} onClick={() => toggle("naics")}>
-          {naicsLabel}<Icon name="chevron" size={14} className="chev" />
-        </button>
-        {open === "naics" && (
-          <div className="popover wide naics-pop">
-            <NaicsPicker selected={naicsSel} onChange={(codes) => onChange({ naics: codes.join(",") })} />
-            <div className="popover-actions">
-              <button className="link-btn" onClick={() => onChange({ naics: "" })}>Clear{naicsSel.length ? ` (${naicsSel.length})` : ""}</button>
-              <button className="link-btn" onClick={() => setOpen("")}>Done</button>
+        <div className="pill-wrap hide-phone">
+          <button className={`pill ${value.sector || value.naics ? "active" : ""}`} aria-expanded={open === "industry"} onClick={() => toggle("industry")}>
+            <span className="pill-text">{industryLabel}</span><Icon name="chevron" size={14} className="chev" />
+          </button>
+          {open === "industry" && (
+            <div className="popover wide industry-pop">
+              <IndustryPicker sector={value.sector} naics={value.naics} onChange={(n, done) => { onChange(n); if (done) setOpen(""); }} />
+              <div className="popover-actions">
+                <button type="button" className="link-btn" onClick={() => onChange({ sector: "", naics: "" })}>Clear</button>
+                <button type="button" className="btn primary" onClick={() => setOpen("")}>Done</button>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      <div className="pill-wrap">
-        <button className={`pill ${moreN ? "active" : ""}`} aria-expanded={open === "more"} onClick={() => toggle("more")}>
-          {moreN ? `More (${moreN})` : "More"}<Icon name="chevron" size={14} className="chev" />
+        <div className="pill-wrap hide-phone">
+          <button className={`pill ${sizeN ? "active" : ""}`} aria-expanded={open === "size"} onClick={() => toggle("size")}>
+            Size{sizeN ? <span className="pill-n">{sizeN}</span> : null}<Icon name="chevron" size={14} className="chev" />
+          </button>
+          {open === "size" && panel(["size"])}
+        </div>
+
+        <button className={`pill sell-pill ${selling ? "on" : ""}`} aria-pressed={selling} onClick={setSell}>
+          <Icon name="flame" size={15} />Likely to sell
         </button>
-        {open === "more" && <MoreFilters value={value.more} revenue={{ minRev: value.minRev, maxRev: value.maxRev }} lender={value.lender}
-          onApply={(next) => onChange(next)} onClose={() => setOpen("")} />}
+
+        <div className="pill-wrap hide-phone">
+          <button className={`pill ${moreN ? "active" : ""}`} aria-expanded={open === "more"} onClick={() => toggle("more")}>
+            More{moreN ? <span className="pill-n">{moreN}</span> : null}<Icon name="chevron" size={14} className="chev" />
+          </button>
+          {open === "more" && panel(["more"])}
+        </div>
       </div>
 
-      <select className="sort-select" aria-label="Sort" value={value.sort} onChange={(e) => onChange({ sort: e.target.value })}>
-        {SORTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-      </select>
-
-      {anyFilter && (
-        <button className="clear-filters" onClick={() => onChange({ sector: "", city: "", minRev: "", maxRev: "", naics: "", lender: "", more: "" })}>Clear filters</button>
+      {chips.length > 0 && (
+        <div className="active-chips" aria-label="Filters in use">
+          {chips.map((c) => (
+            <button type="button" key={c.key} className="active-chip" onClick={() => onChange(c.clear)} aria-label={`Remove filter: ${c.label}`}>
+              {c.label}<Icon name="x" size={13} />
+            </button>
+          ))}
+          {chips.length > 1 && <button type="button" className="link-btn clear-all" onClick={clearAll}>Clear all</button>}
+        </div>
       )}
     </div>
   );

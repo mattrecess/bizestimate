@@ -107,17 +107,11 @@ header.top nav a:hover { color: var(--text); text-decoration: none; }
 .chip.selected { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .popover-actions { display: flex; justify-content: space-between; padding: 6px 4px 2px; border-top: 1px solid var(--border); margin-top: 4px; }
 .link-btn { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 4px 6px; }
-.clear-filters { border: 0; background: none; color: var(--muted); font-weight: 550; padding: 0 6px; }
-.clear-filters:hover { color: var(--text); }
-.sort-select {
-  height: 36px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text);
-  font: inherit; font-weight: 550; padding: 0 30px 0 12px; appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%235b6b80' stroke-width='2'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 11px center;
-}
 
 /* ---------- explorer layout ---------- */
-.explorer { display: grid; grid-template-columns: minmax(0, 1fr) 460px; height: calc(100dvh - 56px - 61px); }
+/* Header 56px; the toolbar takes what it needs (it grows a row when filters are in use) and the map and list fill the rest. */
+.explorer-page { height: calc(100dvh - 56px); display: flex; flex-direction: column; }
+.explorer { display: grid; grid-template-columns: minmax(0, 1fr) 460px; flex: 1; min-height: 0; }
 .map { position: relative; min-height: 300px; background: var(--panel-2); }
 .panel { overflow-y: auto; border-left: 1px solid var(--border); background: var(--panel); position: relative; }
 .list-head {
@@ -239,7 +233,7 @@ footer.foot nav { display: flex; gap: 16px; }
   .pills > * { flex-shrink: 0; }
   .show-sm { display: inline; }
   .popover { position: fixed; left: 12px; right: 12px; top: auto; bottom: 12px; max-height: 60vh; }
-  .explorer { grid-template-columns: 1fr; height: calc(100dvh - 56px - 105px); position: relative; }
+  .explorer { grid-template-columns: 1fr; position: relative; }
   .explorer .map, .explorer .panel { grid-area: 1 / 1; }
   .explorer[data-view="map"] .panel { visibility: hidden; }
   .explorer[data-view="list"] .map, .explorer[data-view="list"] .map * { visibility: hidden !important; }
@@ -420,11 +414,6 @@ table.mini td { padding: 3px 4px; }
 .range-boxes select { font: inherit; font-size: 14px; color: var(--text); background: var(--panel-2); border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm); padding: 8px 10px; }
 .range-boxes .dash { padding-bottom: 9px; color: var(--muted); }
-.popover.more-pop { width: 440px; right: 0; left: auto; }
-.more-body { max-height: min(62vh, 560px); overflow-y: auto; padding: 0 4px; }
-.more-body h4 { margin-top: 14px; }
-.more-body .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 0 6px; }
-.more-body .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
 .pipeline-box { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius); border: 1px dashed var(--accent); background: var(--accent-soft); }
 .pipeline-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .pipeline-head a { font-size: 13px; }
@@ -439,15 +428,13 @@ a.chip { text-decoration: none; display: inline-flex; align-items: center; }
 .sheet-backdrop { display: none; }
 @media (max-width: 860px) {
   .sheet-backdrop { display: block; position: fixed; inset: 0; background: rgba(15, 23, 42, .45); z-index: 900; }
-  .pills .popover, .pills .popover.wide, .pills .popover.more-pop, .pills .popover.naics-pop {
+  .pills .popover, .pills .popover.wide, .pills .popover.filter-panel, .pills .popover.industry-pop {
     position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: 100%; max-width: none; max-height: 82dvh; overflow-y: auto;
     border-radius: 18px 18px 0 0; z-index: 1000; padding: 18px 16px calc(14px + env(safe-area-inset-bottom));
     box-shadow: 0 -8px 30px rgba(0, 0, 0, .2);
   }
   .pills .popover::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 4px; background: var(--border-strong); margin: -8px auto 12px; }
   .pills .popover .check-list, .pills .naics-tree { max-height: 50dvh; }
-  .more-body { max-height: 60dvh; }
-  .more-body .checks { grid-template-columns: 1fr; }
 }
 /* An open sheet lifts the toolbar above the header and the map/list button, so the dimmed backdrop covers them. */
 @media (max-width: 860px) { .toolbar:has(.sheet-backdrop) { z-index: 50; } }
@@ -654,4 +641,57 @@ tr.ref-own td { background: #eef4ff; }
 .signin-close:hover { color: var(--text); background: var(--avg-soft); }
 .signin-google { width: 100%; justify-content: center; height: 44px; font-size: 15px; gap: 10px; }
 .signin-dialog .signin-soon { margin: 0; font-weight: 600; color: var(--text); }
-.more-body .lender-list { max-height: 220px; }
+
+/* ---------- filter bar ---------- */
+.filters { display: contents; }
+.pill { gap: 7px; }
+.pill .pill-text { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.pill-n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--on-accent);
+  font-size: 12px; font-weight: 700; display: inline-grid; place-items: center; }
+.sell-pill svg { color: var(--warn); }
+.sell-pill.on { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.show-phone { display: none; }
+.active-chips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.active-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px 0 12px; border-radius: 999px;
+  border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.active-chip:hover { background: var(--accent); color: var(--on-accent); }
+.active-chips .clear-all { font-size: 13px; }
+.popover.industry-pop { width: 460px; max-height: none; display: flex; flex-direction: column; }
+.industry-picker { max-height: min(62vh, 520px); overflow-y: auto; padding: 0 2px; }
+.industry-picker h4 { margin-top: 12px; }
+.ind-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
+.ind-grid .option { font-size: 13.5px; padding: 6px 10px; }
+.browse-codes { display: inline-flex; align-items: center; gap: 4px; padding: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.browse-codes svg.closed { transform: rotate(-90deg); }
+.popover.filter-panel { width: 440px; max-height: none; display: flex; flex-direction: column; }
+.popover.filter-panel.more { right: 0; left: auto; }
+.panel-body { max-height: min(64vh, 580px); overflow-y: auto; padding: 0 4px; }
+.panel-body h3 { margin: 6px 6px 2px; font-size: 17px; }
+.panel-body section + section { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 10px; }
+.panel-body h4 { margin-top: 14px; }
+.panel-body .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 0 6px; }
+.panel-body .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.panel-body .lender-list { max-height: 220px; }
+.panel-select { width: calc(100% - 8px); margin: 0 4px; height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+  background: var(--panel-2); color: var(--text); font: inherit; padding: 0 8px; }
+.filter-panel .popover-actions .btn { height: 34px; }
+.sort-inline { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-weight: 600; margin-right: auto; }
+.sort-inline select { border: 0; background: none; color: var(--text); font: inherit; font-weight: 650; padding: 0 2px; cursor: pointer; }
+@media (max-width: 860px) {
+  .show-phone { display: block; }
+  .hide-phone { display: none; }
+  .active-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .active-chips::-webkit-scrollbar { display: none; }
+  .active-chip { flex-shrink: 0; }
+  .ind-grid, .panel-body .checks { grid-template-columns: 1fr; }
+  .pills .popover.filter-panel.all { top: 0; max-height: none; height: 100dvh; border-radius: 0; }
+  .pills .popover.filter-panel.all .panel-body { max-height: none; flex: 1; }
+  .pills .popover.filter-panel, .pills .popover.industry-pop { display: flex; flex-direction: column; }
+  .pills .popover .panel-body, .pills .popover .industry-picker { max-height: 70dvh; }
+}
+.panel-head { display: flex; justify-content: space-between; align-items: center; padding: 0 4px 6px; }
+.panel-head h2 { margin: 0; font-size: 20px; }
+.panel-head .signin-close { position: static; }
+.industry-picker .show-all { margin: 4px 4px 0; font-size: 13.5px; }
+.filter-panel.all .industry-picker { max-height: none; overflow: visible; }
+@media (max-width: 860px) { .pills .popover.filter-panel.all::before { display: none; } }

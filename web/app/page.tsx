@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import BusinessProfile, { type Profile } from "@/components/BusinessProfile";
 import BizCard, { type Biz } from "@/components/BizCard";
-import FilterBar, { type FilterState } from "@/components/FilterBar";
+import FilterBar from "@/components/FilterBar";
+import { SORTS, type FilterState } from "@/lib/filters";
 import { saveSearch } from "@/lib/saved";
 import { moreFrom } from "@/lib/more-filters";
 import Icon from "@/components/Icon";
@@ -262,7 +263,7 @@ export default function Home() {
   const totalText = exact == null ? "Counting" : total.toLocaleString();
 
   return (
-    <>
+    <div className="explorer-page">
       <div className="toolbar">
         {/* Suggestions are the top of the list query, so typing costs one request, not two. */}
         <SearchBox value={q} onChange={setQ} onPick={openBusiness} busy={updating && !!q}
@@ -314,6 +315,11 @@ export default function Home() {
                 {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : "in map view"} · estimates
               </span>
               <span className="list-actions">
+                <label className="sort-inline">Sort
+                  <select value={sort} onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value }))} aria-label="Sort">
+                    {SORTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                  </select>
+                </label>
                 <button className="link-btn" onClick={() => {
                   const label = [debouncedQ, sector, city].filter(Boolean).join(" · ") || "All businesses";
                   if (!saveSearch({ label, query: new URLSearchParams(filterParams + (sort !== "revenue_desc" ? `&sort=${sort}` : "")).toString() })) return;
@@ -365,6 +371,6 @@ export default function Home() {
           <Icon name={view === "map" ? "list" : "map"} size={16} />{view === "map" ? "List" : "Map"}
         </button>
       </div>
-    </>
+    </div>
   );
 }
