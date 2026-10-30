@@ -32,7 +32,6 @@ export default function Home() {
   const [savedNote, setSavedNote] = useState(false);
   // A shape drawn on the map ("lon,lat;lon,lat;..."): the search covers it instead of the map view.
   const [area, setArea] = useState("");
-  const areaPts = useMemo(() => (area ? area.split(";").map((p) => p.split(",").map(Number) as [number, number]) : null), [area]);
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [filters, setFilters] = useState<FilterState>(NO_FILTERS);
@@ -75,7 +74,7 @@ export default function Home() {
     });
     // A shared link to a business opens its profile (on phones, the list side rather than the map).
     if (u.get("id") && /^\d+$/.test(u.get("id")!)) { setSelectedId(Number(u.get("id"))); setView("list"); }
-    setArea(u.get("area") ?? "");
+    setArea("");   // drawing an area on the map was removed; old links with one show the plain view
     setReady(true);
     fetch("/api/cities").then((r) => r.json()).then(setCities).catch(() => {});
   }, []);
@@ -260,8 +259,7 @@ export default function Home() {
       <div className="explorer" data-view={view}>
         <div className="map">
           <Map points={points} loading={pinsLoading} onBoundsChange={setBbox} fitKey={fitKey} onSelect={openBusiness}
-            selected={selectedPoint} hoveredId={hovered} onHover={setHovered}
-            area={areaPts} onArea={(pts) => setArea(pts ? pts.map((p) => p.join(",")).join(";") : "")} />
+            selected={selectedPoint} hoveredId={hovered} onHover={setHovered} />
         </div>
         <div className="panel" ref={panel}>
           {selectedId && (
@@ -302,7 +300,6 @@ export default function Home() {
                 {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : "in map view"} · estimates
               </span>
               <span className="list-actions">
-                <a href={`/api/export?${params}&sort=${sort}`} download>Export CSV</a>
                 <button className="link-btn" onClick={() => {
                   const label = [debouncedQ, sector, city].filter(Boolean).join(" · ") || "All businesses";
                   saveSearch({ label, query: new URLSearchParams(filterParams + (sort !== "revenue_desc" ? `&sort=${sort}` : "")).toString() });

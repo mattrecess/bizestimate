@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Industry } from "@/lib/industries";
 import { slug, type Row, type Summary } from "@/lib/landing";
 import { money } from "@/lib/format";
+import { displayName } from "@/lib/seo";
 import { SITE_URL } from "@/lib/site";
 
 const businesses = (n: number) => `${n.toLocaleString()} ${n === 1 ? "business" : "businesses"}`;
@@ -21,6 +22,22 @@ export default function Landing({ ind, city, s, rows, cities, sellers = [], deal
   const where = city ? `${city}, Oklahoma` : "Oklahoma";
   const mapLink = `/?q=${encodeURIComponent(ind.terms[0])}${city ? `&city=${encodeURIComponent(city)}` : ""}`;
   const base = `${SITE_URL}/oklahoma/${slug(ind.label)}`;
+  // A short valuation guide in plain sentences, and the questions it answers (also as FAQ structured data).
+  const lower = ind.label.toLowerCase();
+  const marginPct = s.revenue_median && s.ebitda_median ? Math.round((Number(s.ebitda_median) / Number(s.revenue_median)) * 100) : null;
+  const biggest = rows[0];
+  const faq = [
+    { q: `What is a ${lower} business worth in ${where}?`,
+      a: `A typical ${lower} business in ${where} is worth about ${money(s.value_median)}${s.multiple_median ? `, roughly ${Number(s.multiple_median).toFixed(1)}× its yearly EBITDA` : ""}. Smaller owner-run companies sell for 2–3× EBITDA; larger ones with $5M+ of EBITDA often sell for 6× or more.` },
+    { q: `How much revenue does a ${lower} business make in ${where}?`,
+      a: `The typical one brings in about ${money(s.revenue_median)} a year${marginPct ? `, with an EBITDA margin around ${marginPct}%` : ""}. ${s.bands.over25 ? `${s.bands.over25.toLocaleString()} of them have more than $25M in revenue.` : ""}` },
+    { q: `How many ${lower} businesses are there in ${where}?`,
+      a: `SeeBITDA lists ${s.count.toLocaleString()}, with a combined estimated revenue of ${money(s.revenue_total)}.` },
+    ...(biggest ? [{ q: `What is the largest ${lower} business in ${where}?`,
+      a: `By estimated revenue, ${displayName(biggest.name)}${!city && biggest.city ? ` in ${biggest.city}` : ""}, at about ${money(biggest.est_revenue_mid)} a year.` }] : []),
+    ...(s.likely_to_sell ? [{ q: `Which ${lower} businesses in ${where} might be for sale?`,
+      a: `${s.likely_to_sell.toLocaleString()} show several signs that often come before a sale, such as decades in business with the founder still in charge and no successor. See the likely-to-sell list on SeeBITDA.` }] : []),
+  ];
   const ld = [
     { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
       { "@type": "ListItem", position: 1, name: "Oklahoma industries", item: `${SITE_URL}/oklahoma` },
@@ -28,7 +45,9 @@ export default function Landing({ ind, city, s, rows, cities, sellers = [], deal
       ...(city ? [{ "@type": "ListItem", position: 3, name: city, item: `${base}/${slug(city)}` }] : []),
     ] },
     { "@context": "https://schema.org", "@type": "ItemList", name: `Largest ${ind.label.toLowerCase()} businesses in ${where}`,
-      itemListElement: rows.slice(0, 20).map((r, i) => ({ "@type": "ListItem", position: i + 1, name: r.name, url: `${SITE_URL}/business/${r.id}` })) },
+      itemListElement: rows.slice(0, 20).map((r, i) => ({ "@type": "ListItem", position: i + 1, name: displayName(r.name), url: `${SITE_URL}/business/${r.id}` })) },
+    { "@context": "https://schema.org", "@type": "FAQPage",
+      mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) },
   ];
   return (
     <main className="page landing">
@@ -95,6 +114,13 @@ export default function Landing({ ind, city, s, rows, cities, sellers = [], deal
       )}
 
       <div className="section">
+        <h2>What {lower} businesses are worth in {where}</h2>
+        <dl className="guide-faq">
+          {faq.map((f) => (<div key={f.q}><dt>{f.q}</dt><dd>{f.a}</dd></div>))}
+        </dl>
+      </div>
+
+      <div className="section">
         <h2>Largest {ind.label.toLowerCase()} businesses{city ? ` in ${city}` : ""}</h2>
         <table>
           <thead><tr><th>#</th><th>Business</th>{!city && <th>City</th>}<th className="num">Est. revenue</th><th className="num hide-sm">Est. EBITDA</th></tr></thead>
@@ -102,7 +128,7 @@ export default function Landing({ ind, city, s, rows, cities, sellers = [], deal
             {rows.map((r, i) => (
               <tr key={r.id}>
                 <td>{i + 1}</td>
-                <td><Link href={`/business/${r.id}`}>{r.name}</Link></td>
+                <td><Link href={`/business/${r.id}`}>{displayName(r.name)}</Link></td>
                 {!city && <td>{r.city}</td>}
                 <td className="num">{money(r.est_revenue_mid)}</td>
                 <td className="num hide-sm">{money(r.est_ebitda_mid)}</td>

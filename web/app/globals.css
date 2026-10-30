@@ -599,3 +599,13 @@ tr.bp-me td { background: #eef4ff; }
 .ref-row .btn { height: 32px; font-size: 13px; padding: 0 12px; }
 tr.ref-own td { background: #eef4ff; }
 .brand .brand-em { color: var(--accent); }
+/* Business page: plain-English summary and questions (for readers, search engines and AI assistants) */
+.bp-about { max-width: 980px; margin: 24px auto 0; padding: 0 20px; color: var(--text); }
+.bp-about h2 { font-size: 17px; margin: 22px 0 8px; }
+.bp-about p { margin: 0; line-height: 1.6; color: var(--muted); }
+.bp-about dl { margin: 0; display: grid; gap: 12px; }
+.bp-about dt { font-weight: 650; }
+.bp-about dd { margin: 2px 0 0; color: var(--muted); line-height: 1.55; }
+.guide-faq { margin: 0; display: grid; gap: 12px; }
+.guide-faq dt { font-weight: 650; }
+.guide-faq dd { margin: 2px 0 0; color: var(--muted); line-height: 1.55; }
