@@ -134,6 +134,11 @@ def main():
                 cal.apply_stage(cur)
         except psycopg.Error as e:
             print(f"Calibration failed (non-fatal): {e}", flush=True)
+        # A pin outside Oklahoma is an out-of-state mailing or head-office address on a filing (e.g. a
+        # PPP loan listing the owner's Ohio address): keep the business in the list, off the map.
+        cur.execute("update stage_biz set lat = null, lon = null where lat is not null and not "
+                    "(lat::float8 between 33.6 and 37.1 and lon::float8 between -103.1 and -94.4)")
+        print(f"Pins outside Oklahoma taken off the map: {cur.rowcount:,}", flush=True)
         cur.execute("select count(*) from stage_biz where geo_precision = 'zip'")
         print(f"listed at an approximate (ZIP) location: {cur.fetchone()[0]:,}")
         # Safety net: a truncated input file must never wipe the site. Refuse to shrink a state's

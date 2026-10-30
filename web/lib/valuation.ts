@@ -25,15 +25,25 @@ export const INDUSTRY = multiples.industry as [string, number][];
 
 export type Valuation = { low: number; mid: number; high: number; multiple: number };
 
-function multipleFor(naics: string | null | undefined, ebitda: number) {
+/** The typical multiple for a company with this much EBITDA, before any industry adjustment. */
+export function sizeMultiple(ebitda: number) {
   let size = SIZE[0][1];
   for (const [floor, m] of SIZE) if (ebitda >= floor) size = m;
+  return size;
+}
+
+/** The industry adjustment for a NAICS code (longest matching prefix), 1 when none applies. */
+export function industryFactor(naics: string | null | undefined) {
   let adj = 1;
   let len = 0;
   for (const [prefix, f] of INDUSTRY) {
     if (naics?.startsWith(prefix) && prefix.length > len) { adj = f; len = prefix.length; }
   }
-  return Math.round(size * adj * 10) / 10;
+  return adj;
+}
+
+function multipleFor(naics: string | null | undefined, ebitda: number) {
+  return Math.round(sizeMultiple(ebitda) * industryFactor(naics) * 10) / 10;
 }
 
 /** Null when a sale value doesn't apply: nonprofits, banks, public companies, or no positive EBITDA.

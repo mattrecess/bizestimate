@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const rows = await sql`
     select id, name, lat, lon, naics, is_nonprofit, est_revenue_mid, est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_method
     from businesses
-    where lat is not null and ${where(f)}
+    where lat between 33.6 and 37.1 and lon between -103.1 and -94.4 and ${where(f)}   -- Oklahoma only (load.py also drops other pins)
     order by ${relevance(f)} est_revenue_mid desc nulls last limit 5000`;
   return NextResponse.json({
     type: "FeatureCollection",

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Icon from "./Icon";
+import { blurOnEnter, isTouch } from "@/lib/touch";
 
 // Every 2022 NAICS code (sector to 6-digit industry) as an expandable, searchable checklist, with how
 // many listed businesses fall under each. Titles: public/naics2022.json (Census 2022 NAICS, via the
@@ -82,7 +83,7 @@ export default function NaicsPicker({ selected, onChange }: { selected: string[]
   const matches = q ? rows.filter((r) => r.code.startsWith(q) || r.title.toLowerCase().includes(q)).slice(0, MAX_SEARCH_ROWS) : [];
   return (
     <>
-      <input className="filter-input" placeholder="Search all NAICS codes: 2382, janitorial…" value={query} autoFocus
+      <input className="filter-input" placeholder="Search all NAICS codes: 2382, janitorial…" value={query} autoFocus={!isTouch()} enterKeyHint="done" onKeyDown={blurOnEnter}
         onChange={(e) => setQuery(e.target.value)} />
       <div className="check-list naics-tree">
         {!titles && <div className="naics-row">Loading…</div>}

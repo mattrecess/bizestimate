@@ -7,6 +7,7 @@ import NaicsPicker from "./NaicsPicker";
 import RevenueRange from "./RevenueRange";
 import MoreFilters from "./MoreFilters";
 import { moreCount } from "@/lib/more-filters";
+import { blurOnEnter, isTouch } from "@/lib/touch";
 
 export type FilterState = { sector: string; city: string; minRev: string; maxRev: string; sort: string; naics: string; lender: string; more: string };
 
@@ -83,7 +84,7 @@ export default function FilterBar({ value, onChange, cities }: {
         </button>
         {open === "city" && (
           <div className="popover">
-            <input className="filter-input" placeholder="Find a city" value={cityQuery} autoFocus onChange={(e) => setCityQuery(e.target.value)} />
+            <input className="filter-input" placeholder="Find a city" value={cityQuery} autoFocus={!isTouch()} enterKeyHint="done" onKeyDown={blurOnEnter} onChange={(e) => setCityQuery(e.target.value)} />
             <button className={`option ${!value.city ? "selected" : ""}`} onClick={() => { onChange({ city: "" }); setOpen(""); }}>All cities</button>
             {shownCities.map((c) => (
               <button key={c.city} className={`option ${value.city === c.city ? "selected" : ""}`}
@@ -117,7 +118,7 @@ export default function FilterBar({ value, onChange, cities }: {
         {open === "lender" && (
           <div className="popover wide">
             <h4>Businesses that borrowed from (PPP and SBA loans)</h4>
-            <input className="filter-input" placeholder="Find a bank" value={lenderQuery} autoFocus onChange={(e) => setLenderQuery(e.target.value)} />
+            <input className="filter-input" placeholder="Find a bank" value={lenderQuery} autoFocus={!isTouch()} enterKeyHint="done" onKeyDown={blurOnEnter} onChange={(e) => setLenderQuery(e.target.value)} />
             <div className="check-list">
               {!lenderOptions && <div className="check-option">Loading…</div>}
               {shownLenders.map((l) => (

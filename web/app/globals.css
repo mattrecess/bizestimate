@@ -609,3 +609,35 @@ tr.ref-own td { background: #eef4ff; }
 .guide-faq { margin: 0; display: grid; gap: 12px; }
 .guide-faq dt { font-weight: 650; }
 .guide-faq dd { margin: 2px 0 0; color: var(--muted); line-height: 1.55; }
+
+/* ---------- value calculator ---------- */
+.calc { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 8px 0 4px; }
+.calc-form { display: grid; gap: 14px; align-content: start; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.calc-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 650; }
+.calc-form input, .calc-form select { font: inherit; font-size: 16px; font-weight: 400; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; width: 100%; }
+.calc-form input[aria-invalid="true"] { border-color: var(--warn); }
+.calc-opt { color: var(--faint); font-weight: 500; }
+.calc-hint { color: var(--muted); font-weight: 400; font-size: 12.5px; }
+.calc-err { color: var(--warn); font-weight: 500; font-size: 12.5px; }
+.calc-out { border-radius: 14px; background: #eef4ff; padding: 20px; display: flex; flex-direction: column; gap: 6px; }
+.calc-empty { color: #34465f; margin: auto 0; }
+.calc-k { font-size: 13px; font-weight: 650; color: #34465f; }
+.calc-v { font-size: 44px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; color: #0f1b2d; }
+.calc-r { font-size: 14px; color: #34465f; }
+.calc-math { margin: 10px 0 4px; display: grid; gap: 6px; font-size: 14px; }
+.calc-math div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid rgba(15, 27, 45, .08); padding-top: 6px; }
+.calc-math dt { color: #34465f; }
+.calc-math dd { margin: 0; font-weight: 650; text-align: right; color: #0f1b2d; }
+.calc-math dd span { font-weight: 400; color: #34465f; }
+.calc-note { margin: 4px 0 0; font-size: 13.5px; color: #34465f; line-height: 1.5; }
+.landing .faq { margin: 0; display: grid; gap: 12px; }
+.landing .faq dt { font-weight: 650; }
+.landing .faq dd { margin: 2px 0 0; color: var(--muted); line-height: 1.55; }
+@media (max-width: 720px) { .calc { grid-template-columns: 1fr; } .calc-v { font-size: 38px; } }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .calc-out { background: #16223a; }
+  :root:not([data-theme="light"]) .calc-k, :root:not([data-theme="light"]) .calc-r, :root:not([data-theme="light"]) .calc-note,
+  :root:not([data-theme="light"]) .calc-empty, :root:not([data-theme="light"]) .calc-math dt, :root:not([data-theme="light"]) .calc-math dd span { color: #b8c4d6; }
+  :root:not([data-theme="light"]) .calc-v, :root:not([data-theme="light"]) .calc-math dd { color: #e6edf7; }
+}

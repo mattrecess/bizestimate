@@ -12,12 +12,13 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
   busy?: boolean;   // a search is on its way: the magnifier becomes a spinner
   onChange: (q: string) => void;
   onPick: (id: number) => void;
-  suggestions: { q: string; items: Suggestion[]; industry?: string | null; total?: number; capped?: boolean } | null;
+  suggestions: { q: string; items: Suggestion[]; industry?: string | null; total?: number } | null;
 }) {
   const [text, setText] = useState(value);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const box = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => setText(value), [value]);
 
@@ -33,8 +34,14 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  function pick(s: Suggestion) {
+  // Blurring puts a phone's keyboard away once a search is done.
+  function done() {
     setOpen(false);
+    input.current?.blur();
+  }
+
+  function pick(s: Suggestion) {
+    done();
     onPick(Number(s.id));
   }
 
@@ -42,13 +49,13 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
     <div className="searchbox" ref={box}>
       {busy ? <span className="spinner icon-search" aria-label="Searching" /> : <Icon name="search" className="icon-search" />}
       <input
-        type="search" placeholder="Search a business, city, industry or NAICS code" value={text} aria-label="Search businesses"
+        ref={input} type="search" enterKeyHint="search" placeholder="Search a business, city, industry or NAICS code" value={text} aria-label="Search businesses"
         onFocus={() => setOpen(true)}
         onChange={(e) => { setText(e.target.value); onChange(e.target.value); setOpen(true); }}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, items.length - 1)); }
           else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, -1)); }
-          else if (e.key === "Enter") { if (active >= 0 && items[active]) pick(items[active]); else setOpen(false); }
+          else if (e.key === "Enter") { if (active >= 0 && items[active]) pick(items[active]); else done(); }
           else if (e.key === "Escape") setOpen(false);
         }}
       />
@@ -62,9 +69,9 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
           {/* Read as an industry: the list already shows them all, so this just closes the menu. */}
           {industry && (
             <li>
-              <button className="s-industry" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen(false)}>
+              <button className="s-industry" onMouseDown={(e) => e.preventDefault()} onClick={done}>
                 <span className="s-name"><Icon name="search" size={14} />{industry.startsWith("NAICS") ? `All businesses in ${industry}` : `All ${industry.toLowerCase()} businesses`}</span>
-                <span className="s-meta">{current?.total?.toLocaleString()}{current?.capped ? "+" : ""} found</span>
+                {current?.total != null && <span className="s-meta">{current.total.toLocaleString()} found</span>}
               </button>
             </li>
           )}

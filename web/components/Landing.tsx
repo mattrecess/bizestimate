@@ -118,6 +118,7 @@ export default function Landing({ ind, city, s, rows, cities, sellers = [], deal
         <dl className="guide-faq">
           {faq.map((f) => (<div key={f.q}><dt>{f.q}</dt><dd>{f.a}</dd></div>))}
         </dl>
+        <p className="disclaimer">Own one? <Link href={`/value-my-business?industry=${slug(ind.label)}`}>Estimate what your business is worth</Link>.</p>
       </div>
 
       <div className="section">

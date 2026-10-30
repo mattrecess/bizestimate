@@ -38,7 +38,8 @@ export default function Home() {
   const [bbox, setBbox] = useState<[number, number, number, number] | null>(null);
   // Continuous scroll: how far the list has been extended, for which search (a new search starts over).
   const [more, setMore] = useState({ key: "", offset: 0 });
-  const [data, setData] = useState<{ key: string; total: number; capped?: boolean; results: Biz[]; q: string; industry?: string | null } | null>(null);
+  const [data, setData] = useState<{ key: string; done?: boolean; results: Biz[]; q: string; industry?: string | null } | null>(null);
+  const [counted, setCounted] = useState<{ key: string; total: number } | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [pinsLoading, setPinsLoading] = useState(true);
@@ -188,12 +189,12 @@ export default function Home() {
         .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
         .then((d) => {
           if (offset === 0) {
-            setData({ ...d, key: listKey, q: debouncedQ });
+            setData({ ...d, key: listKey, q: debouncedQ, done: d.results.length < PAGE });
             panel.current?.scrollTo({ top: 0 });
           } else {
             // Next batch: append to the same search's list.
             setData((prev) => (prev && prev.key === listKey
-              ? { ...prev, total: d.total, capped: d.capped, results: [...prev.results, ...d.results] } : prev));
+              ? { ...prev, done: d.results.length < PAGE, results: [...prev.results, ...d.results] } : prev));
           }
           setLoading(false);
         })
@@ -210,10 +211,22 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, listKey, offset, attempt]);
 
+  // The total, counted on its own so a slow count never holds up the list.
+  useEffect(() => {
+    if (!ready) return;
+    const ctrl = new AbortController();
+    const key = params;
+    fetch(`/api/businesses/count?${params}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setCounted({ key, total: d.total }); })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [ready, params, attempt]);
+
   // Load the next batch when the bottom of the list comes within a screen of view.
   useEffect(() => {
     const el = sentinel.current;
-    if (!el || !data || data.key !== listKey || loading || failed || data.results.length >= data.total) return;
+    if (!el || !data || data.key !== listKey || loading || failed || data.done) return;
     const io = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) setMore({ key: listKey, offset: data.results.length });
     }, { root: panel.current, rootMargin: "800px 0px" });
@@ -243,9 +256,10 @@ export default function Home() {
   }, [ready, pinParams, attempt]);
 
   const anyFilter = debouncedQ || sector || city || minRev || maxRev;
-  const total = data?.total ?? 0;
-  // Past 5,000 the server stops counting (it took seconds for a whole city): "5,000+".
-  const totalText = `${total.toLocaleString()}${data?.capped ? "+" : ""}`;
+  // Until the count arrives, what's loaded so far stands in (a page that's the whole list is exact).
+  const exact = counted?.key === params ? counted.total : data?.done ? data.results.length : null;
+  const total = exact ?? data?.results.length ?? 0;
+  const totalText = exact == null ? "Counting" : total.toLocaleString();
 
   return (
     <>
@@ -253,7 +267,7 @@ export default function Home() {
         {/* Suggestions are the top of the list query, so typing costs one request, not two. */}
         <SearchBox value={q} onChange={setQ} onPick={openBusiness} busy={updating && !!q}
           suggestions={data && data.q
-            ? { q: data.q, items: data.results.slice(0, 6), industry: data.industry, total: data.total, capped: data.capped } : null} />
+            ? { q: data.q, items: data.results.slice(0, 6), industry: data.industry, total: exact ?? undefined } : null} />
         <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
       </div>
       <div className="explorer" data-view={view}>
@@ -294,7 +308,7 @@ export default function Home() {
               <span className="count" aria-live="polite">
                 {failed ? "Couldn't load businesses"
                   : updating ? <><span className="spinner" aria-hidden /> {q ? "Searching…" : "Updating…"}</>
-                  : data ? `${totalText} ${total === 1 ? "business" : "businesses"}` : <><span className="spinner" aria-hidden /> Loading businesses…</>}
+                  : data ? (exact == null ? "Counting businesses…" : `${totalText} ${total === 1 ? "business" : "businesses"}`) : <><span className="spinner" aria-hidden /> Loading businesses…</>}
               </span>
               <span className="sub">
                 {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : "in map view"} · estimates
@@ -338,12 +352,10 @@ export default function Home() {
               <div className="list-end">
                 {failed ? (
                   <button className="btn" onClick={() => setAttempt((a) => a + 1)}>Couldn&apos;t load more. Retry</button>
-                ) : data.results.length < total ? (
-                  <span><span className="spinner" aria-hidden /> Loading more… ({data.results.length.toLocaleString()} of {totalText})</span>
-                ) : data.capped ? (
-                  <span>First {total.toLocaleString()} shown. Zoom in or add a filter to see the rest.</span>
-                ) : total > PAGE ? (
-                  <span>All {total.toLocaleString()} shown</span>
+                ) : !data.done ? (
+                  <span><span className="spinner" aria-hidden /> Loading more… ({data.results.length.toLocaleString()}{exact != null ? ` of ${totalText}` : ""})</span>
+                ) : data.results.length > PAGE ? (
+                  <span>All {data.results.length.toLocaleString()} shown</span>
                 ) : null}
               </div>
             )}

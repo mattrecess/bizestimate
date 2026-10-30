@@ -207,9 +207,13 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
 
   useEffect(() => {
     // No fade: tags changing as data or the hover updates otherwise blink.
-    const m = new maplibregl.Map({ container: el.current!, style: SATELLITE, center, zoom, fadeDuration: 0 });
+    const m = new maplibregl.Map({ container: el.current!, style: SATELLITE, center, zoom, fadeDuration: 0,
+      dragRotate: false, pitchWithRotate: false, touchPitch: false });
     map.current = m;
-    m.addControl(new maplibregl.NavigationControl(), "top-right");
+    // North stays up: no rotating or tilting by mouse, touch or keyboard, and no compass button.
+    m.touchZoomRotate.disableRotation();
+    m.keyboard.disableRotation();
+    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     const emit = () => {
       const b = m.getBounds();
       boundsCb.current?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
@@ -322,7 +326,7 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
-      m.dragPan.enable(); m.touchZoomRotate.enable(); m.doubleClickZoom.enable();
+      m.dragPan.enable(); m.touchZoomRotate.enable(); m.touchZoomRotate.disableRotation(); m.doubleClickZoom.enable();
       canvas.style.cursor = "";
     };
   }, [drawing]);

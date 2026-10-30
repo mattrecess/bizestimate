@@ -18,6 +18,7 @@ unless a page says they are reported (SEC, IRS Form 990, bank call reports) or v
 - [Business pages](${SITE_URL}/business/1294710): one per company, e.g. ${SITE_URL}/business/<id>; owner, revenue, EBITDA, value, employees, history
 - [Oklahoma industries](${SITE_URL}/oklahoma): market reports per industry and city: what businesses are worth, typical revenue and margins, largest companies, likely sellers
 - [Businesses likely to sell](${SITE_URL}/likely-to-sell): companies with signs of an upcoming sale (decades in business, founder still in charge, no successor)
+- [What's my business worth?](${SITE_URL}/value-my-business): free calculator: business value from revenue, EBITDA and industry
 - [Recent deals](${SITE_URL}/deals): acquisitions and investments in Oklahoma businesses
 - [Methodology](${SITE_URL}/methodology): how revenue, EBITDA and value are estimated
 

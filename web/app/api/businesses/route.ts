@@ -15,24 +15,6 @@ const SORTS = {
   sell_desc: sql`sell_score desc nulls last, est_revenue_mid desc nulls last, id`,
 };
 
-const COUNT_CAP = 5000;
-
-// The exact number in view. A count can take seconds when the database is busy (a city-sized view is
-// ~40,000 businesses), so it gets COUNT_MS; past that the list falls back to "5,000+".
-const COUNT_MS = 2500;
-async function countAll(w: ReturnType<typeof where>) {
-  try {
-    const [{ count }] = await sql.begin(async (tx) => {
-      await tx`set local statement_timeout = ${sql.unsafe(String(COUNT_MS))}`;
-      return tx<{ count: number }[]>`select count(*)::int as count from businesses where ${w}`;
-    });
-    return { count, capped: false };
-  } catch {
-    const [{ count }] = await sql<{ count: number }[]>`select count(*)::int as count from (select 1 from businesses where ${w} limit ${COUNT_CAP + 1}) t`;
-    return { count: Math.min(count, COUNT_CAP), capped: count > COUNT_CAP };
-  }
-}
-
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
   const f = parseFilters(p);
@@ -43,10 +25,9 @@ export async function GET(req: NextRequest) {
   // appear in the list only as their parent's location count.
   const w = sql`${where(f)} and coalesce(est_method, '') <> 'branch'`;
 
-  // The page and the total run side by side; without a window count, the page can come straight
-  // off an index instead of sorting every matching business.
-  const [rows, { count, capped }] = await Promise.all([
-    sql`
+  // The total comes from /api/businesses/count on its own, so a slow count never holds up the list;
+  // without a window count, the page can come straight off an index instead of sorting every match.
+  const rows = await sql`
       select id, name, ${publicAddress}, city, state, zip, naics, industry, jobs_reported, is_nonprofit, to_jsonb(businesses) ->> 'parent_name' as parent_name,
              est_revenue_low, est_revenue_mid, est_revenue_high,
              est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
@@ -58,9 +39,7 @@ export async function GET(req: NextRequest) {
                  where bl.business_id = businesses.id and bl.lender_key in ${sql(f.lender)}) as lenders` : sql``}
       -- Location counts per row on the page only, via businesses_parent_idx (not a count over every listing).
       from businesses
-      where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`,
-    countAll(w),
-  ]);
+      where ${w} order by ${relevance(f)} ${sort} limit ${limit} offset ${offset}`;
   // Let Vercel's CDN answer repeat requests (the default view especially) without the database.
   // Tell the page when a search reads as an industry ("janitorial", "janitorial tulsa"), so it can
   // say so; not when the other words are a name ("Triple Bar Ranch" is a ranch, not a bar).
@@ -69,12 +48,12 @@ export async function GET(req: NextRequest) {
     const [b] = await sql`select label from industry_benchmarks where ${code.code} like naics_prefix || '%'
                           order by length(naics_prefix) desc limit 1`.catch(() => []);
     const label = industryLabel(code.code) ?? b?.label;
-    return NextResponse.json({ total: count, capped, results: rows, industry: `NAICS ${code.code}${label ? ` · ${label}` : ""}` },
+    return NextResponse.json({ results: rows, industry: `NAICS ${code.code}${label ? ` · ${label}` : ""}` },
       { headers: { "Cache-Control": CACHE } });
   }
   const m = f.q ? matchIndustry(f.q) : null;
   const industry = !m ? null
     : !m.rest || (await sql`select 1 from businesses where lower(city) = ${m.rest} limit 1`).length
       ? m.industry.label : null;
-  return NextResponse.json({ total: count, capped, results: rows, industry }, { headers: { "Cache-Control": CACHE } });
+  return NextResponse.json({ results: rows, industry }, { headers: { "Cache-Control": CACHE } });
 }

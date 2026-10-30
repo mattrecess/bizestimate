@@ -2,21 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Footer from "@/components/Footer";
 import { sql } from "@/lib/db";
-import { money } from "@/lib/format";
+import { money, parseDollars as dollars } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Correct a business's figures | SeeBITDA", robots: { index: false, follow: false } };
 
 const RELATIONSHIPS = { owner: "I own it", executive: "I'm an executive or manager there", advisor: "I'm its accountant or advisor", other: "Other" };
-
-// "$4.2M", "4,200,000", "4.2 million", "850k" -> dollars.
-function dollars(v: string) {
-  const s = v.toLowerCase().replace(/[$,\s]/g, "");
-  const m = s.match(/^(\d+(?:\.\d+)?)(k|m|mm|million|b|billion)?$/);
-  if (!m) return null;
-  const mult = { k: 1e3, m: 1e6, mm: 1e6, million: 1e6, b: 1e9, billion: 1e9 }[m[2] as "k"] ?? 1;
-  return Math.round(Number(m[1]) * mult);
-}
 
 async function submit(form: FormData) {
   "use server";
