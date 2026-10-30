@@ -45,7 +45,6 @@ const pppYear = (loans: Loan[]) => {
   return d ? new Date(d).getFullYear() : 2020;
 };
 
-type Tab = "overview" | "financials" | "people" | "records";
 
 // Shared by the full business page and the explorer's side panel (compact: no mini-map).
 export default function BusinessProfile({ b, compact = false, onSelect }: {
@@ -53,7 +52,6 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   compact?: boolean;
   onSelect?: (id: number) => void;
 }) {
-  const [tab, setTab] = useState<Tab>("overview");
   const [copied, setCopied] = useState(false);
   const avg = b.est_method === "industry_average";           // no business-specific data at all
   const noLoan = !b.loans.length;
@@ -87,7 +85,6 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   // The margin actually applied (IRS industry margin adjusted for size) when the data has it.
   const irsMargin = b.est_ebitda_margin != null && b.est_method !== "owner_earnings";
   const margin = irsMargin ? b.est_ebitda_margin : b.ebitda_margin;
-  const tabs: [Tab, string][] = [["overview", "Overview"], ["financials", "Financials"], ["people", "People"], ["records", "Records"]];
 
   async function share() {
     const url = `${window.location.origin}/business/${b.id}`;
@@ -169,6 +166,10 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   return (
     <div className={compact ? "profile" : "profile full"}>
       <div className="bp-head">
+        <div className="bp-top-actions">
+          <RadarButton id={String(b.id)} name={b.name} city={b.city} />
+          <button className="btn" onClick={share}><Icon name="share" size={15} />{copied ? "Link copied" : "Share"}</button>
+        </div>
         <div className="bp-kicker">
           {industryLabel(b.naics)
             ? <a href={`/oklahoma/${slug(industryLabel(b.naics)!)}${b.city ? `/${slug(b.city)}` : ""}`}>{kicker}</a>
@@ -248,21 +249,12 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         <div className="bp-owner-actions">
           {b.website && <a className="btn" href={b.website} target="_blank" rel="nofollow noopener noreferrer"><Icon name="globe" size={15} />{siteLabel(b.website)}</a>}
           <a className="btn" href={src.linkedin?.company_url || linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer"><Icon name="linkedin" size={15} />LinkedIn</a>
-          <RadarButton id={String(b.id)} name={b.name} city={b.city} />
-          <button className="btn" onClick={share}><Icon name="share" size={15} />{copied ? "Link copied" : "Share"}</button>
         </div>
       </div>
       <ContactCard id={String(b.id)} name={b.name} owner={b.owner_name} />
       <PipelineBox id={String(b.id)} />
 
-      <div className="tabs" role="tablist">
-        {tabs.map(([key, label]) => (
-          <button key={key} role="tab" className="tab" aria-selected={tab === key} onClick={() => setTab(key)}>{label}</button>
-        ))}
-      </div>
-
-      {tab === "overview" && (
-        <>
+      {/* Everything on one scrolling page: the estimate, then financials, people, and public records. */}
           {b.est_method !== "branch" && (
             <div className="section">
               <h2>How we got {money(value ? value.mid : b.est_revenue_mid)}</h2>
@@ -273,7 +265,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
                 ))}
               </div>
               <p className="disclaimer" style={{ marginTop: 8 }}>
-                <button className="link-btn" onClick={() => setTab("financials")}>Full calculation</button>{" · "}
+                <button className="link-btn" onClick={(e) => e.currentTarget.closest(".profile")?.querySelector("#calculation")?.scrollIntoView({ behavior: "smooth" })}>Full calculation</button>{" · "}
                 <Link href={`/correct?business=${b.id}`}>Own this business? Correct these figures</Link>
               </p>
             </div>
@@ -314,75 +306,11 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             </div>
           ) : null}
           {b.comps === undefined && (
-            <div className="section loading-more"><span className="spinner" aria-hidden /> Loading customers, comparables and locations…</div>
+            <div className="section loading-more"><span className="spinner" aria-hidden /> Loading customers, comparables, banks and locations…</div>
           )}
           <CustomersSuppliers offering={src.website_offering} contracts={src.contracts} onSelect={onSelect} prospects={b.prospects ?? []} />
-        </>
-      )}
 
-      {tab === "people" && (
-        <>
-          <PeopleAdvisors sources={b.sources ?? []} owner={b.owner_name}
-            lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
-          {b.lenders?.length ? (
-            <div className="section">
-              <h2><Icon name="bank" size={16} />Banking relationships</h2>
-              <table><tbody>
-                {b.lenders.map((l) => (
-                  <tr key={l.key}>
-                    <td><b>{l.name}</b><div className="disclaimer" style={{ margin: 0 }}>{l.loans.join(", ")}</div></td>
-                    <td className="num"><a href={`/?lender=${encodeURIComponent(l.key)}`}>{l.borrowers > 1 ? `All ${l.borrowers.toLocaleString()} borrowers` : "View"} →</a></td>
-                  </tr>
-                ))}
-              </tbody></table>
-              <p className="disclaimer">From PPP and SBA loan records, which name the bank but not the individual banker.</p>
-            </div>
-          ) : b.comps === undefined ? <div className="section loading-more"><span className="spinner" aria-hidden /> Loading banks…</div> : null}
-        </>
-      )}
-
-      {tab === "records" && (
-        <>
-          {b.loans.length ? (
-            <div className="section">
-              <h2>PPP loans</h2>
-              <table>
-                <thead><tr><th>Approved</th><th>Draw</th><th className="num">Amount</th><th className="num hide-sm">Forgiven</th><th className="num">Jobs</th><th className="hide-sm">Lender</th></tr></thead>
-                <tbody>
-                  {b.loans.map((l) => (
-                    <tr key={l.loan_number}>
-                      <td>{l.date_approved ? new Date(l.date_approved).toLocaleDateString() : "—"}</td>
-                      <td>{l.draw}</td><td className="num">{money(l.amount)}</td>
-                      <td className="num hide-sm">{money(l.forgiveness_amount)}</td>
-                      <td className="num">{l.jobs_reported ?? "—"}</td><td className="hide-sm">{l.lender}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-          {b.locations?.length ? (
-            <div className="section">
-              <h2><Icon name="map" size={16} />{b.locations.length + 1} locations</h2>
-              <table><tbody>
-                <tr><td><b>{b.address ?? b.city}</b></td><td>{b.city}</td><td className="num">This listing</td></tr>
-                {b.locations.map((l) => (
-                  <tr key={l.id}><td>{l.address ?? "—"}</td><td>{l.city}</td>
-                    <td className="num">{onSelect
-                      ? <a href={`/business/${l.id}`} onClick={(e) => { e.preventDefault(); onSelect(Number(l.id)); }}>View</a>
-                      : <a href={`/business/${l.id}`}>View</a>}</td></tr>
-                ))}
-              </tbody></table>
-              <p className="disclaimer">Revenue, profit and value are for the whole company.</p>
-            </div>
-          ) : null}
-          <PublicRecords sources={b.sources ?? []} />
-          {!compact && b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
-        </>
-      )}
-
-      {tab === "financials" && (
-        <>
+      {/* Financials */}
         {(() => {
           // Value over time: needs a headcount basis for today's estimate (PPP grown since, or the latest 401(k) count).
           const ppp = b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null;
@@ -420,7 +348,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             </table>
           </div>
         ) : null}
-        <div className="section">
+        <div className="section" id="calculation">
           <h2>The full calculation</h2>
           {b.est_method === "employees" && (
             <table><tbody>
@@ -532,8 +460,61 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               : " Listing details come from Overture Maps open data.")}{" "}
             <Link href="/methodology">Full methodology</Link></p>
         </div>
-        </>
-      )}
+
+      {/* People */}
+          <PeopleAdvisors sources={b.sources ?? []} owner={b.owner_name}
+            lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
+          {b.lenders?.length ? (
+            <div className="section">
+              <h2><Icon name="bank" size={16} />Banking relationships</h2>
+              <table><tbody>
+                {b.lenders.map((l) => (
+                  <tr key={l.key}>
+                    <td><b>{l.name}</b><div className="disclaimer" style={{ margin: 0 }}>{l.loans.join(", ")}</div></td>
+                    <td className="num"><a href={`/?lender=${encodeURIComponent(l.key)}`}>{l.borrowers > 1 ? `All ${l.borrowers.toLocaleString()} borrowers` : "View"} →</a></td>
+                  </tr>
+                ))}
+              </tbody></table>
+              <p className="disclaimer">From PPP and SBA loan records, which name the bank but not the individual banker.</p>
+            </div>
+          ) : null}
+
+      {/* Records */}
+          {b.loans.length ? (
+            <div className="section">
+              <h2>PPP loans</h2>
+              <table>
+                <thead><tr><th>Approved</th><th>Draw</th><th className="num">Amount</th><th className="num hide-sm">Forgiven</th><th className="num">Jobs</th><th className="hide-sm">Lender</th></tr></thead>
+                <tbody>
+                  {b.loans.map((l) => (
+                    <tr key={l.loan_number}>
+                      <td>{l.date_approved ? new Date(l.date_approved).toLocaleDateString() : "—"}</td>
+                      <td>{l.draw}</td><td className="num">{money(l.amount)}</td>
+                      <td className="num hide-sm">{money(l.forgiveness_amount)}</td>
+                      <td className="num">{l.jobs_reported ?? "—"}</td><td className="hide-sm">{l.lender}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {b.locations?.length ? (
+            <div className="section">
+              <h2><Icon name="map" size={16} />{b.locations.length + 1} locations</h2>
+              <table><tbody>
+                <tr><td><b>{b.address ?? b.city}</b></td><td>{b.city}</td><td className="num">This listing</td></tr>
+                {b.locations.map((l) => (
+                  <tr key={l.id}><td>{l.address ?? "—"}</td><td>{l.city}</td>
+                    <td className="num">{onSelect
+                      ? <a href={`/business/${l.id}`} onClick={(e) => { e.preventDefault(); onSelect(Number(l.id)); }}>View</a>
+                      : <a href={`/business/${l.id}`}>View</a>}</td></tr>
+                ))}
+              </tbody></table>
+              <p className="disclaimer">Revenue, profit and value are for the whole company.</p>
+            </div>
+          ) : null}
+          <PublicRecords sources={b.sources ?? []} />
+          {!compact && b.lat != null && <div className="minimap"><MiniMap lat={Number(b.lat)} lon={Number(b.lon)} /></div>}
 
     </div>
   );
