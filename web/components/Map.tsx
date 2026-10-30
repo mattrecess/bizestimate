@@ -30,7 +30,6 @@ const SATELLITE: maplibregl.StyleSpecification = {
     { id: "labels", type: "raster", source: "labels" },
   ],
 };
-const STREETS = process.env.NEXT_PUBLIC_MAP_STYLE || "https://tiles.openfreemap.org/styles/positron";
 const OKLAHOMA: [number, number] = [-97.5, 35.5];
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
@@ -116,7 +115,7 @@ const TIP_OFFSET: [number, number] = [0, -0.95];
 
 const PPP = "#0b3b75", AVG = "#5b6b82", HOT = "#1f6feb";
 
-// Business pins sit on top of whichever basemap is active; re-added after every style switch.
+// Business pins sit on top of the satellite basemap; added once the style has loaded.
 // Each business is a revenue tag, or a small dot where its tag would overlap a bigger business's.
 function addBizLayers(m: maplibregl.Map, data: GeoJSON.FeatureCollection, selected: GeoJSON.FeatureCollection, hover: GeoJSON.FeatureCollection) {
   if (m.getSource("biz")) return;
@@ -197,7 +196,6 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
   hoverCb.current = onHover;
   const hoveredRef = useRef(hoveredId);
   hoveredRef.current = hoveredId;
-  const [satellite, setSatellite] = useState(true);
   const [drawing, setDrawing] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const areaRef = useRef(area);
@@ -331,18 +329,11 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
     };
   }, [drawing]);
 
-  function toggle() {
-    const next = !satellite;
-    setSatellite(next);
-    map.current?.setStyle(next ? SATELLITE : STREETS);
-  }
-
   return (
     <>
       <div ref={el} style={{ position: "absolute", inset: 0 }} />
       {!mapReady && <div className="map-loading"><span className="spinner" aria-hidden /> Loading map…</div>}
       {mapReady && loading && onSelect && <div className="map-status"><span className="spinner" aria-hidden /> Loading businesses…</div>}
-      <button className="map-toggle" onClick={toggle}>{satellite ? "Map" : "Satellite"}</button>
       {onArea && (
         <div className="draw-controls">
           {drawing ? <span className="draw-hint">Drag a loop around an area…</span>
