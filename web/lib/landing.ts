@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { sql } from "./db";
 import { INDUSTRIES, slug, type Industry } from "./industries";
 import { industryMatch, valueSql } from "./queries";
@@ -83,7 +84,11 @@ export async function allIndustryCities() {
 
 // Industries with enough businesses for a page, and their counts (the index and sitemap). One
 // grouped query, matched to industries here with the same rule as industryMatch.
-export async function industryCounts() {
+// Cached for a day: the counts change only with the overnight load, and counting every listing took
+// seconds (slow enough for Google's live test to give up on /oklahoma).
+export const industryCounts = unstable_cache(industryCountsUncached, ["industry-counts"], { revalidate: 86400 });
+
+async function industryCountsUncached() {
   const byCode = await sql<{ naics: string; count: number }[]>`
     select coalesce(naics, '') as naics, count(*)::int as count from businesses where ${listed} group by 1`;
   return INDUSTRIES.map((ind) => ({
