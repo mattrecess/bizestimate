@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import BusinessProfile, { type Profile } from "@/components/BusinessProfile";
 import BizCard, { type Biz } from "@/components/BizCard";
+import BizTable from "@/components/BizTable";
 import FilterBar from "@/components/FilterBar";
 import { SORTS, type FilterState } from "@/lib/filters";
 import { saveSearch } from "@/lib/saved";
@@ -25,7 +26,7 @@ const inside = (a: Box, b: Box) => a[0] >= b[0] && a[1] >= b[1] && a[2] <= b[2] 
 const NO_FILTERS: FilterState = { sector: "", city: "", minRev: "", maxRev: "", sort: "revenue_desc", naics: "", lender: "", more: "" };
 
 // Filters are mirrored into the page URL so a search can be bookmarked or shared.
-const URL_KEYS = ["q", "sector", "city", "min_rev", "max_rev", "naics", "lender", "sort", "id"] as const;
+const URL_KEYS = ["q", "sector", "city", "min_rev", "max_rev", "naics", "lender", "sort", "id", "layout"] as const;
 
 export default function Home() {
   const [ready, setReady] = useState(false);
@@ -53,6 +54,9 @@ export default function Home() {
   const [hovered, setHovered] = useState<number | null>(null);
   // Phones show the map or the list, not both.
   const [view, setView] = useState<"map" | "list">("map");
+  // Wide screens: the map with a list beside it, or a full-width table of the whole state.
+  const [layout, setLayout] = useState<"map" | "table">("map");
+  const drawer = useRef<HTMLDivElement>(null);
   // Business shown in the side panel (replaces the list until "Back").
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -61,7 +65,7 @@ export default function Home() {
   const { sector, city, minRev, maxRev, sort, naics, lender, more: moreFilters } = filters;
 
   function openBusiness(id: number) {
-    if (!selectedId) listScroll.current = panel.current?.scrollTop ?? 0;
+    if (!selectedId && layout === "map") listScroll.current = panel.current?.scrollTop ?? 0;
     setSelectedId(id);
     setView("list");
   }
@@ -76,6 +80,7 @@ export default function Home() {
     });
     // A shared link to a business opens its profile (on phones, the list side rather than the map).
     if (u.get("id") && /^\d+$/.test(u.get("id")!)) { setSelectedId(Number(u.get("id"))); setView("list"); }
+    if (u.get("layout") === "table" && !window.matchMedia("(max-width: 860px)").matches) setLayout("table");
     setArea("");   // drawing an area on the map was removed; old links with one show the plain view
     setReady(true);
     fetch("/api/cities").then((r) => r.json()).then(setCities).catch(() => {});
@@ -85,7 +90,7 @@ export default function Home() {
     if (!ready) return;
     const values: Record<(typeof URL_KEYS)[number], string> = {
       q: debouncedQ, sector, city, min_rev: minRev, max_rev: maxRev, naics, lender, sort: sort === "revenue_desc" ? "" : sort,
-      id: selectedId ? String(selectedId) : "",
+      id: selectedId ? String(selectedId) : "", layout: layout === "table" ? "table" : "",
     };
     const u = new URLSearchParams();
     for (const k of URL_KEYS) if (values[k]) u.set(k, values[k]);
@@ -93,12 +98,13 @@ export default function Home() {
     if (area) u.set("area", area);
     const qs = u.toString();
     window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-  }, [ready, debouncedQ, sector, city, minRev, maxRev, naics, lender, moreFilters, area, sort, selectedId]);
+  }, [ready, debouncedQ, sector, city, minRev, maxRev, naics, lender, moreFilters, area, sort, selectedId, layout]);
 
   useEffect(() => {
     if (!selectedId) {
       setProfile(null);
-      requestAnimationFrame(() => panel.current?.scrollTo({ top: listScroll.current }));
+      // The table stays in place behind its drawer; the side list was swapped out, so return to its spot.
+      if (layout === "map") requestAnimationFrame(() => panel.current?.scrollTo({ top: listScroll.current }));
       return;
     }
     // The business and its own records first (fast), then comparables, banks and locations.
@@ -114,7 +120,7 @@ export default function Home() {
           .then((rel) => rel && setProfile((cur) => (cur && Number(cur.id) === selectedId ? { ...cur, ...rel } : cur)));
       })
       .catch(() => {});
-    panel.current?.scrollTo({ top: 0 });
+    (layout === "table" ? drawer : panel).current?.scrollTo({ top: 0 });
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
@@ -138,6 +144,8 @@ export default function Home() {
 
   // A bank's borrowers are spread across the state, so a lender filter also searches statewide.
   const fitKey = city || debouncedQ || lender || area ? `${city}|${debouncedQ}|${lender}|${area}` : "";
+  // The table covers the whole state, not just the map's view.
+  const statewide = !!fitKey || layout === "table";
 
   // Strings, not objects, so a render that changes nothing never repeats a request.
   const filterParams = useMemo(() => {
@@ -157,9 +165,9 @@ export default function Home() {
   const fmtBox = (b: Box) => b.map((n) => n.toFixed(4)).join(",");
   const params = useMemo(() => {
     const p = new URLSearchParams(filterParams);
-    if (bbox && !fitKey) p.set("bbox", fmtBox(bbox));
+    if (bbox && !statewide) p.set("bbox", fmtBox(bbox));
     return p.toString();
-  }, [filterParams, bbox, fitKey]);
+  }, [filterParams, bbox, statewide]);
 
   // Widen the pin area only when the view leaves it, or when a capped result may be hiding pins.
   useEffect(() => {
@@ -236,7 +244,7 @@ export default function Home() {
   }, [data, listKey, loading, failed]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || layout === "table") return;   // no map, no pins
     const ctrl = new AbortController();
     // A new search clears the map, so it never flies to the previous search's pins; panning and
     // zooming keep the current pins up until the new ones arrive.
@@ -254,7 +262,15 @@ export default function Home() {
       .catch(() => { if (!ctrl.signal.aborted) setPinsLoading(false); });
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, pinParams, attempt]);
+  }, [ready, pinParams, attempt, layout]);
+
+  // Escape closes the table's drawer.
+  useEffect(() => {
+    if (layout !== "table" || !selectedId) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setSelectedId(null); };
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [layout, selectedId]);
 
   const anyFilter = debouncedQ || sector || city || minRev || maxRev;
   // Until the count arrives, what's loaded so far stands in (a page that's the whole list is exact).
@@ -262,26 +278,12 @@ export default function Home() {
   const total = exact ?? data?.results.length ?? 0;
   const totalText = exact == null ? "Counting" : total.toLocaleString();
 
-  return (
-    <div className="explorer-page">
-      <div className="toolbar">
-        {/* Suggestions are the top of the list query, so typing costs one request, not two. */}
-        <SearchBox value={q} onChange={setQ} onPick={openBusiness} busy={updating && !!q}
-          suggestions={data && data.q
-            ? { q: data.q, items: data.results.slice(0, 6), industry: data.industry, total: exact ?? undefined } : null} />
-        <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
-      </div>
-      <div className="explorer" data-view={view}>
-        <div className="map">
-          <Map points={points} loading={pinsLoading} onBoundsChange={setBbox} fitKey={fitKey} onSelect={openBusiness}
-            selected={selectedPoint} hoveredId={hovered} onHover={setHovered} />
-        </div>
-        <div className="panel" ref={panel}>
-          {selectedId && (
+  // The open business: in the side panel beside the map, or in a drawer over the table.
+  const detail = selectedId ? (
             <div className="detail">
               <div className="detail-bar">
-                <button className="btn" onClick={() => setSelectedId(null)} aria-label="Back to list">
-                  <Icon name="back" size={16} />Back to list
+                <button className="btn" onClick={() => setSelectedId(null)} aria-label={layout === "table" ? "Close" : "Back to list"}>
+                  <Icon name={layout === "table" ? "x" : "back"} size={16} />{layout === "table" ? "Close" : "Back to list"}
                 </button>
                 <a className="link-btn" href={`/business/${selectedId}`} target="_blank" rel="noopener">
                   Full page <Icon name="external" size={14} />
@@ -301,9 +303,35 @@ export default function Home() {
                     );
                   })()}
             </div>
-          )}
+  ) : null;
+
+  return (
+    <div className="explorer-page">
+      <div className="toolbar">
+        {/* Suggestions are the top of the list query, so typing costs one request, not two. */}
+        <SearchBox value={q} onChange={setQ} onPick={openBusiness} busy={updating && !!q}
+          suggestions={data && data.q
+            ? { q: data.q, items: data.results.slice(0, 6), industry: data.industry, total: exact ?? undefined } : null} />
+        <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
+        <div className="layout-switch" role="group" aria-label="View">
+          {(["map", "table"] as const).map((l) => (
+            <button key={l} type="button" aria-pressed={layout === l} onClick={() => { setLayout(l); setSelectedId(null); }}>
+              <Icon name={l === "map" ? "map" : "list"} size={15} />{l === "map" ? "Map" : "Table"}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="explorer" data-view={view} data-layout={layout}>
+        {layout === "map" && (
+          <div className="map">
+            <Map points={points} loading={pinsLoading} onBoundsChange={setBbox} fitKey={fitKey} onSelect={openBusiness}
+              selected={selectedPoint} hoveredId={hovered} onHover={setHovered} />
+          </div>
+        )}
+        <div className="panel" ref={panel}>
+          {layout === "map" && detail}
           {/* The list stays mounted while a profile is open, so Back returns to the same scroll position. */}
-          <div style={{ display: selectedId ? "none" : undefined }}>
+          <div style={{ display: selectedId && layout === "map" ? "none" : undefined }}>
             <div className="list-head">
               {(updating || !data) && !failed && <div className="progress" aria-hidden />}
               <span className="count" aria-live="polite">
@@ -312,7 +340,7 @@ export default function Home() {
                   : data ? (exact == null ? "Counting businesses…" : `${totalText} ${total === 1 ? "business" : "businesses"}`) : <><span className="spinner" aria-hidden /> Loading businesses…</>}
               </span>
               <span className="sub">
-                {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : "in map view"} · estimates
+                {data?.industry ? <>Industry: <strong>{data.industry}</strong></> : fitKey ? "matching your search" : layout === "table" ? "in Oklahoma" : "in map view"} · estimates
               </span>
               <span className="list-actions">
                 <label className="sort-inline">Sort
@@ -332,6 +360,12 @@ export default function Home() {
                 <h3>Something went wrong loading businesses</h3>
                 <p>The database may be busy. Try again in a moment.</p>
                 <button className="btn primary" onClick={() => setAttempt((a) => a + 1)}>Retry</button>
+              </div>
+            )}
+            {layout === "table" && data && data.results.length > 0 && (
+              <div className={`table-scroll ${updating ? "stale" : ""}`}>
+                <BizTable rows={data.results} sort={sort} selectedId={selectedId} onOpen={openBusiness}
+                  onSort={(s) => setFilters((f) => ({ ...f, sort: s }))} />
               </div>
             )}
             <div className={`cards ${updating ? "stale" : ""}`} aria-busy={loading}>
@@ -367,6 +401,10 @@ export default function Home() {
             )}
           </div>
         </div>
+        {layout === "table" && selectedId && <>
+          <div className="drawer-backdrop" onClick={() => setSelectedId(null)} aria-hidden />
+          <aside className="table-drawer" ref={drawer}>{detail}</aside>
+        </>}
         <button className="btn primary view-toggle" onClick={() => setView(view === "map" ? "list" : "map")}>
           <Icon name={view === "map" ? "list" : "map"} size={16} />{view === "map" ? "List" : "Map"}
         </button>

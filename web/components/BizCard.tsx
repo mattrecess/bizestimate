@@ -8,7 +8,7 @@ export type Biz = {
   id: number; name: string; city: string; zip: string; industry: string; naics: string | null;
   jobs_reported: number | null; est_revenue_mid: string; est_ebitda_mid: string;
   est_confidence: string; est_method: string; has_owner: boolean; has_website: boolean;
-  is_nonprofit?: boolean; est_ebitda_low?: string; est_ebitda_high?: string; parent_name?: string | null; sell_score?: string | null; locations?: number;
+  is_nonprofit?: boolean; owner_name?: string | null; est_ebitda_low?: string; est_ebitda_high?: string; parent_name?: string | null; sell_score?: string | null; locations?: number;
   lenders?: { lender: string; program: string | null; year: number | null }[] | null;
 };
 
