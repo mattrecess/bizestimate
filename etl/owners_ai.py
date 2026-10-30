@@ -174,7 +174,7 @@ def main():
     max_total = int(os.environ.get("OWNERS_AI_MAX_TOTAL") or 80_000)   # approved: all listed websites (~$7 more)
     in_flight = sum(len(b["items"]) for b in pending)
     limit = min(int(os.environ.get("OWNERS_AI_LIMIT") or 40_000), max(max_total - len(cache) - in_flight, 0))
-    deadline = time.time() + 60 * int(os.environ.get("OWNERS_AI_WAIT_MIN") or 240)
+    deadline = time.time() + 60 * int(os.environ.get("OWNERS_AI_WAIT_MIN") or 45)
     usage = [0, 0, 0, 0]  # direct in/out, batch in/out
 
     if key:
