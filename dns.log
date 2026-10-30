@@ -1,0 +1,18 @@
+== seebitda.com
+NS:
+ns1.vercel-dns.com.
+ns2.vercel-dns.com.
+TXT:
+"google-site-verification=JThihcJmnD3zw-ZnFW0xLiy0Mt7u-BsB_stihAYsPi4"
+A:
+216.198.79.1
+64.29.17.1
+CNAME:
+== www.seebitda.com
+NS:
+TXT:
+A:
+64.29.17.65
+64.29.17.1
+CNAME:
+== whois nameservers
