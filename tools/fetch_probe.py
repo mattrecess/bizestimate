@@ -5,7 +5,7 @@ import urllib.request
 
 SITE = "https://bizestimate-six.vercel.app"
 get = lambda p: json.loads(urllib.request.urlopen(SITE + p, timeout=60).read())  # noqa: E731
-for q in ["cook feed", "cooks feed"]:
+for q in ["cook feed", "williams companies", "helmerich", "paycom"]:
     r = get(f"/api/businesses?q={urllib.parse.quote(q)}&limit=40")
     print(f"== {q!r}: {r['total']} results")
     for b in r["results"]:
