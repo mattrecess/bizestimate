@@ -1,12 +1,13 @@
-"""Dump one business's profile from the live site (for the layout mockup)."""
-import json
+"""Check the custom domain: home page, www redirect, health check, and which address the sitemap uses."""
+import time
 import urllib.request
 
-SITE = "https://bizestimate-six.vercel.app"
-get = lambda p: json.loads(urllib.request.urlopen(SITE + p, timeout=90).read())  # noqa: E731
-core = get("/api/businesses/1294710?core=1")
-related = get("/api/businesses/1294710/related")
-keep = {k: v for k, v in core.items() if k not in ("sources",)}
-print(json.dumps(keep, default=str)[:6000])
-print("SOURCES", json.dumps([{"source": s["source"], "data": s["data"]} for s in core.get("sources") or []], default=str)[:6000])
-print("RELATED", json.dumps(related, default=str)[:5000])
+for url in ("https://seebitda.com/", "https://www.seebitda.com/", "https://seebitda.com/api/health",
+            "https://seebitda.com/sitemap.xml", "https://seebitda.com/robots.txt"):
+    t = time.time()
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "SeeBITDA check"}), timeout=60) as r:
+            body = r.read(600).decode("utf-8", "replace")
+            print(f"{r.status} {time.time() - t:4.1f}s {url} -> {r.geturl()}\n   {body[:300]!r}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"FAILED {url} {e!r}", flush=True)
