@@ -654,3 +654,4 @@ tr.ref-own td { background: #eef4ff; }
 .signin-close:hover { color: var(--text); background: var(--avg-soft); }
 .signin-google { width: 100%; justify-content: center; height: 44px; font-size: 15px; gap: 10px; }
 .signin-dialog .signin-soon { margin: 0; font-weight: 600; color: var(--text); }
+.more-body .lender-list { max-height: 220px; }

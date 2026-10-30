@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { money } from "@/lib/format";
+import { blurOnEnter } from "@/lib/touch";
+import RevenueRange from "./RevenueRange";
 
 const VALUE = [250e3, 500e3, 1e6, 2e6, 3e6, 5e6, 10e6, 25e6, 50e6];
 const EBITDA = [100e3, 250e3, 500e3, 1e6, 2e6, 3e6, 5e6, 10e6];
@@ -10,9 +12,30 @@ const SELL: [string, string][] = [["", "Any"], ["20", "Some signs"], ["40", "Ele
 const YEARS = ["", "10", "20", "30", "40"];
 const BASIS: [string, string][] = [["reported", "Reported or verified"], ["k401", "401(k) headcount"], ["ppp", "PPP data"], ["avg", "Industry average"]];
 
-// The "More" panel: edits a copy of the filters and applies them together.
-export default function MoreFilters({ value, onApply, onClose }: { value: string; onApply: (more: string) => void; onClose: () => void }) {
-  const [p, setP] = useState(() => new URLSearchParams(value));
+type Applied = { more: string; minRev: string; maxRev: string; lender: string };
+
+// The "More" panel: edits a copy of the filters and applies them together. Revenue and lender are
+// kept under their own URL keys (min_rev, max_rev, lender), so links and saved searches still work.
+export default function MoreFilters({ value, revenue, lender, onApply, onClose }: {
+  value: string; revenue: { minRev: string; maxRev: string }; lender: string;
+  onApply: (next: Applied) => void; onClose: () => void;
+}) {
+  const [p, setP] = useState(() => {
+    const n = new URLSearchParams(value);
+    if (revenue.minRev) n.set("min_rev", revenue.minRev);
+    if (revenue.maxRev) n.set("max_rev", revenue.maxRev);
+    if (lender) n.set("lender", lender);
+    return n;
+  });
+  const [lenderQuery, setLenderQuery] = useState("");
+  const [lenders, setLenders] = useState<{ key: string; name: string; count: number }[] | null>(null);
+  useEffect(() => { fetch("/api/lenders").then((r) => r.json()).then(setLenders).catch(() => setLenders([])); }, []);
+  const apply = () => {
+    const more = new URLSearchParams(p);
+    for (const k of ["min_rev", "max_rev", "lender"]) more.delete(k);
+    onApply({ more: more.toString(), minRev: p.get("min_rev") ?? "", maxRev: p.get("max_rev") ?? "", lender: p.get("lender") ?? "" });
+    onClose();
+  };
   const get = (k: string) => p.get(k) ?? "";
   const set = (changes: Record<string, string>) => setP((old) => {
     const n = new URLSearchParams(old);
@@ -45,11 +68,18 @@ export default function MoreFilters({ value, onApply, onClose }: { value: string
     </div>
   );
   const basis = get("basis") ? get("basis").split(",") : [];
+  const lenderSel = get("lender") ? get("lender").split(",") : [];
+  const flipLender = (k: string) => set({ lender: (lenderSel.includes(k) ? lenderSel.filter((x) => x !== k) : [...lenderSel, k]).join(",") });
+  // Ticked banks first, so they stay in view while searching for others.
+  const shownLenders = (lenders ?? []).filter((l) => lenderSel.includes(l.key) || l.name.toLowerCase().includes(lenderQuery.toLowerCase()))
+    .sort((a, b) => Number(lenderSel.includes(b.key)) - Number(lenderSel.includes(a.key))).slice(0, 200);
   const emp = `${get("min_emp")}|${get("max_emp")}`;
 
   return (
     <div className="popover wide more-pop">
       <div className="more-body">
+        <h4>Revenue</h4>
+        <RevenueRange minRev={get("min_rev")} maxRev={get("max_rev")} onChange={(r) => set({ min_rev: r.minRev, max_rev: r.maxRev })} />
         <h4>Estimated value</h4>{range("min_value", "max_value", VALUE)}
         <h4>EBITDA</h4>{range("min_ebitda", "max_ebitda", EBITDA)}
         <h4>Employees</h4>
@@ -64,6 +94,18 @@ export default function MoreFilters({ value, onApply, onClose }: { value: string
         <div className="checks">{flag("owner", "Owner known")}{flag("phone", "Has phone")}{flag("email", "Has email")}{flag("website", "Has website")}</div>
         <h4>Public records</h4>
         <div className="checks">{flag("contractor", "Federal contractor")}</div>
+        <h4>Lender (PPP and SBA loans){lenderSel.length ? ` · ${lenderSel.length} selected` : ""}</h4>
+        <input className="filter-input" placeholder="Find a bank" value={lenderQuery} enterKeyHint="done" onKeyDown={blurOnEnter}
+          onChange={(e) => setLenderQuery(e.target.value)} />
+        <div className="check-list lender-list">
+          {!lenders && <div className="check-option">Loading…</div>}
+          {shownLenders.map((l) => (
+            <label key={l.key} className="check-option">
+              <input type="checkbox" checked={lenderSel.includes(l.key)} onChange={() => flipLender(l.key)} />
+              <span className="label">{l.name}</span><span className="count">{l.count.toLocaleString()}</span>
+            </label>
+          ))}
+        </div>
         <h4>Estimate based on</h4>
         <div className="checks">
           {BASIS.map(([k, label]) => (
@@ -78,7 +120,7 @@ export default function MoreFilters({ value, onApply, onClose }: { value: string
       </div>
       <div className="popover-actions">
         <button className="link-btn" onClick={() => setP(new URLSearchParams())}>Reset all</button>
-        <button className="btn primary" onClick={() => { onApply(p.toString()); onClose(); }}>Apply</button>
+        <button className="btn primary" onClick={apply}>Apply</button>
       </div>
     </div>
   );

@@ -1,10 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { SECTORS } from "@/lib/sectors";
-import { money } from "@/lib/format";
 import Icon from "./Icon";
 import NaicsPicker from "./NaicsPicker";
-import RevenueRange from "./RevenueRange";
 import MoreFilters from "./MoreFilters";
 import { moreCount } from "@/lib/more-filters";
 import { blurOnEnter, isTouch } from "@/lib/touch";
@@ -16,29 +14,15 @@ const SORTS: [string, string][] = [
   ["ebitda_desc", "EBITDA: high to low"], ["jobs_desc", "Most employees"], ["sell_desc", "Likely to sell"], ["name", "Name A–Z"],
 ];
 
-function revenueLabel(min: string, max: string) {
-  if (min && max) return `${money(min)}–${money(max)}`;
-  if (min) return `${money(min)}+`;
-  if (max) return `Up to ${money(max)}`;
-  return "Revenue";
-}
-
 // Pill buttons that open small panels, Zillow-style, instead of a row of dropdowns.
 export default function FilterBar({ value, onChange, cities }: {
   value: FilterState;
   onChange: (next: Partial<FilterState>) => void;
   cities: { city: string; count: number }[];
 }) {
-  const [open, setOpen] = useState<"" | "industry" | "city" | "revenue" | "naics" | "lender" | "more">("");
+  const [open, setOpen] = useState<"" | "industry" | "city" | "naics" | "more">("");
   const [cityQuery, setCityQuery] = useState("");
-  const [lenderQuery, setLenderQuery] = useState("");
-  const [lenderOptions, setLenderOptions] = useState<{ key: string; name: string; count: number }[] | null>(null);
   const naicsSel = value.naics ? value.naics.split(",") : [];
-  const lenderSel = value.lender ? value.lender.split(",") : [];
-  useEffect(() => {
-    if ((open === "lender" || lenderSel.length) && !lenderOptions) fetch("/api/lenders").then((r) => r.json()).then(setLenderOptions).catch(() => setLenderOptions([]));
-  }, [open, lenderSel.length, lenderOptions]);
-  const flip = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]).join(",");
   const bar = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,11 +35,9 @@ export default function FilterBar({ value, onChange, cities }: {
 
   const toggle = (k: typeof open) => setOpen(open === k ? "" : k);
   const anyFilter = value.sector || value.city || value.minRev || value.maxRev || value.naics || value.lender || value.more;
-  const moreN = moreCount(value.more);
+  // Revenue and lender live in the More panel too, so they count toward its badge.
+  const moreN = moreCount(value.more) + (value.minRev || value.maxRev ? 1 : 0) + (value.lender ? 1 : 0);
   const naicsLabel = !naicsSel.length ? "NAICS" : naicsSel.length === 1 ? `NAICS ${naicsSel[0]}` : `NAICS (${naicsSel.length})`;
-  const shownLenders = (lenderOptions ?? []).filter((l) => l.name.toLowerCase().includes(lenderQuery.toLowerCase())).slice(0, 200);
-  const lenderLabel = !lenderSel.length ? "Lender"
-    : lenderSel.length === 1 ? (lenderOptions?.find((l) => l.key === lenderSel[0])?.name ?? "1 lender") : `Lenders (${lenderSel.length})`;
   const shownCities = cities.filter((c) => c.city.toLowerCase().includes(cityQuery.toLowerCase())).slice(0, 80);
 
   return (
@@ -112,51 +94,11 @@ export default function FilterBar({ value, onChange, cities }: {
       </div>
 
       <div className="pill-wrap">
-        <button className={`pill ${lenderSel.length ? "active" : ""}`} aria-expanded={open === "lender"} onClick={() => toggle("lender")}>
-          {lenderLabel}<Icon name="chevron" size={14} className="chev" />
-        </button>
-        {open === "lender" && (
-          <div className="popover wide">
-            <h4>Businesses that borrowed from (PPP and SBA loans)</h4>
-            <input className="filter-input" placeholder="Find a bank" value={lenderQuery} autoFocus={!isTouch()} enterKeyHint="done" onKeyDown={blurOnEnter} onChange={(e) => setLenderQuery(e.target.value)} />
-            <div className="check-list">
-              {!lenderOptions && <div className="check-option">Loading…</div>}
-              {shownLenders.map((l) => (
-                <label key={l.key} className="check-option">
-                  <input type="checkbox" checked={lenderSel.includes(l.key)} onChange={() => onChange({ lender: flip(lenderSel, l.key) })} />
-                  <span className="label">{l.name}</span><span className="count">{l.count.toLocaleString()}</span>
-                </label>
-              ))}
-            </div>
-            <div className="popover-actions">
-              <button className="link-btn" onClick={() => onChange({ lender: "" })}>Clear{lenderSel.length ? ` (${lenderSel.length})` : ""}</button>
-              <button className="link-btn" onClick={() => setOpen("")}>Done</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="pill-wrap">
-        <button className={`pill ${value.minRev || value.maxRev ? "active" : ""}`} aria-expanded={open === "revenue"} onClick={() => toggle("revenue")}>
-          {revenueLabel(value.minRev, value.maxRev)}<Icon name="chevron" size={14} className="chev" />
-        </button>
-        {open === "revenue" && (
-          <div className="popover wide">
-            <h4>Revenue range</h4>
-            <RevenueRange minRev={value.minRev} maxRev={value.maxRev} onChange={(next) => onChange(next)} />
-            <div className="popover-actions">
-              <button className="link-btn" onClick={() => onChange({ minRev: "", maxRev: "" })}>Reset</button>
-              <button className="link-btn" onClick={() => setOpen("")}>Done</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="pill-wrap">
         <button className={`pill ${moreN ? "active" : ""}`} aria-expanded={open === "more"} onClick={() => toggle("more")}>
           {moreN ? `More (${moreN})` : "More"}<Icon name="chevron" size={14} className="chev" />
         </button>
-        {open === "more" && <MoreFilters value={value.more} onApply={(more) => onChange({ more })} onClose={() => setOpen("")} />}
+        {open === "more" && <MoreFilters value={value.more} revenue={{ minRev: value.minRev, maxRev: value.maxRev }} lender={value.lender}
+          onApply={(next) => onChange(next)} onClose={() => setOpen("")} />}
       </div>
 
       <select className="sort-select" aria-label="Sort" value={value.sort} onChange={(e) => onChange({ sort: e.target.value })}>
