@@ -71,6 +71,8 @@ export default function MoreFilters({ value, onApply, onClose }: { value: string
               onChange={() => set({ basis: (basis.includes(k) ? basis.filter((b) => b !== k) : [...basis, k]).join(",") })} />{label}</label>
           ))}
         </div>
+        <h4>Include</h4>
+        <div className="checks">{flag("public", "Public companies (SEC filers)")}</div>
         <h4>Exclude</h4>
         <div className="checks">{flag("x_branch", "Extra locations on the map")}{flag("x_nonprofit", "Nonprofits")}{flag("x_franchise", "Franchises (from SBA loan records)")}</div>
       </div>

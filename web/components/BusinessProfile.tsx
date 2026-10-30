@@ -182,7 +182,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         {(ownershipChange || src.sec || src.contracts || b.is_nonprofit) && (
           <div className="badges">
             {ownershipChange && <span className="badge warn">New owners FY{ownershipChange}</span>}
-            {src.sec && <span className="badge info">Public company</span>}
+            {src.sec && <span className="badge info">Public company{src.sec.tickers?.length ? ` · ${src.sec.tickers.join(", ")}` : ""}</span>}
             {src.contracts && <span className="badge info">Federal contractor</span>}
             {b.is_nonprofit && <span className="badge">Nonprofit</span>}
           </div>

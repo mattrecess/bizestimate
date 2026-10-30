@@ -18,7 +18,7 @@ export type Filters = {
   years?: number;         // in business at least this many years
   owner?: boolean; phone?: boolean; email?: boolean; website?: boolean; contractor?: boolean;
   basis?: string[];       // reported | k401 | ppp | avg
-  noBranch?: boolean; noNonprofit?: boolean; noFranchise?: boolean;
+  noBranch?: boolean; noNonprofit?: boolean; noFranchise?: boolean; showPublic?: boolean;
   bbox?: [number, number, number, number]; // west, south, east, north
   area?: [number, number][];                // a shape drawn on the map: [lon, lat] corners
 };
@@ -69,6 +69,7 @@ export function parseFilters(p: URLSearchParams): Filters {
     website: p.get("website") === "1", contractor: p.get("contractor") === "1",
     basis: list(p.get("basis")).filter((b) => b in BASIS),
     noBranch: p.get("x_branch") === "1", noNonprofit: p.get("x_nonprofit") === "1", noFranchise: p.get("x_franchise") === "1",
+    showPublic: p.get("public") === "1",
     area: parseArea(p.get("area")),
     bbox: bbox?.length === 4 && bbox.every(Number.isFinite) ? (bbox as Filters["bbox"]) : undefined,
   };
@@ -79,6 +80,15 @@ export function naicsQuery(q: string | undefined) {
   const m = q?.trim().match(/^(?:naics\s*:?\s*)?(\d{2,6})(?:\s+(.+))?$/i);
   return m ? { code: m[1], rest: (m[2] ?? "").trim() } : null;
 }
+
+// Companies that file with the SEC. Only a couple dozen, so the list check is a small hashed lookup.
+export const notPublic = sql`biz_key not in (select biz_key from business_sources where source = 'sec')`;
+
+/** The list's conditions: each company once (extra locations stay on the map only), and public companies
+ *  only when searched for by name or asked for: the list is for private businesses, and a few
+ *  billion-dollar public companies would otherwise top every revenue-sorted list. */
+export const listWhere = (f: Filters) =>
+  sql`${where(f)} and coalesce(est_method, '') <> 'branch' ${f.q || f.showPublic ? sql`` : sql`and ${notPublic}`}`;
 
 export function where(f: Filters) {
   const prefixes = SECTORS.find((s) => s.label === f.sector)?.prefixes;

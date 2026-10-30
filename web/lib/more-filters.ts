@@ -1,7 +1,7 @@
 // The "More" filters, kept together as one query string ("min_value=1000000&owner=1") in the page
 // state and URL. Keys match parseFilters in lib/queries.ts.
 export const MORE_KEYS = ["min_value", "max_value", "min_ebitda", "max_ebitda", "min_emp", "max_emp", "sell", "years",
-  "owner", "phone", "email", "website", "contractor", "basis", "x_branch", "x_nonprofit", "x_franchise"] as const;
+  "owner", "phone", "email", "website", "contractor", "basis", "x_branch", "x_nonprofit", "x_franchise", "public"] as const;
 
 export const moreFrom = (u: URLSearchParams) => {
   const p = new URLSearchParams();

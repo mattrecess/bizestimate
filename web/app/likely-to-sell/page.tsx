@@ -4,7 +4,7 @@ import { sql } from "@/lib/db";
 import { money } from "@/lib/format";
 import { INDUSTRIES } from "@/lib/industries";
 import { industryBySlug, slug } from "@/lib/landing";
-import { industryMatch, valueSql } from "@/lib/queries";
+import { industryMatch, notPublic, valueSql } from "@/lib/queries";
 
 export const metadata = {
   title: "Oklahoma businesses likely to sell | SeeBITDA",
@@ -23,7 +23,7 @@ export default async function LikelyToSell({ searchParams }: { searchParams: Pro
   const ind = p.industry ? industryBySlug(p.industry) : null;
   const city = (p.city ?? "").trim();
   const min = Number(p.min) || 0;
-  const where = sql`not is_individual and coalesce(est_method, '') <> 'branch' and sell_score >= ${MIN_SCORE}
+  const where = sql`not is_individual and coalesce(est_method, '') <> 'branch' and sell_score >= ${MIN_SCORE} and ${notPublic}
     ${ind ? sql`and (${industryMatch(ind.naics)})` : sql``}
     ${city ? sql`and lower(city) = ${city.toLowerCase()}` : sql``}
     ${min ? sql`and est_revenue_mid >= ${min}` : sql``}`;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { industryLabel, matchIndustry } from "@/lib/industries";
-import { CACHE, naicsQuery, parseFilters, publicAddress, relevance, valueSql, where } from "@/lib/queries";
+import { CACHE, naicsQuery, parseFilters, publicAddress, listWhere, relevance, valueSql } from "@/lib/queries";
 
 // Each ends with id, so ties (equal revenue) keep one order and continuous scrolling never repeats
 // or skips a business between batches.
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const offset = Math.max(Number(p.get("offset")) || 0, 0);
   // The list shows each company once: extra locations (est_method 'branch') stay on the map but
   // appear in the list only as their parent's location count.
-  const w = sql`${where(f)} and coalesce(est_method, '') <> 'branch'`;
+  const w = listWhere(f);
 
   // The total comes from /api/businesses/count on its own, so a slow count never holds up the list;
   // without a window count, the page can come straight off an index instead of sorting every match.

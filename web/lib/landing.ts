@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { sql } from "./db";
 import { INDUSTRIES, slug, type Industry } from "./industries";
-import { industryMatch, valueSql } from "./queries";
+import { industryMatch, notPublic, valueSql } from "./queries";
 
 // Pages for "<industry> in <city>, Oklahoma": an industry's slug is its label, a city's is its name.
 export { slug };
@@ -45,7 +45,7 @@ export const top = (ind: Industry, city?: string, limit = 50) => sql<Row[]>`
 // The likeliest sellers and the latest deals, for the market report.
 export const sellers = (ind: Industry, city?: string, limit = 5) => sql<(Row & { sell_score: number; sell_signals: string[] | null })[]>`
   select id, name, city, jobs_reported, est_revenue_mid, est_ebitda_mid, est_method, sell_score, sell_signals from businesses
-  where ${listed} and sell_score >= 40 and (${industryMatch(ind.naics)}) ${city ? sql`and lower(city) = ${city.toLowerCase()}` : sql``}
+  where ${listed} and sell_score >= 40 and ${notPublic} and (${industryMatch(ind.naics)}) ${city ? sql`and lower(city) = ${city.toLowerCase()}` : sql``}
   order by sell_score desc, est_revenue_mid desc nulls last, id limit ${limit}`.catch(() => []);
 
 export const deals = (ind: Industry, city?: string, limit = 5) => sql<{ id: string; name: string; city: string; buyer: string;
