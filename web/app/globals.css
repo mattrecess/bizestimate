@@ -651,8 +651,8 @@ tr.ref-own td { background: #eef4ff; }
 .sell-pill svg { color: var(--warn); }
 .sell-pill.on { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
 .show-phone { display: none; }
-.active-chips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.active-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px 0 12px; border-radius: 999px;
+.active-chips { display: contents; }
+.active-chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px 0 12px; border-radius: 999px;
   border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .active-chip:hover { background: var(--accent); color: var(--on-accent); }
 .active-chips .clear-all { font-size: 13px; }
@@ -680,8 +680,6 @@ tr.ref-own td { background: #eef4ff; }
 @media (max-width: 860px) {
   .show-phone { display: block; }
   .hide-phone { display: none; }
-  .active-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .active-chips::-webkit-scrollbar { display: none; }
   .active-chip { flex-shrink: 0; }
   .ind-grid, .panel-body .checks { grid-template-columns: 1fr; }
   .pills .popover.filter-panel.all { top: 0; max-height: none; height: 100dvh; border-radius: 0; }
@@ -707,3 +705,11 @@ tr.ref-own td { background: #eef4ff; }
 .bp-meta li { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); background: var(--panel-2);
   border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
 .bp-meta li svg { color: var(--muted); flex: none; }
+.filters .pills { flex: 1 1 480px; min-width: 0; }
+.toggle-pill.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.toggle-pill svg { color: var(--muted); }
+.toggle-pill.on svg { color: var(--accent); }
+@media (min-width: 861px) {
+  .toolbar { align-items: flex-start; }
+  .searchbox { flex: 0 1 360px; }
+}

@@ -3,11 +3,9 @@ import { useState } from "react";
 import { INDUSTRIES } from "@/lib/industries";
 import { SECTORS } from "@/lib/sectors";
 import { blurOnEnter, isTouch } from "@/lib/touch";
-import Icon from "./Icon";
-import NaicsPicker from "./NaicsPicker";
 
-// One place to choose an industry: everyday names first ("Plumbing, heating & air"), broad sectors,
-// and every NAICS code for those who want one. A single search box covers all three.
+// Choosing an industry by its everyday name ("Plumbing, heating & air") or broad sector. Exact NAICS
+// codes have their own picker (NaicsPicker).
 const SHORT = 10;   // in the phone sheet, industries shown before "Show all"
 
 export default function IndustryPicker({ sector, naics, onChange, short = false }: {
@@ -15,17 +13,15 @@ export default function IndustryPicker({ sector, naics, onChange, short = false 
   onChange: (next: { sector: string; naics: string }, done: boolean) => void;   // done: a single choice, the panel can close
 }) {
   const [query, setQuery] = useState("");
-  const [browse, setBrowse] = useState(false);
   const [all, setAll] = useState(!short);
   const q = query.trim().toLowerCase();
   const common = INDUSTRIES.filter((i) => !q || i.label.toLowerCase().includes(q) || i.terms.some((t) => t.includes(q)));
   const sectors = SECTORS.filter((s) => !q || s.label.toLowerCase().includes(q));
-  const codes = naics ? naics.split(",") : [];
   const any = !sector && !naics;
 
   return (
     <div className="industry-picker">
-      <input className="filter-input" placeholder="Search industries or NAICS codes" value={query} autoFocus={!isTouch()}
+      <input className="filter-input" placeholder="Search industries" value={query} autoFocus={!isTouch()}
         enterKeyHint="done" onKeyDown={blurOnEnter} onChange={(e) => setQuery(e.target.value)} />
       {!q && (
         <button type="button" className={`option ${any ? "selected" : ""}`} onClick={() => onChange({ sector: "", naics: "" }, true)}>All industries</button>
@@ -54,13 +50,6 @@ export default function IndustryPicker({ sector, naics, onChange, short = false 
           ))}
         </div>
       </>}
-      <h4>{q ? "NAICS codes" : (
-        <button type="button" className="link-btn browse-codes" aria-expanded={browse} onClick={() => setBrowse((b) => !b)}>
-          <Icon name="chevron" size={13} className={browse ? "" : "closed"} />Browse all NAICS codes{codes.length && !common.some((i) => naics === i.naics.join(",")) ? ` (${codes.length} picked)` : ""}
-        </button>
-      )}</h4>
-      <NaicsPicker selected={codes} search={query} browse={browse}
-        onChange={(next) => onChange({ sector: "", naics: next.join(",") }, false)} />
     </div>
   );
 }

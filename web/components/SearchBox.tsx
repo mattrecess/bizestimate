@@ -50,7 +50,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
     <form className="searchbox" ref={box} role="search" action="" onSubmit={(e) => { e.preventDefault(); done(); }}>
       {busy ? <span className="spinner icon-search" aria-label="Searching" /> : <Icon name="search" className="icon-search" />}
       <input
-        ref={input} type="search" enterKeyHint="search" placeholder="Search a business, city, industry or NAICS code" value={text} aria-label="Search businesses"
+        ref={input} type="search" enterKeyHint="search" placeholder="Search businesses, cities, industries" value={text} aria-label="Search businesses"
         onFocus={() => setOpen(true)}
         onChange={(e) => { setText(e.target.value); onChange(e.target.value); setOpen(true); }}
         onKeyDown={(e) => {

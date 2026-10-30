@@ -5,6 +5,8 @@ import { moreCount } from "@/lib/more-filters";
 import FilterPanel from "./FilterPanel";
 import Icon from "./Icon";
 import IndustryPicker from "./IndustryPicker";
+import NaicsPicker from "./NaicsPicker";
+import { INDUSTRIES } from "@/lib/industries";
 
 export type { FilterState };
 
@@ -18,7 +20,7 @@ export default function FilterBar({ value, onChange, cities }: {
   onChange: (next: Partial<FilterState>) => void;
   cities: { city: string; count: number }[];
 }) {
-  const [open, setOpen] = useState<"" | "industry" | "size" | "more" | "all">("");
+  const [open, setOpen] = useState<"" | "industry" | "naics" | "size" | "more" | "all">("");
   const [lenderNames, setLenderNames] = useState<Record<string, string>>({});
   const bar = useRef<HTMLDivElement>(null);
 
@@ -40,14 +42,21 @@ export default function FilterBar({ value, onChange, cities }: {
   const sizeN = (value.minRev || value.maxRev ? 1 : 0) + [["min_value", "max_value"], ["min_ebitda", "max_ebitda"], ["min_emp", "max_emp"]]
     .filter(([a, b]) => more.get(a) || more.get(b)).length;
   const moreOnly = new URLSearchParams(value.more);
-  SIZE_KEYS.forEach((k) => moreOnly.delete(k));
+  [...SIZE_KEYS, "sell", "owner"].forEach((k) => moreOnly.delete(k));   // those have their own buttons
   const moreN = moreCount(moreOnly.toString()) + (value.lender ? 1 : 0) + (value.city ? 1 : 0);
-  const chips = activeChips(value, (k) => lenderNames[k] ?? titleCase(k));
-  const industryLabel = value.sector || industryName(value.naics) || "Industry";
+  // Likely to sell, Owner known and the industry show on their own buttons, so they don't repeat as chips.
+  const chips = activeChips(value, (k) => lenderNames[k] ?? titleCase(k)).filter((c) => c.key !== "sell" || more.get("sell") !== "40").filter((c) => c.key !== "owner")
+    .filter((c) => !["sector", "naics"].includes(c.key));   // the Industry and NAICS buttons already name them
+  // An everyday industry ("Roofing") shows on Industry; any other code selection shows on NAICS.
+  const common = INDUSTRIES.some((i) => i.naics.join(",") === value.naics);
+  const industryLabel = value.sector || (common ? industryName(value.naics) : "") || "Industry";
+  const naicsSel = value.naics ? value.naics.split(",") : [];
+  const naicsLabel = !naicsSel.length || common ? "NAICS" : naicsSel.length === 1 ? `NAICS ${naicsSel[0]}` : `NAICS (${naicsSel.length})`;
   const selling = !!more.get("sell");
-  const setSell = () => {
+  const ownerKnown = more.get("owner") === "1";
+  const flip = (k: string, on: string) => {
     const n = new URLSearchParams(value.more);
-    if (selling) n.delete("sell"); else n.set("sell", "40");
+    if (n.get(k)) n.delete(k); else n.set(k, on);
     onChange({ more: n.toString() });
   };
   const clearAll = () => onChange({ sector: "", city: "", minRev: "", maxRev: "", naics: "", lender: "", more: "" });
@@ -68,7 +77,7 @@ export default function FilterBar({ value, onChange, cities }: {
         </div>
 
         <div className="pill-wrap hide-phone">
-          <button className={`pill ${value.sector || value.naics ? "active" : ""}`} aria-expanded={open === "industry"} onClick={() => toggle("industry")}>
+          <button className={`pill ${value.sector || common ? "active" : ""}`} aria-expanded={open === "industry"} onClick={() => toggle("industry")}>
             <span className="pill-text">{industryLabel}</span><Icon name="chevron" size={14} className="chev" />
           </button>
           {open === "industry" && (
@@ -83,14 +92,32 @@ export default function FilterBar({ value, onChange, cities }: {
         </div>
 
         <div className="pill-wrap hide-phone">
+          <button className={`pill ${naicsSel.length && !common ? "active" : ""}`} aria-expanded={open === "naics"} onClick={() => toggle("naics")}>
+            {naicsLabel}<Icon name="chevron" size={14} className="chev" />
+          </button>
+          {open === "naics" && (
+            <div className="popover wide naics-pop">
+              <NaicsPicker selected={common ? [] : naicsSel} onChange={(codes) => onChange({ sector: "", naics: codes.join(",") })} />
+              <div className="popover-actions">
+                <button type="button" className="link-btn" onClick={() => onChange({ naics: "" })}>Clear</button>
+                <button type="button" className="btn primary" onClick={() => setOpen("")}>Done</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="pill-wrap hide-phone">
           <button className={`pill ${sizeN ? "active" : ""}`} aria-expanded={open === "size"} onClick={() => toggle("size")}>
             Size{sizeN ? <span className="pill-n">{sizeN}</span> : null}<Icon name="chevron" size={14} className="chev" />
           </button>
           {open === "size" && panel(["size"])}
         </div>
 
-        <button className={`pill sell-pill ${selling ? "on" : ""}`} aria-pressed={selling} onClick={setSell}>
+        <button className={`pill sell-pill ${selling ? "on" : ""}`} aria-pressed={selling} onClick={() => flip("sell", "40")}>
           <Icon name="flame" size={15} />Likely to sell
+        </button>
+        <button className={`pill toggle-pill ${ownerKnown ? "on" : ""}`} aria-pressed={ownerKnown} onClick={() => flip("owner", "1")}>
+          <Icon name="user" size={15} />Owner known
         </button>
 
         <div className="pill-wrap hide-phone">
@@ -99,18 +126,19 @@ export default function FilterBar({ value, onChange, cities }: {
           </button>
           {open === "more" && panel(["more"])}
         </div>
-      </div>
 
-      {chips.length > 0 && (
-        <div className="active-chips" aria-label="Filters in use">
-          {chips.map((c) => (
-            <button type="button" key={c.key} className="active-chip" onClick={() => onChange(c.clear)} aria-label={`Remove filter: ${c.label}`}>
-              {c.label}<Icon name="x" size={13} />
-            </button>
-          ))}
-          {chips.length > 1 && <button type="button" className="link-btn clear-all" onClick={clearAll}>Clear all</button>}
-        </div>
-      )}
+        {/* What's set, continuing the row to the right of More. */}
+        {chips.length > 0 && (
+          <div className="active-chips" aria-label="Filters in use">
+            {chips.map((c) => (
+              <button type="button" key={c.key} className="active-chip" onClick={() => onChange(c.clear)} aria-label={`Remove filter: ${c.label}`}>
+                {c.label}<Icon name="x" size={13} />
+              </button>
+            ))}
+            {chips.length > 1 && <button type="button" className="link-btn clear-all" onClick={clearAll}>Clear all</button>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

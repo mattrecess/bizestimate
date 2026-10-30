@@ -5,6 +5,7 @@ import { SELL_LABELS, type FilterState } from "@/lib/filters";
 import { blurOnEnter } from "@/lib/touch";
 import Icon from "./Icon";
 import IndustryPicker from "./IndustryPicker";
+import NaicsPicker from "./NaicsPicker";
 import RevenueRange from "./RevenueRange";
 
 const VALUE = [250e3, 500e3, 1e6, 2e6, 3e6, 5e6, 10e6, 25e6, 50e6];
@@ -103,6 +104,8 @@ export default function FilterPanel({ state, sections, cities, onApply, onClose 
           <section>
             <h3>Industry</h3>
             <IndustryPicker short sector={get("sector")} naics={get("naics")} onChange={(n) => set(n)} />
+            <h4>NAICS codes</h4>
+            <NaicsPicker selected={get("naics") ? get("naics").split(",") : []} onChange={(codes) => set({ sector: "", naics: codes.join(",") })} />
           </section>
         )}
         {sections.includes("size") && (
