@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Business, Comparable, Headcount, LenderLink, Loan, Location, Prospect, Transaction } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import ContactCard from "./ContactCard";
-import SaveButton from "./SaveButton";
+import RadarButton from "./RadarButton";
 import PipelineBox from "./PipelineBox";
 import HeadcountChart from "./HeadcountChart";
 import ValueChart, { valueHistory } from "./ValueChart";
@@ -248,7 +248,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         <div className="bp-owner-actions">
           {b.website && <a className="btn" href={b.website} target="_blank" rel="nofollow noopener noreferrer"><Icon name="globe" size={15} />{siteLabel(b.website)}</a>}
           <a className="btn" href={src.linkedin?.company_url || linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer"><Icon name="linkedin" size={15} />LinkedIn</a>
-          <SaveButton id={String(b.id)} name={b.name} city={b.city} />
+          <RadarButton id={String(b.id)} name={b.name} city={b.city} />
           <button className="btn" onClick={share}><Icon name="share" size={15} />{copied ? "Link copied" : "Share"}</button>
         </div>
       </div>

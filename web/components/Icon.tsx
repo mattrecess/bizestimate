@@ -12,6 +12,7 @@ const PATHS: Record<string, string> = {
   list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
   map: "M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14",
   check: "m5 12 5 5L20 7",
+  radar: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM12 12l6.4-6.4M12 12h.01",
   // industry glyphs
   store: "M3 9l2-5h14l2 5M3 9h18M3 9v11h18V9M9 20v-6h6v6",
   utensils: "M6 3v8a3 3 0 0 0 3 3v7M9 3v6M3 3v6a3 3 0 0 0 3 3M18 3c-2 0-3 2-3 5s1 4 3 4v9",

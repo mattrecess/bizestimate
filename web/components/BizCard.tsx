@@ -2,6 +2,7 @@ import { money } from "@/lib/format";
 import { industryLabel } from "@/lib/industries";
 import { estimateValue } from "@/lib/valuation";
 import Icon, { industryIcon } from "./Icon";
+import RadarButton from "./RadarButton";
 
 export type Biz = {
   id: number; name: string; city: string; zip: string; industry: string; naics: string | null;
@@ -31,6 +32,7 @@ export default function BizCard({ b, hovered, onOpen, onHover }: {
           <div className="name">{b.name}</div>
           <div className="sub">{industryLabel(b.naics) ?? b.industry} · {b.city}, OK {b.zip}</div>
         </div>
+        <RadarButton compact id={String(b.id)} name={b.name} city={b.city} />
       </div>
       {b.est_method === "branch" ? (
         <div className="card-figures"><span className="sub">Location of <b>{b.parent_name}</b></span></div>

@@ -33,7 +33,7 @@ export default async function Compare({ searchParams }: { searchParams: Promise<
     <>
       <main className="page compare">
         <h1>Compare businesses</h1>
-        {rows.length < 2 ? <p>Pick two to five businesses on your <Link href="/saved">Saved</Link> page to compare them.</p> : (
+        {rows.length < 2 ? <p>Pick two to five businesses on <Link href="/radar">My Radar</Link> to compare them.</p> : (
           <div className="section">
             <table>
               <thead><tr><th />{rows.map((r) => <th key={r.id}><Link href={`/business/${r.id}`}>{r.name}</Link></th>)}</tr></thead>

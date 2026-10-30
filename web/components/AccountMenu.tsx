@@ -50,7 +50,7 @@ export default function AccountMenu() {
       {open && (
         <div className="account-menu" role="menu">
           <div className="who"><b>{user.name}</b><div className="muted">{user.email}</div></div>
-          <Link href="/saved" onClick={() => setOpen(false)}>Saved businesses &amp; searches</Link>
+          <Link href="/radar" onClick={() => setOpen(false)}>My Radar</Link>
           <button onClick={() => signOut()}>Sign out</button>
           <button className="danger" onClick={() => deleteAccount()}>Delete account</button>
         </div>

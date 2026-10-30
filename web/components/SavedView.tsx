@@ -30,15 +30,15 @@ export default function SavedView() {
   const pick = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : p.length < MAX_COMPARE ? [...p, id] : p));
   return (
     <>
-      <h1>Saved</h1>
-      <p className="disclaimer">{signedIn ? "Saved to your account, so they're on every device you sign in on."
-        : "Kept in this browser only. Sign in with Google to keep them on every device."} Tick up to {MAX_COMPARE} businesses to compare them side by side.</p>
+      <h1>My Radar</h1>
+      <p className="disclaimer">{signedIn ? "The companies you're keeping an eye on, saved to your account so they're on every device you sign in on."
+        : "The companies you're keeping an eye on, kept in this browser. Sign in with Google to keep them on every device."} Tick up to {MAX_COMPARE} businesses to compare them side by side.</p>
       <div className="section">
         <div className="saved-head">
-          <h2>Businesses</h2>
+          <h2>Companies</h2>
           {picked.length >= 2 && <Link className="btn primary" href={`/compare?ids=${picked.join(",")}`}>Compare {picked.length}</Link>}
         </div>
-        {!list.length ? <p className="disclaimer">Nothing saved yet. Use the Save button on a business.</p> : (
+        {!list.length ? <p className="disclaimer">Nothing on your radar yet. Tap the radar icon on any business to add it.</p> : (
           <table>
             <thead><tr><th /><th>Business</th><th className="num">Est. revenue</th><th className="num hide-sm">Est. EBITDA</th><th /></tr></thead>
             <tbody>
@@ -59,7 +59,7 @@ export default function SavedView() {
         )}
       </div>
       <div className="section">
-        <h2>Searches</h2>
+        <h2>Saved searches</h2>
         {!searches.length ? <p className="disclaimer">No saved searches. Use “Save search” above the business list.</p> : (
           <ul className="saved-searches">
             {searches.map((s) => (
