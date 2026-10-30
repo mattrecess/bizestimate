@@ -5,7 +5,7 @@ import { businessId, isAdmin } from "@/lib/admin";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Transactions | Admin | BizEstimate", robots: { index: false, follow: false } };
+export const metadata = { title: "Transactions | Admin | SeeBITDA", robots: { index: false, follow: false } };
 
 const TYPES = ["acquisition", "majority investment", "minority investment", "investment", "recapitalization", "merger", "management buyout"];
 const dollars = (v: FormDataEntryValue | null) => {

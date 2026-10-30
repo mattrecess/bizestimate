@@ -5,7 +5,7 @@ import { money, moneyRange } from "@/lib/format";
 import { estimateValue } from "@/lib/valuation";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Compare businesses | BizEstimate", robots: { index: false, follow: true } };
+export const metadata = { title: "Compare businesses | SeeBITDA", robots: { index: false, follow: true } };
 
 const METHOD: Record<string, string> = {
   employees: "PPP headcount", blend: "PPP headcount + payroll", payroll: "PPP payroll", retirement_plan: "401(k) headcount", fleet: "Trucks and drivers (FMCSA)", reported: "Reported figures",

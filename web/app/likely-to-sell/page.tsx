@@ -7,7 +7,7 @@ import { industryBySlug, slug } from "@/lib/landing";
 import { industryMatch, valueSql } from "@/lib/queries";
 
 export const metadata = {
-  title: "Oklahoma businesses likely to sell | BizEstimate",
+  title: "Oklahoma businesses likely to sell | SeeBITDA",
   description: "Oklahoma private businesses showing signs of an upcoming sale: decades in business, founder still in charge, no successor, shrinking headcount.",
   alternates: { canonical: "/likely-to-sell" },
 };

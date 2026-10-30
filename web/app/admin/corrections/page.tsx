@@ -5,7 +5,7 @@ import { isAdmin } from "@/lib/admin";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Corrections | Admin | BizEstimate", robots: { index: false, follow: false } };
+export const metadata = { title: "Corrections | Admin | SeeBITDA", robots: { index: false, follow: false } };
 
 type Row = { id: string; business_id: string; name: string; city: string; website: string | null; relationship: string;
   person: string | null; email: string; revenue: string | null; ebitda: string | null; employees: number | null;

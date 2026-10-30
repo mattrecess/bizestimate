@@ -6,7 +6,7 @@ import { money } from "@/lib/format";
 import { estimateValue } from "@/lib/valuation";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "My pipeline | Admin | BizEstimate", robots: { index: false, follow: false } };
+export const metadata = { title: "My pipeline | Admin | SeeBITDA", robots: { index: false, follow: false } };
 
 const STATUSES: [string, string][] = [["watching", "Watching"], ["contacted", "Contacted"], ["talking", "Talking"], ["passed", "Passed"]];
 

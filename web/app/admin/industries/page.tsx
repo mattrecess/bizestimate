@@ -7,7 +7,7 @@ import { INDUSTRIES } from "@/lib/industries";
 import { estimateValue } from "@/lib/valuation";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Industry figures | Admin | BizEstimate", robots: { index: false, follow: false } };
+export const metadata = { title: "Industry figures | Admin | SeeBITDA", robots: { index: false, follow: false } };
 
 type Override = { naics_prefix: string; revenue_per_employee: string | null; ebitda_margin: string | null; multiple: string | null;
   note: string | null; updated_at: string; label: string | null; bench_rpe: string | null; businesses: number };

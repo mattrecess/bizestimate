@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ industry:
   if (!ind) return { title: "Not found" };
   const s = await summary(ind);
   return {
-    title: `${ind.label} in Oklahoma: ${s.count.toLocaleString()} businesses, revenue & EBITDA | BizEstimate`,
+    title: `${ind.label} in Oklahoma: ${s.count.toLocaleString()} businesses, revenue & EBITDA | SeeBITDA`,
     description: `${s.count.toLocaleString()} Oklahoma ${ind.label.toLowerCase()} businesses with estimated revenue, EBITDA and value. ` +
       `Typical revenue ${money(s.revenue_median)}.`,
     alternates: { canonical: `/oklahoma/${slug(ind.label)}` },

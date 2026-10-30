@@ -1,4 +1,4 @@
-/* BizEstimate design system: navy/blue finance palette, Inter, soft surfaces. */
+/* SeeBITDA design system: navy/blue finance palette, Inter, soft surfaces. */
 :root {
   --bg: #f4f6fa; --panel: #ffffff; --panel-2: #f8fafc; --text: #0f1b2d; --muted: #5b6b80; --faint: #8a97a8;
   --border: #e3e8ef; --border-strong: #cfd7e2;
@@ -598,3 +598,4 @@ tr.bp-me td { background: #eef4ff; }
 .ref-cell small { font-size: 11px; color: var(--muted); text-align: right; }
 .ref-row .btn { height: 32px; font-size: 13px; padding: 0 12px; }
 tr.ref-own td { background: #eef4ff; }
+.brand .brand-em { color: var(--accent); }

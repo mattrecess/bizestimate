@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: P) {
   if (!r) return { title: "Not found" };
   const s = await summary(r.ind, r.city);
   return {
-    title: `${r.ind.label} in ${r.city}, OK: ${s.count.toLocaleString()} businesses, revenue & EBITDA | BizEstimate`,
+    title: `${r.ind.label} in ${r.city}, OK: ${s.count.toLocaleString()} businesses, revenue & EBITDA | SeeBITDA`,
     description: `${s.count.toLocaleString()} ${r.ind.label.toLowerCase()} businesses in ${r.city}, Oklahoma, with estimated ` +
       `revenue, EBITDA and value. Typical revenue ${money(s.revenue_median)}.`,
     alternates: { canonical: `/oklahoma/${slug(r.ind.label)}/${slug(r.city)}` },

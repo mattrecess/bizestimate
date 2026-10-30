@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!b) return { title: "Not found" };
   const where = [b.city, "OK"].filter(Boolean).join(", ");
   return {
-    title: `${b.name} (${where}) — estimated revenue & EBITDA | BizEstimate`,
+    title: `${b.name} (${where}) — estimated revenue & EBITDA | SeeBITDA`,
     description: `${b.name} in ${where}: estimated revenue ${money(b.est_revenue_mid)}, EBITDA ${money(b.est_ebitda_mid)} ` +
       `and business value (${b.industry}), from public records.${b.owner_name ? ` Owner: ${b.owner_name}.` : ""} Estimates only.`,
     alternates: { canonical: `/business/${b.id}` },

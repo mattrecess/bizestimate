@@ -5,7 +5,7 @@ import { sql } from "@/lib/db";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Correct a business's figures | BizEstimate", robots: { index: false, follow: false } };
+export const metadata = { title: "Correct a business's figures | SeeBITDA", robots: { index: false, follow: false } };
 
 const RELATIONSHIPS = { owner: "I own it", executive: "I'm an executive or manager there", advisor: "I'm its accountant or advisor", other: "Other" };
 
@@ -52,7 +52,7 @@ export default async function Correct({ searchParams }: { searchParams: Promise<
           <p>Thank you. We&apos;ll review your figures, usually within a few business days, and may email you to confirm.
             {id && <> <Link href={`/business/${id}`}>Back to the business</Link>.</>}</p>
         ) : !b ? (
-          <p>Open the business on BizEstimate and use <b>Correct these figures</b> on its page.</p>
+          <p>Open the business on SeeBITDA and use <b>Correct these figures</b> on its page.</p>
         ) : (
           <>
             <p>For <b>{b.name}</b>{b.city ? ` (${b.city})` : ""}. We currently estimate revenue of about {money(b.est_revenue_mid)} and

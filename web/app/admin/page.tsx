@@ -6,7 +6,7 @@ import { estimateValue } from "@/lib/valuation";
 import { adminConfigured, businessId, isAdmin, signIn, signOut } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Admin | BizEstimate", robots: { index: false, follow: false } };
+export const metadata = { title: "Admin | SeeBITDA", robots: { index: false, follow: false } };
 
 type Row = {
   id: string; name: string; city: string; revenue: string | null; ebitda: string | null; year: number | null;

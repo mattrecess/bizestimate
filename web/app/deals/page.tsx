@@ -4,7 +4,7 @@ import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Recent Oklahoma business acquisitions & investments | BizEstimate",
+  title: "Recent Oklahoma business acquisitions & investments | SeeBITDA",
   description: "Private equity investments, acquisitions and recapitalizations of Oklahoma private companies.",
   alternates: { canonical: "/deals" },
 };

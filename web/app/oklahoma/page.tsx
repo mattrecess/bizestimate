@@ -5,7 +5,7 @@ import { industryCounts, slug } from "@/lib/landing";
 export const revalidate = 86400;
 export const dynamic = "force-dynamic";   // not built ahead: it reads the database
 export const metadata = {
-  title: "Oklahoma businesses by industry: revenue & EBITDA estimates | BizEstimate",
+  title: "Oklahoma businesses by industry: revenue & EBITDA estimates | SeeBITDA",
   description: "Browse Oklahoma private companies by industry and city, with estimated revenue, EBITDA and value.",
   alternates: { canonical: "/oklahoma" },
 };

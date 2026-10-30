@@ -1,7 +1,7 @@
 import Footer from "@/components/Footer";
 import Link from "next/link";
 
-export const metadata = { title: "Terms & disclaimer | BizEstimate" };
+export const metadata = { title: "Terms & disclaimer | SeeBITDA" };
 
 export default function Terms() {
   return (
@@ -10,7 +10,7 @@ export default function Terms() {
         <h1>Terms &amp; disclaimer</h1>
         <div className="section">
           <h2>Estimates, not facts</h2>
-          <p>Every revenue, EBITDA and payroll figure on BizEstimate is a statistical estimate produced by a model.
+          <p>Every revenue, EBITDA and payroll figure on SeeBITDA is a statistical estimate produced by a model.
             None of them are reported financials, and none were provided by the businesses listed. They can be
             substantially wrong. Do not rely on them for lending, investment, credit, employment, insurance or any
             other decision without independent verification.</p>
@@ -41,7 +41,7 @@ export default function Terms() {
         <div className="section">
           <h2>No warranty</h2>
           <p>The site is provided &quot;as is&quot;, without warranties of any kind. To the fullest extent permitted by
-            law, BizEstimate is not liable for any loss arising from use of the site or its estimates.</p>
+            law, SeeBITDA is not liable for any loss arising from use of the site or its estimates.</p>
         </div>
         <p className="disclaimer">Not affiliated with the SBA, the U.S. Census Bureau, or any listed business.</p>
       </main>

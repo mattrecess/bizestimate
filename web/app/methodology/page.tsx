@@ -1,5 +1,5 @@
 import Footer from "@/components/Footer";
-export const metadata = { title: "How estimates work | BizEstimate" };
+export const metadata = { title: "How estimates work | SeeBITDA" };
 
 export default function Methodology() {
   return (

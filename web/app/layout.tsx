@@ -9,8 +9,8 @@ import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "BizEstimate — Oklahoma business values",
-  description: "Estimated revenue and EBITDA for Oklahoma businesses, from public PPP loan data.",
+  title: "SeeBITDA: see what any Oklahoma business is worth",
+  description: "See estimated revenue, EBITDA and value for Oklahoma private businesses, from public records.",
   // Google Search Console ownership check: set GOOGLE_SITE_VERIFICATION in Vercel to the code Google gives.
   verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <header className="top">
-          <Link href="/" className="brand"><BrandMark />BizEstimate</Link>
+          <Link href="/" className="brand" aria-label="SeeBITDA home"><BrandMark /><span>See<span className="brand-em">BITDA</span></span></Link>
           <span className="state-chip">Oklahoma</span>
           <nav>
             <Link href="/likely-to-sell" className="hide-sm">Likely to sell</Link>

@@ -476,7 +476,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               margin to estimate revenue. Treat these numbers as rough.</p>
           )}
           {b.est_method === "verified" && (
-            <p>These are the business&apos;s actual figures, provided to BizEstimate, not an estimate.</p>
+            <p>These are the business&apos;s actual figures, provided to SeeBITDA, not an estimate.</p>
           )}
           {reported && (
             <p>These are the business&apos;s own reported figures, from {src.sec ? "its SEC annual report (10-K)"

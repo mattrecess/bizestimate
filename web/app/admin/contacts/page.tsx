@@ -6,7 +6,7 @@ import { contactsOf, lookupPerson, refreshPerson, rocketReachConfigured } from "
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;   // a lookup waits up to 20s for RocketReach to finish
-export const metadata = { title: "Contacts | Admin | BizEstimate", robots: { index: false, follow: false } };
+export const metadata = { title: "Contacts | Admin | SeeBITDA", robots: { index: false, follow: false } };
 
 const PROVIDER = "rocketreach";
 const company = (name: string) => name.replace(/,?\s+(LLC|L\.L\.C\.|INC\.?|CORP\.?|CO\.?|PLLC|LTD\.?)$/i, "");

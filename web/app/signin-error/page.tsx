@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Footer from "@/components/Footer";
 
-export const metadata = { title: "Sign-in problem | BizEstimate", robots: { index: false, follow: false } };
+export const metadata = { title: "Sign-in problem | SeeBITDA", robots: { index: false, follow: false } };
 
 const REASONS: Record<string, string> = {
   cancelled: "Sign-in was cancelled.",

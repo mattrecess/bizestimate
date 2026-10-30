@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Remove or correct contact details | BizEstimate", robots: { index: false, follow: false } };
+export const metadata = { title: "Remove or correct contact details | SeeBITDA", robots: { index: false, follow: false } };
 
 const KINDS = { remove: "Remove our contact details", correct: "Correct our contact details", other: "Something else" };
 
