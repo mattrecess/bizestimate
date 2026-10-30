@@ -3,6 +3,10 @@ name: UX test
 # things load (tools/ux_test.mjs), published to the ux-logs branch.
 on:
   workflow_dispatch:
+    inputs:
+      script:
+        description: ux_test (screenshots) or list_timing (request timeline)
+        default: ux_test
 permissions:
   contents: write
 jobs:
@@ -15,7 +19,7 @@ jobs:
         with:
           node-version: "22"
       - run: npm i --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
-      - run: OUT="$RUNNER_TEMP/shots" node tools/ux_test.mjs
+      - run: mkdir -p "$RUNNER_TEMP/shots" && OUT="$RUNNER_TEMP/shots" node tools/${{ inputs.script || 'ux_test' }}.mjs 2>&1 | tee "$RUNNER_TEMP/shots/timeline.txt"
       - if: always()
         run: |
           cd "$RUNNER_TEMP/shots" && git init -q -b ux-logs
