@@ -756,3 +756,4 @@ tr.ref-own td { background: #eef4ff; }
   .explorer[data-layout="table"] .table-scroll { display: none; }
   .explorer[data-layout="table"] .cards { display: grid; }
 }
+.list-actions .export-btn { display: inline-flex; align-items: center; gap: 4px; }

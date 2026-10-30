@@ -19,7 +19,7 @@ export const account = () => read<Account | null>(ACCOUNT, null);
 
 // My Radar and saved searches need an account. Adding while signed out opens the sign-in prompt
 // (SignInPrompt) and remembers what was being added, so it's added once they're back.
-export type Pending = { biz?: SavedBiz; search?: SavedSearch };
+export type Pending = { biz?: SavedBiz; search?: SavedSearch; exporting?: boolean };
 let signInOk = false;
 export const signInAvailable = () => signInOk;
 export function askSignIn(pending: Pending) {

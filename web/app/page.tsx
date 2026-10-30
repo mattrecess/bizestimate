@@ -6,7 +6,7 @@ import BizCard, { type Biz } from "@/components/BizCard";
 import BizTable from "@/components/BizTable";
 import FilterBar from "@/components/FilterBar";
 import { SORTS, type FilterState } from "@/lib/filters";
-import { saveSearch } from "@/lib/saved";
+import { account, askSignIn, saveSearch } from "@/lib/saved";
 import { moreFrom } from "@/lib/more-filters";
 import Icon from "@/components/Icon";
 import SearchBox from "@/components/SearchBox";
@@ -353,6 +353,12 @@ export default function Home() {
                   if (!saveSearch({ label, query: new URLSearchParams(filterParams + (sort !== "revenue_desc" ? `&sort=${sort}` : "")).toString() })) return;
                   setSavedNote(true); setTimeout(() => setSavedNote(false), 2000);
                 }}>{savedNote ? "Saved ✓" : "Save search"}</button>
+                {layout === "table" && (
+                  <button className="link-btn export-btn" onClick={() => {
+                    if (!account()) { askSignIn({ exporting: true }); return; }
+                    window.location.href = `/api/export?${new URLSearchParams(filterParams + `&sort=${sort}`)}`;
+                  }}><Icon name="download" size={14} />Export to Excel</button>
+                )}
               </span>
             </div>
             {failed && !data?.results.length && (

@@ -23,13 +23,14 @@ export default function SignInPrompt() {
 
   const next = window.location.pathname + window.location.search;
   const what = pending.biz ? <>Sign in to add <b>{pending.biz.name}</b> to your radar.</>
-    : pending.search ? <>Sign in to save this search.</> : <>Sign in to start your radar.</>;
+    : pending.search ? <>Sign in to save this search.</>
+    : pending.exporting ? <>Sign in to export this list to Excel.</> : <>Sign in to start your radar.</>;
   return (
     <div className="signin-backdrop" onClick={() => setPending(null)}>
       <div className="signin-dialog" role="dialog" aria-modal="true" aria-labelledby="signin-title" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="signin-close" aria-label="Close" onClick={() => setPending(null)}><Icon name="x" size={18} /></button>
         <div className="signin-icon"><Icon name="radar" size={26} /></div>
-        <h2 id="signin-title">Keep companies on your radar</h2>
+        <h2 id="signin-title">{pending.exporting ? "Export to Excel" : "Keep companies on your radar"}</h2>
         <p>{what} Your radar and saved searches follow you to every device. It&apos;s free.</p>
         {signInAvailable() ? (
           <a className="btn signin-google" href={`/api/auth/google?next=${encodeURIComponent(next)}`}><GoogleG /> Continue with Google</a>
