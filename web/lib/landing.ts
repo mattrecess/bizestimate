@@ -63,6 +63,24 @@ export async function cityBySlug(ind: Industry, s: string) {
   return (await cities(ind)).find((c) => slug(c.city) === s) ?? null;
 }
 
+// Every industry's cities with enough businesses for a page, from one grouped query (the sitemap):
+// a query per industry took over a minute.
+export async function allIndustryCities() {
+  const byCodeCity = await sql<{ naics: string; city: string; count: number }[]>`
+    select coalesce(naics, '') as naics, initcap(lower(city)) as city, count(*)::int as count from businesses
+    where ${listed} and coalesce(city, '') <> '' group by 1, 2`;
+  return INDUSTRIES.map((ind) => {
+    const counts = new Map<string, number>();
+    for (const r of byCodeCity) {
+      if (ind.naics.some((c) => r.naics.startsWith(c) || (r.naics.length >= 4 && r.naics.length <= 5 && c.startsWith(r.naics)))) {
+        counts.set(r.city, (counts.get(r.city) ?? 0) + r.count);
+      }
+    }
+    const total = [...counts.values()].reduce((n, x) => n + x, 0);
+    return { ind, total, cities: [...counts].filter(([, n]) => n >= MIN_LISTED).map(([city]) => city) };
+  }).filter((r) => r.total >= MIN_LISTED);
+}
+
 // Industries with enough businesses for a page, and their counts (the index and sitemap). One
 // grouped query, matched to industries here with the same rule as industryMatch.
 export async function industryCounts() {
