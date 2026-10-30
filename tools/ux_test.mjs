@@ -4,7 +4,7 @@
 import { chromium, devices } from "playwright";
 import fs from "node:fs";
 
-const SITE = process.env.SITE || "https://bizestimate-six.vercel.app";
+const SITE = process.env.SITE || "https://www.seebitda.com";
 const OUT = process.env.OUT || "shots";
 fs.mkdirSync(OUT, { recursive: true });
 const log = (...a) => { const s = a.join(" "); console.log(s); fs.appendFileSync(`${OUT}/log.txt`, s + "\n"); };

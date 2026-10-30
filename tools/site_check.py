@@ -1,6 +1,6 @@
 """Check the live site after a deploy: main pages and APIs answer quickly and with real data.
 
-    python tools/site_check.py https://bizestimate-six.vercel.app
+    python tools/site_check.py https://www.seebitda.com
 
 Exits with an error listing what failed (the Run alerts workflow then opens an issue).
 """
@@ -9,7 +9,7 @@ import sys
 import time
 import urllib.request
 
-BASE = (sys.argv[1] if len(sys.argv) > 1 else "https://bizestimate-six.vercel.app").rstrip("/")
+BASE = (sys.argv[1] if len(sys.argv) > 1 else "https://www.seebitda.com").rstrip("/")
 SLOW = 8.0   # seconds; a cold start can take a few, more than this is a problem
 
 

@@ -11,7 +11,7 @@ import urllib.request
 import psycopg
 
 
-SITE = os.environ.get("SITE", "https://bizestimate-six.vercel.app")
+SITE = os.environ.get("SITE", "https://www.seebitda.com")
 BBOX = "-98.6,34.9,-96.4,36.1"
 PATHS = ["/api/cities", "/api/businesses?sort=revenue_desc&limit=50&offset=0",
          f"/api/businesses?bbox={BBOX}&sort=revenue_desc&limit=50&offset=0",

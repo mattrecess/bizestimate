@@ -3,7 +3,7 @@
 //   SITE=https://... node tools/browser_probe.mjs
 import { chromium } from "playwright";
 
-const SITE = process.env.SITE || "https://bizestimate-six.vercel.app";
+const SITE = process.env.SITE || "https://www.seebitda.com";
 const b = await chromium.launch();
 
 async function visit(label, run) {

@@ -1,7 +1,7 @@
 // Open the live site like a visitor and log when each API request starts and finishes and when the
 // list's first card appears, for the home view and after zooming into Oklahoma City.
 import { chromium } from "playwright";
-const SITE = process.env.SITE || "https://bizestimate-six.vercel.app";
+const SITE = process.env.SITE || "https://www.seebitda.com";
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1366, height: 820 } });
 const t0 = Date.now();

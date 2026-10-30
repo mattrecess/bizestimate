@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 3
     steps:
       - run: |
-          site=https://bizestimate-six.vercel.app
+          site=https://www.seebitda.com
           t=$(date +%s)
           for path in "/api/businesses?limit=1&warm=$t" "/api/points?bbox=-97.6,35.4,-97.5,35.5&warm=$t" \
                       "/api/businesses/1289747?warm=$t" "/api/cities?warm=$t"; do

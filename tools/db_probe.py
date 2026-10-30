@@ -8,7 +8,7 @@ import urllib.request
 
 import psycopg
 
-SITE = "https://bizestimate-six.vercel.app"
+SITE = "https://www.seebitda.com"
 BOXES = {"OKC": (-97.75, 35.35, -97.35, 35.6), "Tulsa": (-96.1, 36.0, -95.8, 36.25)}
 
 for name, (w, s, e, n) in BOXES.items():
