@@ -1,0 +1,224 @@
+home#1: html 281ms
+  home#1 +439ms -> 267ms 200 cdn=MISS 160B /api/me
+  home#1 +462ms -> 2367ms 200 cdn=MISS 6772B /api/businesses?sort=revenue_desc&limit=50&offset=0
+  home#1 +462ms -> 2543ms 200 cdn=MISS 206017B /api/points?
+home#1: first cards 3229ms
+  home#1 +439ms -> 3435ms 200 cdn=MISS 3612B /api/cities
+home#1: points response by 33547ms
+  search#1 +413ms -> 399ms 200 cdn=MISS 164B /api/me
+  search#1 +435ms -> 640ms 200 cdn=MISS 6787B /api/businesses?sort=revenue_desc&limit=50&offset=0
+  search#1 +414ms -> 1319ms 200 cdn=MISS 3589B /api/cities
+  search#1 +435ms -> 1406ms 200 cdn=MISS 206104B /api/points?
+  search#1 +4895ms -> 1259ms 200 cdn=MISS 364B /api/points?q=southwestern+wire
+  search#1 +4894ms -> 1266ms 200 cdn=MISS 508B /api/businesses?q=southwestern+wire&sort=revenue_desc&limit=50&offset=0
+search#1: "southwestern wire" typed in 2835ms; suggestions 2935ms after last key
+search#1: list shows a match 3136ms after last key
+  search#1 +8858ms -> 532ms 200 cdn=MISS 1392B /api/businesses/1444003?core=1
+  search#1 +9652ms -> 361ms 200 cdn=MISS 170B /api/admin/pipeline/1444003
+search#1: profile open 2230ms after click
+  search#1 +9503ms -> 922ms 200 cdn=MISS 782B /api/businesses/1444003/related
+home#2: html 447ms
+  home#2 +542ms -> 82ms 200 cdn=MISS 227B /api/me
+  home#2 +569ms -> 169ms 200 cdn=MISS 6803B /api/businesses?sort=revenue_desc&limit=50&offset=0
+  home#2 +569ms -> 327ms 200 cdn=MISS 206184B /api/points?
+  home#2 +543ms -> 368ms 200 cdn=MISS 3664B /api/cities
+home#2: first cards 985ms
+home#2: points response by 31715ms
+  search#2 +362ms -> 48ms 200 cdn=HIT 3665B /api/cities
+  search#2 +388ms -> 59ms 200 cdn=HIT 6672B /api/businesses?sort=revenue_desc&limit=50&offset=0
+  search#2 +390ms -> 82ms 200 cdn=HIT 205472B /api/points?
+  search#2 +362ms -> 275ms 200 cdn=MISS 217B /api/me
+  search#2 +2595ms -> 379ms 200 cdn=MISS 314B /api/points?q=mertz
+  search#2 +2592ms -> 466ms 200 cdn=MISS 526B /api/businesses?q=mertz&sort=revenue_desc&limit=50&offset=0
+search#2: "mertz" typed in 1267ms; suggestions 1422ms after last key
+search#2: list shows a match 1619ms after last key
+  search#2 +4853ms -> 466ms 200 cdn=MISS 2136B /api/businesses/1315463?core=1
+  search#2 +5406ms -> 378ms 200 cdn=MISS 749B /api/businesses/1315463/related?locations=0
+  search#2 +5613ms -> 288ms 200 cdn=MISS 160B /api/admin/pipeline/1315463
+search#2: profile open 2258ms after click
+200   0.19s    14,203B cdn=HIT /api/cities b'[{"city":"Ada","count":1530},{"city":"Adair","count":116},{"city":"Afton","count":284},{"city":"Agra","count":27},{"city'
+200   0.23s    29,756B cdn=HIT /api/businesses?sort=revenue_desc&limit=50&offset=0 b'{"total":5000,"capped":true,"results":[{"id":"1351226","name":"ONEOK, Inc.","address":"100 W 5th St S","city":"Tulsa","s'
+200   0.28s    29,956B cdn=MISS /api/businesses?bbox=-98.6,34.9,-96.4,36.1&sort=revenue_desc&limit=50&offset=0 b'{"total":5000,"capped":true,"results":[{"id":"1405841","name":"Continental Resources","address":"20 N Broadway Ave","cit'
+200   0.18s 1,000,441B cdn=HIT /api/points b'{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-95.9914016723633,36'
+200   2.84s   995,331B cdn=MISS /api/points?bbox=-98.6,34.9,-96.4,36.1 b'{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-97.5140686035156,35'
+200   6.09s     3,567B cdn=MISS /api/businesses?q=septic&limit=6 b'{"total":490,"capped":false,"results":[{"id":"1438691","name":"RED DIRT SEPTIC AND BACKHOE, LLC","address":"2345 E Water'
+200   0.13s    12,686B cdn=HIT / b'<!DOCTYPE html><!--kvBMdZLkQkaBSz_kexTmd--><html lang="en"><head><meta charSet="utf-8"/><meta name="viewport" content="w'
+200   4.37s     4,842B cdn=MISS /api/businesses?q=commercial%20cleaning&limit=8 b'{"total":595,"capped":false,"results":[{"id":"1291320","name":"C & C COMMERCIAL CLEANING CO.","address":"2313 W 7th Ave"'
+      total=595 industry='Commercial cleaning & janitorial' [('C & C COMMERCIAL CLEANING CO.', '333318', 'Stillwater'), ('SPIC & SPAN COMMERCIAL CLEANING LLC', '561720', 'Edmond'), ('PRISTINE COMMERCIAL CLEANING SERVICE INC', '561740', 'Sand Springs'), ('Commercial Cleaning Services of Oklahoma', '561720', 'Oklahoma City'), ('Perfectly Clean Commercial Cleaning Services, LLC', '561720', 'Tulsa'), ('Commercial Cleaning-solutions, Llc', '561720', 'Chickasha'), ('Jani-king | Commercial Cleaning & Janitorial Services In Okc', '561720', 'Oklahoma City'), ('Anago Commercial Cleaning', '561720', 'Oklahoma City')]
+200   2.89s     4,766B cdn=MISS /api/businesses?q=janitorial%20tulsa&limit=8 b'{"total":115,"capped":false,"results":[{"id":"1368284","name":"Jani-king | Commercial Cleaning & Janitorial Services In '
+      total=115 industry='Commercial cleaning & janitorial' [('Jani-king | Commercial Cleaning & Janitorial Services In Tulsa', '561720', 'Tulsa'), ('ALAVERN JANITORIAL SERVICES INC', '811490', 'Tulsa'), ('OFFICE EXPRESS JANITORIAL SERVICES, INC', '561720', 'Tulsa'), ('CLEAN SWEEP JANITORIAL INC', '561720', 'Tulsa'), ('MID-AMERICA PACKAGING JANITORIAL', '423990', 'Tulsa'), ('D & P JANITORIAL LLC', '561720', 'Tulsa'), ('MID-AMERICAK PACKAGING & JANITORIAL SUPPLIES, INC.', '561790', 'Tulsa'), ('Sunrise Janitorial Services', '561720', 'Tulsa')]
+200   2.95s     4,908B cdn=MISS /api/businesses?q=plumbers%20okc&limit=8 b'{"total":241,"capped":false,"results":[{"id":"1430136","name":"Plumbers OKC","address":"2410 W Memorial Rd Ste C","city"'
+      total=241 industry='Plumbing, heating & air' [('Plumbers OKC', '444', 'Oklahoma City'), ('OKC Plumbing Experts', '238220', 'Oklahoma City'), ('Oklahoma City Emergency Plumbers', '238220', 'Oklahoma City'), ('Heat and Air OKC', '238220', 'Oklahoma City'), ('Integrity Heat & Air | OKC 24/7 HVAC', '238220', 'Oklahoma City'), ('Cutters Plumbing Llc', '238220', 'Oklahoma City'), ('Chase The Plumber', '238220', 'Oklahoma City'), ('A Village Plumber', '238220', 'Oklahoma City')]
+activity: (2241, 'idle', datetime.timedelta(seconds=5992, microseconds=29678), 'Client', 'LISTEN "pgrst"')
+activity: (10161, 'idle', datetime.timedelta(seconds=130, microseconds=886712), 'Client', '\n      select id, name, city, industry, jobs_reported, est_revenue_mid, est_ebitda_mid, 69.0 * sqrt(power(lat - $1, 2) +')
+activity: (10160, 'idle', datetime.timedelta(seconds=130, microseconds=741015), 'Client', '\n      select id, name, city, industry, jobs_reported, est_revenue_mid, est_ebitda_mid, 69.0 * sqrt(power(lat - $1, 2) +')
+activity: (10165, 'idle', datetime.timedelta(seconds=130, microseconds=421632), 'Client', '\n      select id, name, city, industry, jobs_reported, est_revenue_mid, est_ebitda_mid, 69.0 * sqrt(power(lat - $1, 2) +')
+activity: (10159, 'idle', datetime.timedelta(seconds=129, microseconds=901778), 'Client', '\n  select loan_number, draw, date_approved, amount, forgiveness_amount, loan_status, lender, jobs_reported\n  from ppp_lo')
+activity: (10157, 'idle', datetime.timedelta(seconds=129, microseconds=892583), 'Client', '\n      select id, name, city, industry, jobs_reported, est_revenue_mid, est_ebitda_mid, 69.0 * sqrt(power(lat - $1, 2) +')
+activity: (10147, 'idle', datetime.timedelta(seconds=129, microseconds=873844), 'Client', '\n      select id, name, city, industry, est_revenue_mid,\n             round((69.0 * sqrt(power(lat - $1, 2) + power((lon')
+activity: (8649, 'idle', datetime.timedelta(seconds=128, microseconds=531875), 'Client', '\n    select b.id, b.name, case when is_individual then null else address end as address, b.city, b.state, b.zip, b.count')
+activity: (10162, 'idle', datetime.timedelta(seconds=125, microseconds=15988), 'Client', '\n      select id, name, city, industry, jobs_reported, est_revenue_mid, est_ebitda_mid, 69.0 * sqrt(power(lat - $1, 2) +')
+activity: (10164, 'idle', datetime.timedelta(seconds=97, microseconds=665324), 'Client', '\n      select b.oid, b.typarray\n      from pg_catalog.pg_type a\n      left join pg_catalog.pg_type b on b.oid = a.typele')
+activity: (10166, 'idle', datetime.timedelta(seconds=97, microseconds=663086), 'Client', '\n      select b.oid, b.typarray\n      from pg_catalog.pg_type a\n      left join pg_catalog.pg_type b on b.oid = a.typele')
+activity: (10156, 'idle', datetime.timedelta(seconds=97, microseconds=560426), 'Client', "select count(*)::int as count from (select 1 from businesses where true and coalesce(est_method, '') <> 'branch' limit $")
+activity: (9441, 'idle', datetime.timedelta(seconds=97, microseconds=550706), 'Client', '\n      select id, name, case when is_individual then null else address end as address, city, state, zip, naics, industry')
+activity: (10163, 'idle', datetime.timedelta(seconds=64, microseconds=405420), 'Client', '\n    select id, name, lat, lon, naics, is_nonprofit, est_revenue_mid, est_ebitda_low, est_ebitda_mid, est_ebitda_high, e')
+activity: (883, 'idle', datetime.timedelta(seconds=30, microseconds=928122), 'Client', "SELECT\nCASE\n    WHEN usename IN ('postgres', 'authenticator', 'supabase_auth_admin', 'supabase_storage_admin', 'supabase")
+rows: (183400, '422 MB')
+  known: (1284404, 'AAA LANDSCAPE, INC.', 'Oklahoma City', '561730', 'Landscaping Services', 30, 'blend', 'ppp', 4183322, 448870, Decimal('0.1073'), 443100, None, Decimal('123824'), 'US Economic Census 2022, OK')
+  known: (1371166, 'AAA Landscaping', 'Oklahoma City', '561730', 'Landscaping Services', None, 'industry_average', 'overture', 509957, 66243, Decimal('0.1299'), None, None, Decimal('123824'), 'US Economic Census 2022, OK')
+  known: (1348511, "Dominick's Cafe Llc", 'Oklahoma City', '7225', 'Restaurants and Other Eating Places', None, 'industry_average', 'overture', 990014, 108110, Decimal('0.1092'), None, None, Decimal('61370'), 'US Economic Census 2022, OK')
+  known: (1370489, 'Minick Materials', 'Norman', '423320', 'Brick, Stone, and Related Construction Material Merchant Wholesalers', None, 'branch', 'overture', None, None, None, None, None, Decimal('1513116'), 'US Economic Census 2022, OK')
+  known: (1368293, 'Minick Materials', 'Choctaw', '423320', 'Brick, Stone, and Related Construction Material Merchant Wholesalers', None, 'branch', 'overture', None, None, None, None, None, Decimal('1513116'), 'US Economic Census 2022, OK')
+  known: (1420403, 'Minick Materials', 'Yukon', '423320', 'Brick, Stone, and Related Construction Material Merchant Wholesalers', None, 'branch', 'overture', None, None, None, None, None, Decimal('1513116'), 'US Economic Census 2022, OK')
+  known: (1410587, 'Minick Materials', 'Edmond', '423320', 'Brick, Stone, and Related Construction Material Merchant Wholesalers', None, 'branch', 'overture', None, None, None, None, None, Decimal('1513116'), 'US Economic Census 2022, OK')
+  known: (1316278, 'MINICK MATERIALS COMPANY', 'Oklahoma City', '423320', 'Brick, Stone, and Related Construction Material Merchant Wholesalers', 41, 'blend', 'ppp', 40036296, 2742486, Decimal('0.0685'), 291100, None, Decimal('1513116'), 'US Economic Census 2022, OK')
+  known: (5316881, 'Red Dirt Septic', 'Tuttle', '562991', 'Septic Tank and Related Services', None, 'industry_average', 'overture', 1248624, 200904, Decimal('0.1609'), None, None, Decimal('169341'), 'US Economic Census 2022')
+  known: (1438691, 'RED DIRT SEPTIC AND BACKHOE, LLC', 'Edmond', '562991', 'Septic Tank and Related Services', 52, 'blend', 'ppp', 11223705, 1350212, Decimal('0.1203'), 461000, None, Decimal('169341'), 'US Economic Census 2022')
+  known: (5376661, 'VANTAGE POINT DISPOSITION LLC', 'Oklahoma City', '4841', 'General Freight Trucking', None, 'fleet', 'fmcsa', 2097728, 303541, Decimal('0.1447'), None, None, Decimal('225524'), 'US Economic Census 2022, OK')
+  known: (1450383, 'VANTAGE POINT HOME INSPECTIONS LLC', 'Oklahoma City', '541350', 'Building Inspection Services', 1, 'blend', 'ppp', 282951, 65786, Decimal('0.2325'), 20655, None, Decimal('110931'), 'US Economic Census 2022, OK')
+  known: (1433647, 'Vantage Point ITAD Inc.', 'Oklahoma City', '423430', 'Computer and Computer Peripheral Equipment and Software Merchant Wholesalers', None, 'branch', 'overture', None, None, None, None, None, Decimal('2531047'), 'US Economic Census 2022, OK')
+  known: (1450384, 'VANTAGE POINT ITAD LLC', 'Oklahoma City', '423430', 'Computer and Computer Peripheral Equipment and Software Merchant Wholesalers', 9, 'employees', 'ppp', 14688628, 1006171, Decimal('0.0685'), 63700, None, Decimal('2531047'), 'US Economic Census 2022, OK')
+  known: (1335611, 'Vantage Point Videography and Media LLC', 'Eufaula', '54', 'Professional, scientific, and technical services', None, 'industry_average', 'overture', 554226, 109903, Decimal('0.1983'), None, None, Decimal('180580'), 'US Economic Census 2022, OK')
+owners coverage: (183400, 13658, 82140, 100620, 56081)
+team titles with owner roles but no owner: (0,)
+top1000 by city: [('Oklahoma City', 286), ('Tulsa', 230), ('Norman', 36), ('Broken Arrow', 27), ('Edmond', 25), ('Enid', 17), ('Lawton', 16), ('Chickasha', 11), ('Muskogee', 11), ('Sapulpa', 10), ('Ada', 9), ('Ardmore', 9), ('Shawnee', 9), ('Mcalester', 9), ('Durant', 9)]
+all by city: [('Oklahoma City', 35827), ('Tulsa', 27098), ('Edmond', 9018), ('Norman', 6207), ('Broken Arrow', 4826), ('Lawton', 3625), ('Stillwater', 2603), ('Enid', 2587)]
+top1000 by method: [('blend', 'ppp', 385), ('retirement_plan', 'ppp', 231), ('retirement_plan', 'form5500', 108), ('retirement_plan', 'overture', 96), ('employees', 'ppp', 68), ('reported', 'overture', 59), ('reported', 'ppp', 27), ('industry_average', 'overture', 9), ('reported', 'form5500', 8), ('fleet', 'fmcsa', 6), ('retirement_plan', 'fmcsa', 2), ('fleet', 'ppp', 1)]
+top1000 by sector: [('42', 170, Decimal('174702737')), ('44', 153, Decimal('123054267')), ('21', 104, Decimal('154791890')), ('23', 84, Decimal('128217051')), ('52', 70, Decimal('196829225')), ('33', 66, Decimal('122579415')), ('62', 56, Decimal('207358417')), ('54', 48, Decimal('185872067')), ('31', 34, Decimal('413057291')), ('32', 32, Decimal('135685387')), ('48', 27, Decimal('121294013')), ('56', 27, Decimal('2083365459'))]
+top1000 east/west of -96.5: [(False, 582), (True, 418)]
+top1000 jobs stats: ([25.0, 110.0, 318.7], 712)
+  top: (1451083, 'WALLACE ENGINEERING - STRUCTURAL CONSULTANTS, INC', 'Tulsa', '541330', 163, 'retirement_plan', 69492603)
+  top: (1293112, 'CHICKASAW DEFENSE LOGISTICS, LLC', 'Norman', '236220', 258, 'blend', 174410773)
+  top: (1449739, 'TWIN CITIES READY MIX, INC.', 'Mcalester', '327320', 144, 'retirement_plan', 78679335)
+  top: (1346175, 'Matrix Service Company', 'Tulsa', '23', None, 'reported', 873632000)
+  top: (1291965, 'CARDINAL OKC INC', 'Oklahoma City', '441110', 50, 'retirement_plan', 76970921)
+  top: (5202465, 'J-M FARMS, INC', 'Miami', '111998', 170, 'blend', 57729920)
+  top: (5374700, 'HOBBY LOBBY STORES INC', 'Oklahoma City', '4841', None, 'fleet', 174106849)
+  top: (1312649, 'LIL BIT OF PARADISE', 'Newkirk', '524113', 64, 'blend', 72163569)
+  top: (1436358, 'PIONEER TRUCKING, LLC', 'Oklahoma City', '424720', 9, 'retirement_plan', 106611099)
+  top: (5193205, 'RILEY EXPLORATION - PERMIAN LLC', 'Oklahoma City', '211120', None, 'reported', 391980000)
+  top: (1342272, 'Kaiser Francis Oil Co.', 'Wilson', '31', None, 'retirement_plan', 189479500)
+  top: (1435449, 'PATRIOT AUTO GROUP 2, LLC', 'Chandler', '441110', 47, 'blend', 45992806)
+  top: (1396124, 'Cactus Drilling Co', 'Oklahoma City', '237110', None, 'retirement_plan', 601924608)
+  top: (1289753, 'BOB MILLS FURNITURE CO, INC', 'Oklahoma City', '423210', 420, 'retirement_plan', 363304516)
+  top: (5192905, 'SOVEREIGN NATIVE HOLDCO, LLC', 'Ada', '238900', None, 'retirement_plan', 139211931)
+  top: (1294378, 'COMMANCHE LUMBER COMPANY, INC.', 'Lawton', '423310', 58, 'blend', 48776723)
+  top: (1435037, 'PACE/BUTLER CORPORATION', 'Oklahoma City', '423690', 78, 'blend', 54755618)
+  top: (1449145, 'TRIPLE B OILFIELD SERVICES INC.', 'Elk City', '211130', 20, 'blend', 94505279)
+  top: (1317836, 'NEW DOMINION LLC', 'Tulsa', '211120', 34, 'retirement_plan', 80779471)
+  top: (1441396, 'SANGUINE GAS EXPLORATION, LLC', 'Tulsa', '211120', 30, 'retirement_plan', 110697794)
+  top: (1288593, 'BELFAIR OF MCALESTER LLC', 'Mcalester', '236116', 46, 'employees', 74229765)
+  top: (1289758, 'BOB MOORE FORD, LLC', 'Oklahoma City', '441110', 45, 'blend', 61935487)
+  top: (1439183, 'RESOLVE RESOURCE SAFETY SOLUTIONS', 'Oklahoma City', '312230', 18, 'employees', 65016208)
+  top: (1447072, 'THE FLEMING CONSTRUCTION GROUP, LLC', 'Tulsa', '236220', 41, 'retirement_plan', 110506063)
+  top: (1300360, 'FABSCO SHELL AND TUBE, LLC', 'Sapulpa', '221330', 65, 'retirement_plan', 136871091)
+  first: (1351226, 'ONEOK, Inc.', 'Tulsa', '56', None, 'reported', 33629000000)
+  first: (1405841, 'Continental Resources', 'Oklahoma City', '56', None, 'reported', 7693574000)
+  first: (5298460, 'Choctaw Nation', 'Durant', '5615', None, 'retirement_plan', 4843508802)
+  first: (1354892, 'Helmerich & Payne', 'Tulsa', '54', None, 'reported', 3746013000)
+  first: (1298749, 'EARNHEART OIL, INC', 'Marshall', '424720', 104, 'retirement_plan', 3680936062)
+  first: (1340269, 'OGE Energy Corp.', 'Oklahoma City', '56', None, 'reported', 3260100000)
+  first: (1403021, 'NGL Energy Partners LP', 'Tulsa', '5619', None, 'reported', 3156159000)
+  first: (1410297, 'OU Health', 'Oklahoma City', '622000', None, 'retirement_plan', 2304493477)
+  first: (1327054, 'MidFirst Bank', 'Oklahoma City', '5221', None, 'reported', 2254129000)
+  first: (1375005, 'Alliance Resource Partners', 'Tulsa', '56', None, 'reported', 2194811000)
+  first: (1408278, 'American Fidelity Assurance Company', 'Oklahoma City', '5242', None, 'retirement_plan', 2010488506)
+  first: (5338026, 'Laredo Petroleum', 'Tulsa', '31', None, 'reported', 1952314000)
+  first: (1330603, 'Saint Francis Hospital Muskogee Inc', 'Tulsa', '6211', None, 'reported', 1951973242)
+  first: (1374571, 'Hilti', 'Tulsa', '444', None, 'retirement_plan', 1701976784)
+  first: (1334120, 'Imperial Llc Tulsa', 'Tulsa', '42', None, 'retirement_plan', 1461463284)
+headcounts: businesses, rows = (6461, 27781)
+headcounts by year: [(2020, 4540, 360938), (2021, 4649, 350361), (2022, 4803, 368892), (2023, 4959, 389425), (2024, 5123, 423004), (2025, 3707, 167568)]
+estimates by method and listing source: [('blend', 'ppp', 46826), ('branch', 'overture', 9860), ('branch', 'ppp', 220), ('employees', 'ppp', 6953), ('fleet', 'fmcsa', 4876), ('fleet', 'ppp', 250), ('industry_average', 'overture', 108416), ('reported', 'fmcsa', 5), ('reported', 'form5500', 38), ('reported', 'overture', 445), ('reported', 'ppp', 1209), ('retirement_plan', 'fmcsa', 6), ('retirement_plan', 'form5500', 870), ('retirement_plan', 'overture', 653), ('retirement_plan', 'ppp', 2773)]
+IRS margins applied (method, count with margin, avg margin): [('blend', 46826, Decimal('0.1819')), ('branch', 0, None), ('employees', 6953, Decimal('0.1907')), ('fleet', 5126, Decimal('0.1472')), ('industry_average', 108416, Decimal('0.1817')), ('reported', 1697, Decimal('0.2143')), ('retirement_plan', 4302, Decimal('0.1568'))]
+  re-based: (1353029, 'Stuart Nissan', '441110', 19486309, 796990, Decimal('0.0409'))
+  re-based: (1294655, 'CONTAINER SUPPLY, INC.', '423840', 9145656, 673120, Decimal('0.0736'))
+  re-based: (1315572, 'MEW PRACTICE MANAGEMENT', '541611', 4591744, 752128, Decimal('0.1638'))
+  re-based: (1436169, 'PHOENIX CONSTRUCTION DISASTER SERVICES INC', '236115', 8415232, 456947, Decimal('0.0543'))
+  re-based: (1286410, 'ANDERSON AND HOUSE INC', '236220', 6881899, 373687, Decimal('0.0543'))
+  re-based: (1337638, 'McEntire Advisory', '541211', 475401, 110531, Decimal('0.2325'))
+  re-based: (1290606, 'BROKEN ARROW ELECTRIC SUPPLY INC.', '423610', 147538591, 8852315, Decimal('0.06'))
+  re-based: (1317756, 'NETFABRIC LLC', '423430', 91877006, 5512620, Decimal('0.06'))
+headcounts by listing source: [('fmcsa', 13), ('form5500', 900), ('overture', 1122), ('ppp', 4426)]
+  sample: (1347365, 'Kerr Pumps', 'Sulphur', None, '2020:333 2021:302 2022:334 2023:330 2024:374')
+  sample: (1452442, 'WOODRUM, TATE & ASSOCIATES, PLLC', 'Tulsa', 12, '2020:12 2021:16 2022:17 2023:15 2024:15')
+  sample: (1445883, 'T.C. CRAIGHEAD & COMPANY, LLC', 'Ardmore', 23, '2020:20 2021:20 2022:20 2023:19 2024:17')
+  sample: (1440014, 'ROBINSON MANAGEMENT CONSULTANTS, INC', 'Tulsa', 2, '2020:36 2021:34 2022:38 2023:39 2024:49')
+  sample: (5193221, 'NEUROPTIMIZE LLC', 'Tulsa', None, '2025:31')
+  sample: (1296258, 'DANA L GISH PLLC', 'Tulsa', 4, '2020:5 2021:6 2022:6 2023:6 2024:7 2025:7')
+  sample: (1308115, 'JAYSON D. VOTO, DDS PC', 'Owasso', 12, '2020:8 2021:7 2022:12 2023:10 2024:10')
+  sample: (5193153, 'LOVING CARE MANAGEMENT, INC.', 'Oklahoma City', None, '2020:99 2021:83 2022:81 2023:59 2024:50')
+  sample: (1313265, 'LOUIS H. COX, MD, INC.', 'Oklahoma City', 1, '2025:5')
+  sample: (1296874, 'DEARING & JONES, PC', 'Lawton', 17, '2020:16 2021:14 2022:12 2023:12 2024:13 2025:12')
+  sample: (1300356, 'FABRICATION SOLUTIONS LLC', 'Tulsa', 19, '2024:36 2025:42')
+  sample: (1314371, 'MARSHALL COUNTY ABSTRACT CO., LLC', 'Madill', 9, '2020:8 2021:8 2022:8 2023:8 2024:9')
+  sample: (1294818, 'CORBYN L VANBRUNT DDS PC', 'Tulsa', 10, '2020:5 2021:6 2022:5 2023:5 2024:6')
+  sample: (1447362, 'THE MUSSELMAN ABSTRACT COMPANY', 'Bartlesville', 14, '2020:10 2021:11 2022:12 2023:13 2024:15 2025:13')
+  sample: (1447338, 'THE MEADOWS CENTER FOR OPPORTUNITY INC', 'Edmond', 59, '2020:50 2021:45 2022:40 2023:47 2024:40')
+  sample: (1436786, 'POWER TRAIN INC', 'Tulsa', 4, '2020:6 2021:6 2022:6 2023:7 2024:6 2025:6')
+  sample: (1317700, 'NEIL R CORNELL DDS INC PC', 'Tulsa', 11, '2020:4 2021:5 2022:5 2023:5 2024:5 2025:4')
+  sample: (1296368, 'DANNY WICK EXCAVATING LLC', 'Stillwater', 6, '2020:3 2021:5 2022:4 2023:4 2024:1 2025:1')
+  sample: (1420495, 'Parman and Easterday', 'Oklahoma City', None, '2020:9 2021:9 2022:8 2023:10 2024:7 2025:8')
+  sample: (1437390, 'PROGRAM MANAGEMENT GROUP LLC', 'Tulsa', 10, '2023:8 2024:8')
+  sample: (1442091, 'SERNA MANAGEMENT LLC', 'Gore', 8, '2020:17 2021:16 2022:35 2023:51 2024:50')
+  sample: (5193491, 'TITAN INTAKE INC', 'Tulsa', None, '2025:9')
+  sample: (1398530, 'First Liberty Bank', 'Oklahoma City', None, '2020:63 2021:61 2022:63 2023:71 2024:68')
+  sample: (1305428, 'HILL WOUND CARE MANAGEMENT LLC', 'Durant', 8, '2020:14 2021:16 2022:18 2023:15 2024:14 2025:14')
+  sample: (1437921, 'R. ELLIOTT & ASSOCIATES, INC.', 'Oklahoma City', 12, '2024:6 2025:6')
+--- list all
+   Limit  (cost=34547.59..34547.96 rows=50 width=43) (actual time=6364.426..6368.181 rows=50 loops=1)
+     Buffers: shared hit=158124 read=5247 dirtied=17, temp read=1373 written=1527
+     ->  WindowAgg  (cost=34547.59..35923.27 rows=183400 width=43) (actual time=6362.938..6364.470 rows=50 loops=1)
+           Buffers: shared hit=158124 read=5247 dirtied=17, temp read=1373 written=1527
+           ->  Index Scan using businesses_rev_nl_idx on businesses  (cost=0.42..32255.27 rows=183400 width=95) (actual time=2.206..6087.732 rows=183400 loops=1)
+                 Buffers: shared hit=158124 read=5247 dirtied=17
+   Planning Time: 1.383 ms
+   Execution Time: 6381.432 ms
+--- list bbox
+   Limit  (cost=31611.29..31611.42 rows=50 width=43) (actual time=715.952..715.982 rows=50 loops=1)
+     Buffers: shared hit=23762 read=693, temp read=1132 written=642
+     ->  Sort  (cost=31611.29..31775.30 rows=65602 width=43) (actual time=715.259..715.283 rows=50 loops=1)
+           Sort Key: est_revenue_mid DESC NULLS LAST
+           Sort Method: top-N heapsort  Memory: 32kB
+           Buffers: shared hit=23762 read=693, temp read=1132 written=642
+           ->  WindowAgg  (cost=28939.58..29432.04 rows=65602 width=43) (actual time=629.971..678.137 rows=77173 loops=1)
+                 Buffers: shared hit=23759 read=693, temp read=1132 written=642
+                 ->  Seq Scan on businesses  (cost=0.00..28120.00 rows=65602 width=95) (actual time=3.509..547.916 rows=77173 loops=1)
+                       Filter: ((lat >= '34.9'::double precision) AND (lat <= '36.1'::double precision) AND (lon >= '-98.6'::double precision) AND (lon <= '-96.4'::double precision))
+                       Rows Removed by Filter: 106227
+                       Buffers: shared hit=23759 read=693
+   Planning:
+     Buffers: shared hit=6
+   Planning Time: 32.153 ms
+   Execution Time: 722.203 ms
+--- points all
+   Limit  (cost=0.42..879.78 rows=5000 width=65) (actual time=2.699..61.578 rows=5000 loops=1)
+     Buffers: shared hit=4982 read=56
+     ->  Index Scan using businesses_rev_nl_idx on businesses  (cost=0.42..32255.27 rows=183400 width=65) (actual time=2.697..60.885 rows=5000 loops=1)
+           Filter: (lat IS NOT NULL)
+           Buffers: shared hit=4982 read=56
+   Planning Time: 11.943 ms
+   Execution Time: 62.566 ms
+--- points bbox
+   Limit  (cost=0.42..2598.58 rows=5000 width=65) (actual time=0.020..80.265 rows=5000 loops=1)
+     Buffers: shared hit=11450 read=68
+     ->  Index Scan using businesses_rev_nl_idx on businesses  (cost=0.42..34089.27 rows=65602 width=65) (actual time=0.019..79.567 rows=5000 loops=1)
+           Filter: ((lat IS NOT NULL) AND (lat >= '34.9'::double precision) AND (lat <= '36.1'::double precision) AND (lon >= '-98.6'::double precision) AND (lon <= '-96.4'::double precision))
+           Rows Removed by Filter: 6716
+           Buffers: shared hit=11450 read=68
+   Planning Time: 0.228 ms
+   Execution Time: 80.748 ms
+200   0.10s    14,203B cdn=HIT /api/cities b'[{"city":"Ada","count":1530},{"city":"Adair","count":116},{"city":"Afton","count":284},{"city":"Agra","count":27},{"city'
+200   0.13s    29,756B cdn=HIT /api/businesses?sort=revenue_desc&limit=50&offset=0 b'{"total":5000,"capped":true,"results":[{"id":"1351226","name":"ONEOK, Inc.","address":"100 W 5th St S","city":"Tulsa","s'
+200   0.46s    29,956B cdn=MISS /api/businesses?bbox=-98.6,34.9,-96.4,36.1&sort=revenue_desc&limit=50&offset=0 b'{"total":5000,"capped":true,"results":[{"id":"1405841","name":"Continental Resources","address":"20 N Broadway Ave","cit'
+200   0.26s 1,000,441B cdn=HIT /api/points b'{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-95.9914016723633,36'
+200   0.23s   995,331B cdn=HIT /api/points?bbox=-98.6,34.9,-96.4,36.1 b'{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-97.5140686035156,35'
+200   0.09s     3,567B cdn=HIT /api/businesses?q=septic&limit=6 b'{"total":490,"capped":false,"results":[{"id":"1438691","name":"RED DIRT SEPTIC AND BACKHOE, LLC","address":"2345 E Water'
+200   0.18s    12,686B cdn=HIT / b'<!DOCTYPE html><!--kvBMdZLkQkaBSz_kexTmd--><html lang="en"><head><meta charSet="utf-8"/><meta name="viewport" content="w'
+200   0.25s     4,842B cdn=HIT /api/businesses?q=commercial%20cleaning&limit=8 b'{"total":595,"capped":false,"results":[{"id":"1291320","name":"C & C COMMERCIAL CLEANING CO.","address":"2313 W 7th Ave"'
+      total=595 industry='Commercial cleaning & janitorial' [('C & C COMMERCIAL CLEANING CO.', '333318', 'Stillwater'), ('SPIC & SPAN COMMERCIAL CLEANING LLC', '561720', 'Edmond'), ('PRISTINE COMMERCIAL CLEANING SERVICE INC', '561740', 'Sand Springs'), ('Commercial Cleaning Services of Oklahoma', '561720', 'Oklahoma City'), ('Perfectly Clean Commercial Cleaning Services, LLC', '561720', 'Tulsa'), ('Commercial Cleaning-solutions, Llc', '561720', 'Chickasha'), ('Jani-king | Commercial Cleaning & Janitorial Services In Okc', '561720', 'Oklahoma City'), ('Anago Commercial Cleaning', '561720', 'Oklahoma City')]
+200   0.19s     4,766B cdn=HIT /api/businesses?q=janitorial%20tulsa&limit=8 b'{"total":115,"capped":false,"results":[{"id":"1368284","name":"Jani-king | Commercial Cleaning & Janitorial Services In '
+      total=115 industry='Commercial cleaning & janitorial' [('Jani-king | Commercial Cleaning & Janitorial Services In Tulsa', '561720', 'Tulsa'), ('ALAVERN JANITORIAL SERVICES INC', '811490', 'Tulsa'), ('OFFICE EXPRESS JANITORIAL SERVICES, INC', '561720', 'Tulsa'), ('CLEAN SWEEP JANITORIAL INC', '561720', 'Tulsa'), ('MID-AMERICA PACKAGING JANITORIAL', '423990', 'Tulsa'), ('D & P JANITORIAL LLC', '561720', 'Tulsa'), ('MID-AMERICAK PACKAGING & JANITORIAL SUPPLIES, INC.', '561790', 'Tulsa'), ('Sunrise Janitorial Services', '561720', 'Tulsa')]
+200   0.20s     4,908B cdn=HIT /api/businesses?q=plumbers%20okc&limit=8 b'{"total":241,"capped":false,"results":[{"id":"1430136","name":"Plumbers OKC","address":"2410 W Memorial Rd Ste C","city"'
+      total=241 industry='Plumbing, heating & air' [('Plumbers OKC', '444', 'Oklahoma City'), ('OKC Plumbing Experts', '238220', 'Oklahoma City'), ('Oklahoma City Emergency Plumbers', '238220', 'Oklahoma City'), ('Heat and Air OKC', '238220', 'Oklahoma City'), ('Integrity Heat & Air | OKC 24/7 HVAC', '238220', 'Oklahoma City'), ('Cutters Plumbing Llc', '238220', 'Oklahoma City'), ('Chase The Plumber', '238220', 'Oklahoma City'), ('A Village Plumber', '238220', 'Oklahoma City')]
