@@ -20,6 +20,7 @@ import enrich
 import headcount_estimates
 from benchmarks import load_benchmarks
 import calibration
+import industry_reference
 import map_tables
 import records_only
 
@@ -239,6 +240,11 @@ def main():
             map_tables.refresh(conn, state.upper())
     except psycopg.Error as e:
         print(f"Map tables failed (non-fatal): {e}", flush=True)
+    try:
+        with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
+            industry_reference.refresh(cur, state.upper())
+    except psycopg.Error as e:
+        print(f"Industry reference failed (non-fatal): {e}", flush=True)
 
 
 if __name__ == "__main__":

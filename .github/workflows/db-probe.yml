@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r etl/requirements.txt
-      - if: ${{ inputs.script == 'industry_table' }}
+      - if: ${{ inputs.script == 'industry_table' || inputs.script == 'industry_reference' }}
         run: python etl/margins.py --fetch; python etl/benchmarks.py --fetch
         env:
           CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}

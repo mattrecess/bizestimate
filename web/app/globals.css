@@ -587,3 +587,14 @@ tr.bp-me td { background: #eef4ff; }
   .bp-hero-v { color: #e6edf7; }
   .bp-owner { background: #0b1220; border: 1px solid var(--border); }
 }
+
+/* Admin: common industries, editable in place */
+.ref-table { overflow-x: auto; }
+.ref-row { display: grid; grid-template-columns: 110px 130px 90px auto; gap: 8px; align-items: start; justify-content: end; }
+.ref-row input:not([type="hidden"]) { width: 100%; box-sizing: border-box; font: inherit; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px 8px; text-align: right; }
+.ref-row input::placeholder { color: var(--faint); }
+.ref-cell { display: flex; flex-direction: column; gap: 2px; }
+.ref-cell small { font-size: 11px; color: var(--muted); text-align: right; }
+.ref-row .btn { height: 32px; font-size: 13px; padding: 0 12px; }
+tr.ref-own td { background: #eef4ff; }

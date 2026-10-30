@@ -11,6 +11,9 @@ export const metadata = { title: "Industry figures | Admin | BizEstimate", robot
 
 type Override = { naics_prefix: string; revenue_per_employee: string | null; ebitda_margin: string | null; multiple: string | null;
   note: string | null; updated_at: string; label: string | null; bench_rpe: string | null; businesses: number };
+type Reference = { naics_prefix: string; label: string | null; businesses: number; revenue_per_employee: string | null;
+  margin_1m: string | null; margin_5m: string | null; margin_20m: string | null; multiple: string | null;
+  own_rpe: string | null; own_margin: string | null; own_multiple: string | null; own_note: string | null };
 type Learned = { naics_prefix: string; segment: string; revenue_factor: string; n: number; typical_miss: string | null; label: string | null };
 
 async function guard() {
@@ -74,6 +77,9 @@ async function remove(form: FormData) {
   revalidatePath("/admin/industries");
 }
 
+const pct = (v: string | null) => (v == null ? "—" : `${(Number(v) * 100).toFixed(1)}%`);
+const k = (v: string | null) => (v == null ? "" : Number(v) >= 1e6 ? `${(Number(v) / 1e6).toFixed(2)}M` : `${Math.round(Number(v) / 1000)}k`);
+
 const labelOf = (code: string) => INDUSTRIES.find((i) => i.naics.some((c) => c === code || code.startsWith(c)))?.label ?? null;
 
 export default async function Industries({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -89,6 +95,11 @@ export default async function Industries({ searchParams }: { searchParams: Promi
   const growth = growthRow ? Number(growthRow.value) : 0.08;
   const [tiltRow] = await sql<{ value: string }[]>`select value from estimate_settings where key = 'range_tilt'`.catch(() => []);
   const tilt = tiltRow ? Number(tiltRow.value) : 0.5;
+  const reference = await sql<Reference[]>`
+    select r.naics_prefix, r.label, r.businesses, r.revenue_per_employee, r.margin_1m, r.margin_5m, r.margin_20m, r.multiple,
+           o.revenue_per_employee as own_rpe, o.ebitda_margin as own_margin, o.multiple as own_multiple, o.note as own_note
+    from industry_reference r left join industry_overrides o on o.naics_prefix = r.naics_prefix
+    order by r.businesses desc`.catch(() => [] as Reference[]);
   const learned = await sql<Learned[]>`
     select c.naics_prefix, c.segment, c.revenue_factor, c.n, c.typical_miss,
            (select label from industry_benchmarks where c.naics_prefix like naics_prefix || '%' order by length(naics_prefix) desc limit 1) as label
@@ -150,6 +161,43 @@ export default async function Industries({ searchParams }: { searchParams: Promi
             ))}
           </tbody>
         </table>
+      )}
+
+      <h2>Common Oklahoma industries</h2>
+      <p className="disclaimer">Our current figures (in grey) for the {reference.length || 60} most common industries. Type your own number over
+        any of them and press Save on that row; leave a box empty to keep ours. Revenue per employee is in today&apos;s dollars; the
+        margin is for a company of about $1M revenue (ours shrinks for bigger companies: shown underneath); the multiple is for a
+        company with about $1M of EBITDA.</p>
+      {!reference.length ? <p>This list appears after the next data load.</p> : (
+        <div className="ref-table">
+          <table>
+            <thead><tr><th>Industry</th><th className="num" colSpan={4}>Revenue / employee · EBITDA margin · Multiple at ~$1M EBITDA</th></tr></thead>
+            <tbody>
+              {reference.map((r) => (
+                <tr key={r.naics_prefix} className={r.own_rpe || r.own_margin || r.own_multiple ? "ref-own" : ""}>
+                  <td><b>{r.naics_prefix}</b> {labelOf(r.naics_prefix) ?? r.label}
+                    <div className="disclaimer" style={{ margin: 0 }}>{r.businesses.toLocaleString()} businesses{r.own_note ? ` · ${r.own_note}` : ""}</div></td>
+                  <td className="num" colSpan={4}>
+                    <form action={save} className="ref-row">
+                      <input type="hidden" name="naics" value={r.naics_prefix} />
+                      <input name="rpe" aria-label={`Revenue per employee for ${r.naics_prefix}`} placeholder={`$${k(r.revenue_per_employee)}`}
+                        defaultValue={r.own_rpe ? k(r.own_rpe) : ""} />
+                      <span className="ref-cell">
+                        <input name="margin" aria-label={`EBITDA margin for ${r.naics_prefix}`} placeholder={pct(r.margin_1m)}
+                          defaultValue={r.own_margin ? pct(r.own_margin) : ""} />
+                        <small>ours: {pct(r.margin_5m)} at $5M, {pct(r.margin_20m)} at $20M</small>
+                      </span>
+                      <input name="multiple" aria-label={`Multiple for ${r.naics_prefix}`} placeholder={r.multiple ? `${Number(r.multiple).toFixed(1)}×` : "—"}
+                        defaultValue={r.own_multiple ? String(Number(r.own_multiple)) : ""} />
+                      <input type="hidden" name="note" value={r.own_note ?? ""} />
+                      <button className="btn">Save</button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <h2>Learned from real figures</h2>
