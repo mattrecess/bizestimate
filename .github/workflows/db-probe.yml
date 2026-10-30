@@ -5,10 +5,10 @@ on:
     inputs:
       script:
         description: db_probe (timings) or accuracy_probe (backtest)
-        default: accuracy_probe
+        default: db_activity
   push:
     branches: [main]
-    paths: ["tools/db_probe.py", "tools/accuracy_probe.py", ".github/workflows/db-probe.yml"]
+    paths: ["tools/db_probe.py", "tools/accuracy_probe.py", "tools/db_activity.py", ".github/workflows/db-probe.yml"]
 permissions:
   contents: write
 jobs:
@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install "psycopg[binary]"
-      - run: python tools/${{ inputs.script || 'accuracy_probe' }}.py 2>&1 | tee "$RUNNER_TEMP/db.log"
+      - run: python tools/${{ inputs.script || 'db_activity' }}.py 2>&1 | tee "$RUNNER_TEMP/db.log"
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - if: always()
