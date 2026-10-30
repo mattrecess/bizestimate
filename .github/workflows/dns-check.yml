@@ -1,0 +1,28 @@
+name: DNS check
+# Shows the domain's nameservers and TXT records as the internet sees them (read-only).
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  dns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          {
+            for d in seebitda.com www.seebitda.com; do
+              echo "== $d"
+              echo "NS:";  dig +short NS $d @8.8.8.8
+              echo "TXT:"; dig +short TXT $d @8.8.8.8
+              echo "A:";   dig +short A $d @8.8.8.8
+              echo "CNAME:"; dig +short CNAME $d @8.8.8.8
+            done
+            echo "== whois nameservers"; whois seebitda.com 2>/dev/null | grep -iE "name server|registrar:|creation date" | head -8
+          } 2>&1 | tee "$RUNNER_TEMP/dns.log"
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b dns-logs
+          cp "$RUNNER_TEMP/dns.log" dns.log && git add dns.log
+          git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" dns-logs
