@@ -14,7 +14,6 @@ import psycopg
 
 from adjust import Adjust
 from benchmarks import load_benchmarks, lookup
-from load import database_url
 from margins import Margins
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -62,5 +61,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--state", default="OK")
     state = ap.parse_args().state.upper()
+    from load import database_url   # here, not at the top: load.py imports this module
     with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
         refresh(cur, state)
