@@ -17,7 +17,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
   const [text, setText] = useState(value);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const box = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLFormElement>(null);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => setText(value), [value]);
@@ -46,7 +46,8 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
   }
 
   return (
-    <div className="searchbox" ref={box}>
+    // A form, so a phone's Return/Search key submits it (some keyboards send no Enter keydown).
+    <form className="searchbox" ref={box} role="search" action="" onSubmit={(e) => { e.preventDefault(); done(); }}>
       {busy ? <span className="spinner icon-search" aria-label="Searching" /> : <Icon name="search" className="icon-search" />}
       <input
         ref={input} type="search" enterKeyHint="search" placeholder="Search a business, city, industry or NAICS code" value={text} aria-label="Search businesses"
@@ -55,12 +56,12 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, items.length - 1)); }
           else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, -1)); }
-          else if (e.key === "Enter") { if (active >= 0 && items[active]) pick(items[active]); else done(); }
+          else if (e.key === "Enter" && active >= 0 && items[active]) { e.preventDefault(); pick(items[active]); }
           else if (e.key === "Escape") setOpen(false);
         }}
       />
       {text && (
-        <button className="clear" aria-label="Clear search" onClick={() => { setText(""); onChange(""); }}>
+        <button type="button" className="clear" aria-label="Clear search" onClick={() => { setText(""); onChange(""); }}>
           <Icon name="x" size={16} />
         </button>
       )}
@@ -69,7 +70,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
           {/* Read as an industry: the list already shows them all, so this just closes the menu. */}
           {industry && (
             <li>
-              <button className="s-industry" onMouseDown={(e) => e.preventDefault()} onClick={done}>
+              <button type="button" className="s-industry" onMouseDown={(e) => e.preventDefault()} onClick={done}>
                 <span className="s-name"><Icon name="search" size={14} />{industry.startsWith("NAICS") ? `All businesses in ${industry}` : `All ${industry.toLowerCase()} businesses`}</span>
                 {current?.total != null && <span className="s-meta">{current.total.toLocaleString()} found</span>}
               </button>
@@ -77,7 +78,7 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
           )}
           {items.map((s, i) => (
             <li key={s.id}>
-              <button role="option" aria-selected={i === active} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(s)}>
+              <button type="button" role="option" aria-selected={i === active} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(s)}>
                 <span className="s-name">{s.name}</span>
                 <span className="s-meta">{s.city} · {money(s.est_revenue_mid)}</span>
               </button>
@@ -85,6 +86,6 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
           ))}
         </ul>
       )}
-    </div>
+    </form>
   );
 }

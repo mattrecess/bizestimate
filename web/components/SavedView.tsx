@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CompareRow } from "@/lib/compare";
 import { money } from "@/lib/format";
-import { account, removeSearch, savedBusinesses, savedSearches, toggleSaved, type SavedBiz, type SavedSearch } from "@/lib/saved";
+import { account, askSignIn, removeSearch, savedBusinesses, savedSearches, toggleSaved, type SavedBiz, type SavedSearch } from "@/lib/saved";
 
 const MAX_COMPARE = 5;
 
@@ -31,8 +31,15 @@ export default function SavedView() {
   return (
     <>
       <h1>My Radar</h1>
+      {!signedIn && !list.length && !searches.length ? (
+        <div className="section">
+          <p>Keep an eye on the companies you care about: add them from the radar icon on any business, then compare them
+            side by side here. Sign in to get started; it&apos;s free.</p>
+          <button type="button" className="btn primary" onClick={() => askSignIn({})}>Sign in</button>
+        </div>
+      ) : <>
       <p className="disclaimer">{signedIn ? "The companies you're keeping an eye on, saved to your account so they're on every device you sign in on."
-        : "The companies you're keeping an eye on, kept in this browser. Sign in with Google to keep them on every device."} Tick up to {MAX_COMPARE} businesses to compare them side by side.</p>
+        : "Saved in this browser before sign-in was needed. Sign in to keep them and add more."} Tick up to {MAX_COMPARE} businesses to compare them side by side.</p>
       <div className="section">
         <div className="saved-head">
           <h2>Companies</h2>
@@ -69,6 +76,7 @@ export default function SavedView() {
           </ul>
         )}
       </div>
+      </>}
     </>
   );
 }

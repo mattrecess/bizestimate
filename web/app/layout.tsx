@@ -5,6 +5,7 @@ import "@fontsource-variable/inter";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import AccountMenu from "@/components/AccountMenu";
+import SignInPrompt from "@/components/SignInPrompt";
 import Icon from "@/components/Icon";
 import { SITE_URL } from "@/lib/site";
 
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </nav>
         </header>
         {children}
+        <SignInPrompt />
         {/* Page-view counts (no cookies); shows in Vercel once Web Analytics is enabled for the project. */}
         <Analytics />
       </body>

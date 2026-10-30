@@ -316,7 +316,7 @@ export default function Home() {
               <span className="list-actions">
                 <button className="link-btn" onClick={() => {
                   const label = [debouncedQ, sector, city].filter(Boolean).join(" · ") || "All businesses";
-                  saveSearch({ label, query: new URLSearchParams(filterParams + (sort !== "revenue_desc" ? `&sort=${sort}` : "")).toString() });
+                  if (!saveSearch({ label, query: new URLSearchParams(filterParams + (sort !== "revenue_desc" ? `&sort=${sort}` : "")).toString() })) return;
                   setSavedNote(true); setTimeout(() => setSavedNote(false), 2000);
                 }}>{savedNote ? "Saved ✓" : "Save search"}</button>
               </span>
