@@ -10,13 +10,19 @@ export const MIN_LISTED = 5;   // fewer than this and a page has too little to s
 
 const listed = sql`not is_individual and coalesce(est_method, '') <> 'branch'`;
 
+// Market-report figures change only with the overnight load, so each is kept a day in Vercel's data
+// cache, which (unlike the page cache) survives deploys: Google crawling thousands of industry and
+// city pages right after a deploy otherwise recomputes every one against the database at once.
+const DAY = { revalidate: 86400 };
+const daily = <A extends unknown[], R>(name: string, fn: (...a: A) => Promise<R>) => unstable_cache(fn, [`landing-${name}`], DAY);
+
 export type Summary = { count: number; revenue_total: number | null; revenue_median: number | null; ebitda_median: number | null;
   value_median: number | null; multiple_median: number | null; likely_to_sell: number;
   bands: { under1: number; m1to5: number; m5to25: number; over25: number } };
 export type Row = { id: string; name: string; city: string; jobs_reported: number | null; est_revenue_mid: string | null;
   est_ebitda_mid: string | null; est_method: string };
 
-export async function summary(ind: Industry, city?: string): Promise<Summary> {
+export const summary = daily("summary", async (ind: Industry, city?: string): Promise<Summary> => {
   const [s] = await sql`
     with b as (
       select est_revenue_mid, est_ebitda_mid, sell_score, ${valueSql} as value from businesses
@@ -35,29 +41,42 @@ export async function summary(ind: Industry, city?: string): Promise<Summary> {
   return { count: s.count, revenue_total: s.revenue_total, revenue_median: s.revenue_median, ebitda_median: s.ebitda_median,
     value_median: s.value_median, multiple_median: s.multiple_median, likely_to_sell: s.likely_to_sell,
     bands: { under1: s.under1, m1to5: s.m1to5, m5to25: s.m5to25, over25: s.over25 } };
-}
+});
 
-export const top = (ind: Industry, city?: string, limit = 50) => sql<Row[]>`
-  select id, name, city, jobs_reported, est_revenue_mid, est_ebitda_mid, est_method from businesses
-  where ${listed} and (${industryMatch(ind.naics)}) ${city ? sql`and lower(city) = ${city.toLowerCase()}` : sql``}
-  order by est_revenue_mid desc nulls last, id limit ${limit}`;
+async function topUncached(ind: Industry, city?: string, limit = 50): Promise<Row[]> {
+  return [...await sql<Row[]>`
+    select id, name, city, jobs_reported, est_revenue_mid, est_ebitda_mid, est_method from businesses
+    where ${listed} and (${industryMatch(ind.naics)}) ${city ? sql`and lower(city) = ${city.toLowerCase()}` : sql``}
+    order by est_revenue_mid desc nulls last, id limit ${limit}`];
+}
+export const top = daily("top", topUncached);
 
 // The likeliest sellers and the latest deals, for the market report.
-export const sellers = (ind: Industry, city?: string, limit = 5) => sql<(Row & { sell_score: number; sell_signals: string[] | null })[]>`
-  select id, name, city, jobs_reported, est_revenue_mid, est_ebitda_mid, est_method, sell_score, sell_signals from businesses
-  where ${listed} and sell_score >= 40 and ${notPublic} and (${industryMatch(ind.naics)}) ${city ? sql`and lower(city) = ${city.toLowerCase()}` : sql``}
-  order by sell_score desc, est_revenue_mid desc nulls last, id limit ${limit}`.catch(() => []);
+type Seller = Row & { sell_score: number; sell_signals: string[] | null };
+async function sellersUncached(ind: Industry, city?: string, limit = 5): Promise<Seller[]> {
+  return [...await sql<Seller[]>`
+    select id, name, city, jobs_reported, est_revenue_mid, est_ebitda_mid, est_method, sell_score, sell_signals from businesses
+    where ${listed} and sell_score >= 40 and ${notPublic} and (${industryMatch(ind.naics)}) ${city ? sql`and lower(city) = ${city.toLowerCase()}` : sql``}
+    order by sell_score desc, est_revenue_mid desc nulls last, id limit ${limit}`.catch(() => [] as Seller[])];
+}
+export const sellers = daily("sellers", sellersUncached);
 
-export const deals = (ind: Industry, city?: string, limit = 5) => sql<{ id: string; name: string; city: string; buyer: string;
-  deal_date: string | null; deal_type: string | null }[]>`
-  select b.id, b.name, b.city, t.buyer, t.deal_date::text, t.deal_type from transactions t join businesses b on b.biz_key = t.biz_key
-  where (${industryMatch(ind.naics)}) ${city ? sql`and lower(b.city) = ${city.toLowerCase()}` : sql``}
-  order by t.deal_date desc nulls last limit ${limit}`.catch(() => []);
+type Deal = { id: string; name: string; city: string; buyer: string; deal_date: string | null; deal_type: string | null };
+async function dealsUncached(ind: Industry, city?: string, limit = 5): Promise<Deal[]> {
+  return [...await sql<Deal[]>`
+    select b.id, b.name, b.city, t.buyer, t.deal_date::text, t.deal_type from transactions t join businesses b on b.biz_key = t.biz_key
+    where (${industryMatch(ind.naics)}) ${city ? sql`and lower(b.city) = ${city.toLowerCase()}` : sql``}
+    order by t.deal_date desc nulls last limit ${limit}`.catch(() => [] as Deal[])];
+}
+export const deals = daily("deals", dealsUncached);
 
-export const cities = (ind: Industry) => sql<{ city: string; count: number }[]>`
-  select initcap(lower(city)) as city, count(*)::int as count from businesses
-  where ${listed} and (${industryMatch(ind.naics)}) and coalesce(city, '') <> ''
-  group by 1 having count(*) >= ${MIN_LISTED} order by 2 desc, 1`;
+async function citiesUncached(ind: Industry): Promise<{ city: string; count: number }[]> {
+  return [...await sql<{ city: string; count: number }[]>`
+    select initcap(lower(city)) as city, count(*)::int as count from businesses
+    where ${listed} and (${industryMatch(ind.naics)}) and coalesce(city, '') <> ''
+    group by 1 having count(*) >= ${MIN_LISTED} order by 2 desc, 1`];
+}
+export const cities = daily("cities", citiesUncached);
 
 // The city as stored, from its slug ("broken-arrow" -> "Broken Arrow"), if this industry has it.
 export async function cityBySlug(ind: Industry, s: string) {

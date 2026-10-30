@@ -6,7 +6,11 @@ import BusinessProfile from "@/components/BusinessProfile";
 import { SITE_URL } from "@/lib/site";
 import { businessFacts, displayName } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+// Rendered on first visit and kept a day (figures change only with the overnight load), so search
+// engines crawling thousands of these don't each cost a round of database queries.
+export const revalidate = 86400;
+// None built ahead of time; each page is rendered on its first visit and then served from cache.
+export async function generateStaticParams() { return []; }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const b = await getBusinessRow((await params).id);

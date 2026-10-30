@@ -43,7 +43,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Link href="/" className="brand" aria-label="SeeBITDA home"><BrandMark /><span>See<span className="brand-em">BITDA</span></span></Link>
           <span className="state-chip">Oklahoma</span>
           <nav>
-            <Link href="/likely-to-sell" className="hide-sm">Likely to sell</Link>
             <Link href="/radar" className="nav-radar"><Icon name="radar" size={16} />My Radar</Link>
             <AccountMenu />
           </nav>

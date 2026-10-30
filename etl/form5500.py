@@ -275,6 +275,7 @@ def main():
         cur.execute("select biz_key, name, coalesce(address, ''), coalesce(city, ''), coalesce(zip, '') "
                     "from businesses where state = %s", (state,))
         businesses = [dict(zip(["biz_key", "name", "address", "city", "zip"], r)) for r in cur.fetchall()]
+        conn.commit()   # matching takes a while: don't hold a transaction open (it stops vacuum) meanwhile
         matches = match(sponsors, businesses)
         # Several EINs can land on one business (e.g. a renamed entity): keep the largest per year.
         counts = defaultdict(dict)

@@ -5,6 +5,8 @@ import { cityBySlug, deals, industryBySlug, sellers, slug, summary, top } from "
 import { money } from "@/lib/format";
 
 export const revalidate = 86400;
+// None built ahead of time; each page is rendered on its first visit and then served from cache.
+export async function generateStaticParams() { return []; }
 
 type P = { params: Promise<{ industry: string; city: string }> };
 
