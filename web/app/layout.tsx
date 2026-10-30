@@ -11,7 +11,7 @@ import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "SeeBITDA: see what any Oklahoma business is worth",
+  title: "SeeBITDA: see what any business is worth",
   description: "See estimated revenue, EBITDA and value for Oklahoma private businesses, from public records.",
   // Google Search Console ownership check: set GOOGLE_SITE_VERIFICATION in Vercel to the code Google gives.
   verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
