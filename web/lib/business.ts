@@ -165,6 +165,14 @@ export async function getComparables(b: Business, limit = 6): Promise<Comparable
   if (!b.naics) return [];
   const lat = b.lat == null ? null : Number(b.lat);
   const lon = b.lon == null ? null : Number(b.lon);
+  // Worked out in the nightly load (etl/map_tables.py comparables); measured here only for a business
+  // the load hasn't covered yet.
+  const stored = await capped(QUICK, (q) => q<Comparable[]>`
+    select c.id, c.name, c.city, c.industry, c.jobs_reported, c.est_revenue_mid, c.est_ebitda_mid,
+           ${lat == null ? sql`null::float8` : sql`69.0 * sqrt(power(c.lat - ${lat}, 2) + power((c.lon - ${lon}) * cos(radians(${lat})), 2))`} as miles
+    from business_comps bc cross join unnest(bc.comps) with ordinality as u(cid, n) join businesses c on c.id = u.cid
+    where bc.id = ${b.id} order by u.n limit ${limit}`, [] as Comparable[]);
+  if (stored.length) return stored;
   // Nearby first (within about 50 miles, so only that area is measured and sorted), then statewide.
   const tries = [b.naics.slice(0, 4), b.naics.slice(0, 2)].flatMap((prefix) => [{ prefix, near: true }, { prefix, near: false }]);
   for (const { prefix, near } of tries) {
