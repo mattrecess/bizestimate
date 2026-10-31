@@ -3,7 +3,7 @@ and memory settings. Run via the DB probe workflow (script: db_health)."""
 import os
 import psycopg
 
-url = os.environ["DATABASE_URL"].strip().strip("'\"")
+url = os.environ["DATABASE_URL"].strip().strip('"').replace("[", "").replace("]", "")
 with psycopg.connect(url, connect_timeout=60) as conn, conn.cursor() as cur:
     cur.execute("set statement_timeout = '60s'")
     cur.execute("select pg_size_pretty(pg_database_size(current_database()))")
