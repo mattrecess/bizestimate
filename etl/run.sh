@@ -11,11 +11,9 @@ mkdir -p data/cache   # cached between runs by the workflow
 "$PY" etl/size_factors.py --fetch || echo "Size figures unavailable; using industry averages"
 # Early: it only needs businesses already in the database, so headcounts land within minutes.
 "$PY" etl/form5500.py --state "$STATE" || echo "Form 5500 step failed (non-fatal)"
-# Public records (nonprofits, banks, SEC, SBA loans, contracts, DOT, years in business); each non-fatal.
-# Steps marked "paid" run only in the Public records workflow, so nothing is looked up twice.
-for m in $(grep -v '^#' etl/sources.txt | grep -v ' paid' | awk '{print $1}'); do
-  "$PY" "etl/$m.py" --state "$STATE" || echo "$m failed (non-fatal)"
-done
+# Public records (nonprofits, banks, SEC, SBA loans, contracts, DOT, years in business) are refreshed by
+# the Public records workflow (enrich.yml), which runs daily; the load uses what it has saved. Running
+# them here too re-downloaded everything first and pushed the load past GitHub's 6-hour limit (Oct 31).
 "$PY" etl/benchmarks.py --fetch --state "$STATE" || echo "Using sector-default benchmarks"
 "$PY" etl/download_ppp.py --state "$STATE"
 "$PY" etl/build.py --state "$STATE"
