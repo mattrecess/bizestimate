@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { sql } from "@/lib/db";
+import { dbTarget, sql } from "@/lib/db";
 import { money } from "@/lib/format";
 import { estimateValue } from "@/lib/valuation";
 import { adminConfigured, businessId, isAdmin, signIn, signOut } from "@/lib/admin";
@@ -140,6 +140,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
     <main className="page admin">
       <div className="admin-head">
         <h1>Verified figures</h1>
+        <p className="disclaimer">Database connection: {dbTarget.host}:{dbTarget.port} ({dbTarget.mode})</p>
         <div className="admin-nav"><a href="/admin/industries">Industry figures</a><a href="/admin/corrections">Owner corrections</a><a href="/admin/pipeline">My pipeline</a><a href="/admin/transactions">Transactions</a><a href="/admin/contacts">Contacts &amp; requests</a><form action={logout}><button className="link-btn">Sign out</button></form></div>
       </div>
       <p className="disclaimer">Actual revenue and EBITDA you know for a business. Private by default: they&apos;re used only

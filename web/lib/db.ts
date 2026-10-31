@@ -13,6 +13,15 @@ const isLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
 // site at once, the slots ran out and nothing could connect: the outages of Oct 30-31.
 const siteUrl = url.replace(/(@[^/]*pooler\.supabase\.com):5432\//, "$1:6543/");
 
+// For the admin page: where the site connects (server and port only, never the password).
+export const dbTarget = (() => {
+  const m = siteUrl.match(/@([^/:?]+)(?::(\d+))?/);
+  const host = m?.[1] ?? "unknown", port = m?.[2] ?? "5432";
+  const mode = !/pooler\.supabase\.com$/.test(host) ? (isLocal ? "local" : "direct connection (no pooler)")
+    : port === "6543" ? "transaction pooler" : "session pooler";
+  return { host, port, mode };
+})();
+
 // One pool per server instance; `prepare: false` keeps the transaction pooler happy. Idle connections
 // are closed after 20s rather than kept by every warm instance.
 const globalForDb = globalThis as unknown as { sql?: ReturnType<typeof postgres> };
