@@ -15,8 +15,10 @@ permissions:
   actions: read
 # A new run waits for the current one rather than cancelling it: paid steps (AI, web search) may be
 # mid-way, and their results are only saved as each batch completes.
+# Shares the data load's queue: both write the businesses tables, and starting together (the daily
+# trigger starts both) left the load unable to take its schema lock (Oct 31).
 concurrency:
-  group: enrich
+  group: etl
   cancel-in-progress: false
 jobs:
   # GitHub often skips or delays scheduled runs, so the site's daily cron (Vercel, /api/cron/daily) starts
