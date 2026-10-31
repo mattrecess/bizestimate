@@ -8,9 +8,11 @@ on:
     paths: ["etl/form5500.py", "etl/headcount_estimates.py", "etl/records_only.py", ".github/workflows/form5500.yml"]
 permissions:
   contents: write
+# Shares the full load's queue: it writes the same tables, and running alongside a load (Oct 30) left
+# both fighting over locks until the database stopped accepting connections.
 concurrency:
-  group: form5500
-  cancel-in-progress: true
+  group: etl
+  cancel-in-progress: false
 jobs:
   form5500:
     runs-on: ubuntu-latest
