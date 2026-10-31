@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   const rows = await sql`
       select id, name, ${publicAddress}, city, state, zip, naics, industry, jobs_reported, is_nonprofit, to_jsonb(businesses) ->> 'parent_name' as parent_name,
              est_revenue_low, est_revenue_mid, est_revenue_high,
-             est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_confidence, est_method, lat, lon,
+             est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_value_mid, est_confidence, est_method, lat, lon,
              coalesce(owner_name, '') <> '' as has_owner, nullif(owner_name, '') as owner_name,
              coalesce(website, '') <> '' as has_website, to_jsonb(businesses) ->> 'sell_score' as sell_score,
              (select count(*)::int from businesses c where c.parent_key = businesses.biz_key) as locations

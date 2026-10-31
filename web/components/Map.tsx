@@ -231,7 +231,7 @@ export default function Map({ points, onBoundsChange, center = OKLAHOMA, zoom = 
       const a = document.createElement("a");
       a.href = `/business/${p.id}`;
       a.textContent = p.name;
-      div.append(a, document.createElement("br"), `Est. revenue ${shortMoney(Number(p.rev))}`);
+      div.append(a, document.createElement("br"), String(p.label ?? "").endsWith("rev") ? `Est. revenue ${shortMoney(Number(p.rev))}` : `Est. value ${shortMoney(Number(p.rev))}`);
       new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(m);
     });
     // Hover: the tag turns bright and shows the name (the hover layer), and the matching card is
