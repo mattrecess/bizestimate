@@ -1,0 +1,26 @@
+name | city | basis | revenue | ebitda | value | growth | tilt | calibration
+IMAGENET CONSULTING LLC | Oklahoma City | blend | 1005381549 | 61830965 | 500830817 | 0.08 | 0.5 | 1
+COOK FEED AND OUTDOOR YUKON LLC | Yukon | blend | 2022830 | 182864 | 365728 | 0.08 | 0.5 | 1
+Cook Feed & Outdoor | Oklahoma City | branch | None | None | None | None | None | None
+Cook Feed and Outdoor | Norman | branch | None | None | None | None | None | None
+ImageNet Consulting Tulsa | Tulsa | branch | None | None | None | None | None | None
+
+basis | businesses | average revenue
+industry_average | 109072 | 2299662
+blend | 49748 | 5080481
+employees | 7054 | 5870851
+fleet | 4885 | 2371330
+reported | 1694 | 49187848
+retirement_plan | 870 | 39333544
+
+largest values:
+ONEOK, Inc. | Tulsa | 61667500000
+Continental Resources | Oklahoma City | 47127935500
+OGE Energy Corp. | Oklahoma City | 11553200000
+GULFPORT ENERGY CORPORATION | Oklahoma City | 6513019200
+Laredo Petroleum | Tulsa | 6115019000
+Alliance Resource Partners | Tulsa | 5820281500
+Helmerich & Payne | Tulsa | 5341425500
+MACH RESOURCES LLC | Oklahoma City | 3871540800
+NGL Energy Partners LP | Tulsa | 3089418500
+DIAMONDBACK E & P LLC | Oklahoma City | 2970309989
