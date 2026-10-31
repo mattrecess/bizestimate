@@ -1,0 +1,256 @@
+run 41227789096 (582b759094584ded20d6c602316d894c7e7a99fb): failure
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+Schema applied
+IRS margins: cache is recent; skipping download
+  562991 at $2,000,000: industry (0.1303, 'Waste management and remediation services') -> margin 16.1%
+  561720 at $1,000,000: industry (0.0952, 'Administrative and support services') -> margin 11.8%
+  238220 at $3,000,000: industry (0.094, 'Specialty trade contractors') -> margin 10.6%
+  722511 at $1,500,000: industry (0.08, 'Food services and drinking places') -> margin 9.9%
+  541330 at $5,000,000: industry (0.1453, 'Professional, scientific, and technical services') -> margin 14.4%
+adjust: cache is recent; skipping download
+  inflation 2019 -> now: 1.259, 2022 -> now: 1.1
+  growth 561730: 1.211
+  growth 562991: 1.165
+  growth 423320: 1.146
+  growth 423430: 0.977
+  growth 238220: 1.095
+  growth 722511: 1.014
+size_factors: cache is recent; skipping download
+  423320 41 employees: benchmark $1,500,000 -> $1,032,535
+  561730 30 employees: benchmark $150,000 -> $135,681
+  423430 9 employees: benchmark $1,200,000 -> $1,071,227
+  562991 52 employees: benchmark $180,000 -> $183,783
+Form 5500: F_5500 2026: not available (<HTTPError 404: 'Not Found'>)
+Form 5500: F_5500_SF 2026: not available (<HTTPError 404: 'Not Found'>)
+Form 5500: 7,906 OK sponsors with retirement plans
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+Form 5500: matched 6,563 of 7,906 sponsors to 6,462 listed businesses
+Form 5500: largest unmatched sponsors: [(8384, 'CHICKASAW NATION', 'ADA'), (5692, 'THE WILLIAMS COMPANIES, INC.', 'TULSA'), (4961, 'BOKF, NA', 'TULSA'), (3943, 'ONE GAS, INC', 'TULSA'), (3732, 'ALLIANCE COAL, LLC', 'TULSA'), (2246, 'AMERICAN HEALTH STAFFING GROUP, INC', 'EDMOND'), (2077, 'COMMUNITY STRATEGIES, INC. DBA EPIC CHARTER SCHOOLS', 'OKLAHOMA CITY'), (1950, 'ROONEY HOLDINGS, INC.', 'TULSA'), (1746, 'MAGELLAN MIDSTREAM HOLDINGS GP, LLC', 'TULSA'), (1630, 'ENABLE MIDSTREAM SERVICES, LLC', 'OKLAHOMA CITY'), (1501, 'AIRCO SERVICE, INC.', 'TULSA'), (1473, 'LOCKE SUPPLY CO.', 'OKLAHOMA CITY'), (1217, 'TINKER FEDERAL CREDIT UNION', 'TINKER AFB'), (1207, 'ATWOOD DISTRIBUTING, L.P.', 'ENID'), (1173, 'THE UNIVERSITY OF TULSA', 'TULSA'), (957, 'T. D. WILLIAMSON INC.', 'TULSA'), (952, 'OMNI AIR INTERNATIONAL, LLC', 'TULSA'), (888, 'LUCKY STAR CASINO', 'CONCHO'), (875, 'BUTION HOLDCO 1, LLC', 'TULSA'), (832, 'SOLARAY LLC', 'SAPULPA'), (780, 'RCB BANK', 'CLAREMORE'), (706, 'WESTERN EQUIPMENT, LLC', 'CLINTON'), (695, 'VETEVOLVE HOLDINGS, LLC', 'OKLAHOMA CITY'), (685, 'DUNCAN REGIONAL HOSPITAL, INC.', 'DUNCAN'), (655, 'EDGE OFS HOLDINGS', 'TULSA'), (631, 'GENISYS CONTROLS, LLC', 'TULSA'), (618, 'WPX ENERGY SERVICES COMPANY, LLC', 'OKLAHOMA CITY'), (581, 'LSB INDUSTRIES, INC.', 'OKLAHOMA CITY'), (554, '7-ELEVEN STORES OF OKLAHOMA', 'OKLAHOMA CITY'), (535, 'PHARMCARE USA', 'HYDRO'), (519, 'OKLAHOMA MED RESEARCH FOUNDATION', 'OKLAHOMA CITY'), (477, 'PARADIGM INVESTMENT GROUP, LLC', 'OKLAHOMA CITY'), (450, 'AUXANO HOLDINGS, LLC', 'OWASSO'), (443, 'CARTER HEALTHCARE,LLC', 'OKLAHOMA CITY'), (442, 'TULSA COMMUNITY FOUNDATION', 'TULSA'), (439, 'GREAT PLAINS REGIONAL MEDICAL CENTER', 'ELK CITY'), (406, 'OKLAHOMA CHRISTIAN UNIVERSITY', 'EDMOND'), (390, 'CENTRAL SERVICE CORPORATION', 'ENID'), (385, 'KIOWA CASINOS', 'DEVOL'), (360, 'AUXANO HOLDINGS, LLC', 'OWASSO')]
+  sample: HALE & COMPANY CPA PC -> 2020: 16, 2021: 20, 2022: 22, 2023: 26, 2024: 21, 2025: 22 (sponsor HALE & COMPANY, CPA, P.C.)
+  sample: ENDEX OF OKLAHOMA INC -> 2020: 20, 2021: 17, 2022: 21, 2023: 17, 2024: 24, 2025: 30 (sponsor ENDEX OF OKLAHOMA, INC.)
+  sample: SNOWDEN EYE CARE, PLLC -> 2020: 6, 2021: 6, 2022: 5, 2023: 5, 2024: 5, 2025: 2 (sponsor PAUL B. SNOWDEN DBA SNOWDEN EYE CARE)
+  sample: Bank of Cherokee County -> 2020: 44, 2021: 38, 2022: 55, 2023: 53, 2024: 73 (sponsor BANK OF CHEROKEE COUNTY)
+  sample: BROOKE R SNOWDEN DDS PC -> 2020: 5, 2021: 6, 2022: 6, 2023: 4, 2024: 1, 2025: 1 (sponsor BROOKE R. SNOWDEN, DDS, PC)
+  sample: RONALD E. WORTHEN, P.C. -> 2020: 2, 2021: 2, 2022: 1 (sponsor RONALD E WORTHEN PC)
+  sample: PSAL 145 7 INC. -> 2020: 1, 2021: 1, 2022: 1, 2023: 1, 2024: 1, 2025: 3 (sponsor PSAL 145 7 INC.)
+  sample: Oklahoma Liquefied Gas -> 2020: 24, 2021: 24, 2022: 26, 2023: 35, 2024: 34, 2025: 31 (sponsor OKLAHOMA LIQUEFIED GAS OF SEMINOLE, INC.)
+  sample: Diagnostic Radiology -> 2020: 3, 2021: 3, 2022: 2, 2023: 2, 2024: 3, 2025: 3 (sponsor DIAGNOSTIC RADIOLOGY CONSULTANTS PC)
+  sample: SURFACE MOUNT DEPOT INC. -> 2020: 42, 2021: 51, 2022: 52, 2023: 61, 2024: 63, 2025: 60 (sponsor SURFACE MOUNT DEPOT, INC.)
+  sample: LOBDOCK, INC. -> 2020: 5 (sponsor LOBDOCK, INC.)
+  sample: ELYNX TECHNOLOGIES LLC -> 2020: 48, 2021: 41, 2022: 33, 2023: 29, 2024: 29, 2025: 30 (sponsor ELYNX TECHNOLOGIES, LLC)
+  sample: Oklahoma Educators Credit Union -> 2020: 48, 2021: 35, 2022: 48, 2023: 59, 2024: 48, 2025: 56 (sponsor OKLAHOMA EDUCATORS CREDIT UNION)
+  sample: ACTION EDGE INC. -> 2020: 1, 2021: 1, 2022: 1, 2023: 1, 2024: 1, 2025: 1 (sponsor ACTION EDGE, INC.)
+  sample: BOBBY C KANG P.C. -> 2020: 2, 2021: 2, 2022: 2, 2023: 2, 2024: 3 (sponsor BOBBY C. KANG, P.C.)
+Form 5500: Schedule H 2026 unavailable (<HTTPError 404: 'Not Found'>)
+form5500_people: saved records for 1,520 businesses
+Form 5500: signers for 1,106 businesses, audit firms for 539
+form5500: 1,072 unmatched companies saved as record-only listings
+Estimates re-based on recent retirement-plan headcounts: 0 updated (0 staffing firms/PEOs skipped)
+Form 5500: headcounts saved
+Wrote 2052 benchmarks from Economic Census 2022 to /home/runner/work/bizestimate/bizestimate/etl/../data/benchmarks.csv (1026 using OK figures)
+CKAN API failed (HTTP Error 404: Not Found); falling back to the dataset page
+Found 13 PPP files
+public_150k_plus_240930.csv: 9,999 OK loans
+public_up_to_150k_10_240930.csv: 0 OK loans
+public_up_to_150k_11_240930.csv: 0 OK loans
+public_up_to_150k_12_240930.csv: 0 OK loans
+public_up_to_150k_1_240930.csv: 0 OK loans
+public_up_to_150k_2_240930.csv: 0 OK loans
+public_up_to_150k_3_240930.csv: 0 OK loans
+public_up_to_150k_4_240930.csv: 0 OK loans
+public_up_to_150k_5_240930.csv: 0 OK loans
+public_up_to_150k_6_240930.csv: 0 OK loans
+public_up_to_150k_7_240930.csv: 0 OK loans
+public_up_to_150k_8_240930.csv: 0 OK loans
+public_up_to_150k_9_240930.csv: 144,906 OK loans
+Wrote 154,905 loans to /home/runner/work/bizestimate/bizestimate/etl/../data/ppp_ok.csv
+Merged 4,226 duplicate listings
+Built 123,224 businesses from /home/runner/work/bizestimate/bizestimate/etl/../data/ppp_ok.csv
+58,744 addresses to place, 58,744 already cached
+GEOCODIO_API_KEY not set; using cached rooftop results only
+Overture 2026-10-21.0: downloading OK address points…
+Overture 2026-10-21.0: downloading OK building footprints…
+Overture 2026-10-21.0: downloading OK places…
+Indexed 1,859,651 Overture address points
+Indexed 3,052,640 building footprints
+Indexed 273,474 Overture places
+Overture 2026-10-21.0 placement: {'exact address point': 29067, 'business name match': 12338, 'street point + building': 11173, 'no building found': 4813, 'neighbours + building': 1353}; websites found: 18,164; phones: 20,851
+Located 122,595/123,224 businesses: {'rooftop': 29067, 'place': 12338, 'building': 12526, 'address': 833, 'zip': 67831, 'none': 629}
+Places-only: 227 PPP-listed companies folded into a sister company as its locations
+LOOKUP place 'True Solutions': category not mapped to an industry (civic_organization / civic_organization)
+Places-only: added 121,276 businesses without loan data; skipped {'already in PPP data': 29262, 'not a business category': 40714, 'closed or low confidence': 36101, 'duplicate place': 2283, 'branch of a listed company (kept as a location)': 2785}; 2,376 ZIP-placed borrowers moved to their map listing; 7,232 map listings folded into multi-location companies
+Places-only: most common categories not listed: christian_place_of_worship/christian_place_of_worship 5,309, None/None 5,185, social_or_community_service/social_or_community_service 1,953, historic_site/historic_site 1,811, christian_place_of_worship/baptist_place_of_worship 1,793, atm/atm 1,687, government_office/government_office 1,531, park/park 1,519, religious_organization/religious_organization 1,260, elementary_school/elementary_school 1,197, library/library 897, community_and_government/community_and_government 789, hospital/hospital 730, college_university/college_university 670, fire_station/fire_station 565, high_school/high_school 548, civic_organization/charity_organization 530, lake/lake 527, place_of_learning/school 465, police_station/police_station 433, preschool/preschool 392, sports_and_recreation/sports_and_recreation 379, civic_organization/civic_organization 340, place_of_learning/public_school 332, christian_place_of_worship/pentecostal_place_of_worship 320
+Websites: 110,569 to verify, reading 0 homepages
+Websites: kept 75,396 by domain, 7,324 by homepage; dropped 27,849
+  dropped: GDH CONSULTING INC (Tulsa) x http://www.yourgdhfuture.com/
+  dropped: MCBRIDE CLINIC ORTHOPEDIC HOSPITAL (Oklahoma City) x http://www.mcboh.com/
+  dropped: SOLUTIONS THROUGH INNOVATIVE TECHNOLOGIES, INC. (Tulsa) x https://www.hpw.net
+  dropped: MCDANIEL TECHNICAL SERVICES, INC. (Broken Arrow) x http://wyatt-tech.net/
+  dropped: D & M CARRIERS LLC (Oklahoma City) x http://www.freymiller.com
+  dropped: PACESETTER CLAIMS SERVICES, IC. (Tulsa) x https://www.nbispa.com
+  dropped: SOUTHERN STAR INC (Poteau) x http://satelliteplace.com/
+  dropped: CHANDLER USA, INC. (Chandler) x http://www.chandlerok.com/
+  dropped: HS-REAL ESTATE INC (Norman) x http://www.LungrenRealEstate.com/
+  dropped: WILLIE GEORGE MINISTRIES, INC (Tulsa) x http://www.drygulchusa.com
+  dropped: ACKERMAN MCQUEEN INC (Oklahoma City) x https://www.am.com
+  dropped: EST INC (Oklahoma City) x http://www.wsbeng.com/
+  dropped: LEADER COMMUNICATIONS INC (Oklahoma City) x http://www.lcibest.com/overview.aspx
+  dropped: HUDIBURG CHEVROLET, LLC (Midwest City) x https://www.rose.edu/content/news-events/event-centers/rose-state-college-hudiburg-chevrolet-center/
+  dropped: WTI HOLDINGS LLC (Tulsa) x https://www.wintech-winches.com
+Owners: 71,559 websites, 39,786 to scan
+Owners: scanned 2,000/39,786
+Owners: scanned 4,000/39,786
+Owners: time budget used; 35,786 sites left for the next run
+Owners: website contacts: 24,537 phones, 10,107 with email
+Owners: found a name for 3,630 businesses (5% of scanned websites)
+  sample: 3 LEVEL DESIGN INC. P.C. (Oklahoma City) -> President: Bobby Newman | https://www.3leveldesign.net/about
+  sample: DATA3 CORPORATION (Tulsa) -> President: Yasser Khan | https://www.datathree.com/executive-team2
+  sample: LIBERTY FENCE CO, INC. (Skiatook) -> President: Dewayne Thetford | https://www.libertyfenceco.com/
+  sample: Journey Productions (Lawton) -> Owner: Pat Reynolds | https://www.rentjp.com/contact
+  sample: Perfect Tan (Broken Arrow) -> Founder: Mindy Neal | https://www.yourperfecttan.com/
+  sample: Great Plains Bank (El Reno) -> President: Terry Shelby | https://www.gpbankok.com/about/board-of-directors
+  sample: Murphy USA (Bartlesville) -> President: Mindy West | https://www.murphyusa.com/murphyusa/home
+  sample: Bank7 (Medford) -> President: Jason Estes | https://www.bank7.com/about-us/
+  sample: Legacy Commercial Property Advisors (Tulsa) -> Owner: Wayne Pyle | https://www.legacycpadvisors.com/
+  sample: Stillwater Board of Realtors (Stillwater) -> President: Mike Lauvetz | https://stillwaterboardofrealtors.com/
+  sample: SpareBox Storage (Edmond) -> CEO: Kate Matheny | https://www.spareboxstorage.com/leadership
+  sample: Irons Heat & Air (Fort Gibson) -> Owner: Brandon Irons | https://www.ironsheatair.com/
+  sample: Legend (Tulsa) -> President: Matt Buchanan | https://legendseniorliving.com/about-legend/
+  sample: WellFast Urgent Care (Lawton) -> Founder: Emergency Medicine | https://wellfasturgentcare.com/about-us/
+  sample: All America Bank (Elgin) -> President: Medicine Park | https://allamerica.bank/personal/lending/meet-our-loan-officers
+  sample: Southwest Orthopaedic & Reconstructive Specialists (Cordell) -> CEO: Joe Streich | https://www.southwestortho.com/about-2/
+  sample: E-Z MART #4229 (Durant) -> Owner: Western Union | https://location.westernunion.com/us/ok/durant/b8efe67a89be2b57980d8bc5273a66a8
+  sample: Hobby's Hoagies (Oklahoma City) -> Founder: Greg Elwell | https://www.hobbyshoagies.com/about
+  sample: Fox Mortgage (Oklahoma City) -> Founder: Thomas Wilson | https://www.foxmortgage.com/about/careers
+  sample: RED RIVER FARMERS COOPERATIVE (Hugo) -> President: Beckie Morris | http://www.redriverfarmerscoop.com/About-Us.html
+Owners AI (claude-haiku-5-5): 13 unresolved websites, 0 already submitted, looking up 13 more (cap 80,000, 70,336 done)
+Owners AI: 11 sites readable, 2 unreachable
+Owners AI: this run used 58,313 input + 517 output tokens ≈ $0.01
+Owners AI: 8,170 businesses have an AI-found owner
+  sample: IMAGENET CONSULTING LLC (Oklahoma City) -> Founder: Bobby Roberson | https://www.imagenetconsulting.com/
+  sample: GOLDSBY CONSTRUCTION LLC (Norman) -> Owner/CEO: Chris Goldsby | https://www.goldsbyconstruction.com/meet-the-team
+  sample: AUBURN CORD DUESENBERG CO (Broken Arrow) -> Leader (took over company operations): Adam Pray | https://www.acdco.com/acdcostory
+  sample: CO ICE, LLC (Lawton) -> Founder: Bill Braum | https://www.braums.com/about/
+  sample: ADAPTIVE TECH SOLUTIONS, LLC (Sand Springs) -> President: Denise Bandl | https://www.adaptivetechsolutions.com/
+  sample: Bartling Insurance (Comanche) -> Owner: Kelsey Hare | https://bartlinginsurance.com/team
+  sample: Simple Simon's Pizza (Rattan) -> Owner: BJ Dumond | https://simplesimonspizza.com/about/
+  sample: Lopez Foods Inc (Oklahoma City) -> Owner: John C. Lopez | https://www.lopezdorada.com/history
+  sample: Oklahoma/Arkansas Chapter ACPA (Moore) -> Executive Director: Brent Burwell, P.E. | https://www.concreteroads.org/staff-2/
+  sample: family dental center Inc (Oklahoma City) -> Owner: Derek Cohlmia | https://familydentalokc.com/our-team
+  sample: Thrown Design and Wine (Oklahoma City) -> Principal Designer and Owner: Amber Foster | https://www.mythrown.com/about
+  sample: Enid Axe (Enid) -> Founder: Lafe Coldwater | https://www.enidaxe.com/our-story
+  sample: Edmond Sheet Metal (Edmond) -> Owner: Brian and Kourtney Heard | https://edmondsheetmetal.com/about-us
+  sample: Blackwelder Farms (Harrah) -> Owner & Head Trainer: Mallory Sciaraffa | https://sites.google.com/view/blackwelderfarmsok/meet-the-team
+  sample: Billy Sims Barbecue (Sand Springs) -> CEO: Jeff Jackson | https://billysimsbbq.com/about-us/
+  sample: Coney I-Lander (Tulsa) -> Founder: Chuck Kingsley | https://www.coneyi-lander.com/about/
+  sample: Tulsa Grass and Sod Farms (Bixby) -> Founder: Ray and Patty Volentine | https://tulsagrass.com/about/
+  sample: Riverside Liquor (Tahlequah) -> Owner: David Joudi | https://riversideliquors.biz/about-us/
+  sample: Boyd Machining (Tulsa) -> Owner and General Manager: Joseph L. Boyd | http://www.boydmachining.com
+  sample: Abundant WellnessMD (Owasso) -> Owner: Loretta A. Farrell, MD | https://www.abundantwellnessmd.com/
+Owners search: 0 businesses to search (500 of 500 done)
+Owners search: found 0 of 0 (0%); ≈ $0.00 (0 searches + 0 input / 0 output tokens)
+Owners search: 146 businesses have a search-found owner
+  sample: PARFAB FIELD SERVICES LLC (Inola) -> Principal: Alvin Harrison Moore | https://www.subser.com/pros/wa/inola/parfab-field-services-llc-inola-parfafs902pq
+  sample: LATSHAW DRILLING COMPANY, LLC (Tulsa) -> Founder and President: Trent Latshaw | https://www.preqin.com/data/profile/asset/latshaw-drilling-company-llc/511095
+  sample: HAC, INC (Oklahoma City) -> President and CEO: David Criscione | https://www.supermarketnews.com/finance/homeland-names-david-criscione-as-new-ceo
+  sample: QUALITY INTEGRATED SERVICES INC. (Guymon) -> President, Principal Owner: Richard Looney | https://www.qisinspection.com/documents/QIS_2025_Marketing_Brochure.pdf
+  sample: ZEECO, INC (Broken Arrow) -> Owner and CEO: Darton Zink | https://www.zeeco.com/resources/news/zeeco-40-years-of-taking-oklahoma-innovation-to-the-world
+  sample: GDH CONSULTING INC (Tulsa) -> President: Gerald Hurley | https://www.govcb.com/government-vendors/profile-PRE00000000001442064-gdh-consulting-inc-Tulsa-OK.htm
+  sample: SOLUTIONS THROUGH INNOVATIVE TECHNOLOGIES, INC. (Tulsa) -> Chief Executive Officer: Charles Colon | https://www.crunchbase.com/organization/solutions-through-innovative-technologies-inc-dba-sti-technologies-inc/profiles_and_contacts
+  sample: COVERCRAFT INDUSTRIES, LLC (Pauls Valley) -> CEO: Matt Jordan | https://www.preqin.com/data/profile/asset/covercraft-industries-llc/170557
+  sample: AMERICAN PIPING INSPECTION, IN (Tulsa) -> President: David Alcorn | https://rocketreach.co/american-piping-inspection-profile_b502d5b9f9d0bb27
+  sample: COLLISION WORKS OF OKLAHOMA, LLC (Oklahoma City) -> Founder: Jacob Nossaman | https://www.gerbercollision.com/news/gerber-collision-glass-agrees-to-acquire-35-repair-centers-in-kansas-missouri-and-oklahoma
+  sample: FUSION INDUSTRIES, LLC (Oklahoma City) -> Owner: Sammy Zouaoui | https://energy-biz.net/directory/951015-fusion_industries_llc.html?entityid=951015&entityname=fusion_industries_llc
+  sample: B & H CONSTRUCTION, LLC (Norman) -> Owner: Donnie Beller | https://www.bbb.org/us/ok/norman/profile/pipe-line-contractors/b-h-construction-llc-0995-90012429
+  sample: FABRICUT, INC. (Tulsa) -> CEO: David Finer | https://tulsaworld.com/news/local/business/tulsa-based-fabricut-expands-reach-with-purchase-of-new-york-company/article_d510cc97-c73c-5a4f-a049-96458e6aad1a.html
+  sample: WYATT CONSTRUCTION COMPANY INC (Ponca City) -> President: Glen Anthony Wyatt | https://wyobiz.wyo.gov/Business/FilingDetails.aspx?eFNum=110114249202157088172153201202071040157246085004
+  sample: EVANS ENTERPRISES, INC. (Norman) -> President: Evan Thrash | https://www.405magazine.com/national-firm-acquires-oklahoma-based-evans-enterprises-inc/
+  sample: PARAGON INDUSTRIES, INC. (Sapulpa) -> CEO: Derek Wachob | https://www.zoominfo.com/c/paragon-industries-inc/344882408
+  sample: DEAN MCGEE EYE INSTITUTE (Oklahoma City) -> CEO: R. Michael Siatkowski | https://www.oklahoman.com/story/opinion/columns/guest/2025/01/28/oklahoma-dean-mcgee-eye-center-historic-vision-ophthalmology/77976122007/
+  sample: MITCHELL CONSULTING SERVICES GROUP INC. (Oklahoma City) -> Contact Person: David Mitchell | https://governmentbidders.com/government-bidders/contractor-6034801-MITCHELL-CONSULTING-SERVICE.htm
+  sample: PLASTER & WALD CONSULTING CORP (Mustang) -> President and CEO: Geree Morton | https://rocketreach.co/plaster-wald-consulting-corp-profile_b4468fa6faead48b
+  sample: MERTZ MANUFACTURING, INC. (Ponca City) -> President and CEO: Steve Ballinger | https://vpic.nhtsa.dot.gov/mid/manufacturer/details/8901
+  sample: SOUTHERN STAR INC (Poteau) -> Business Owner: Johnathan Wilson | https://www.zoominfo.com/p/Johnathan-Wilson/11480164818
+  sample: MILLER TRUCK LINES LLC (Stroud) -> Owner: James Miller | https://www.bbb.org/us/ok/stroud/profile/motor-freight-trucking/miller-truck-lines-llc-1025-38022915/addressId/22916
+  sample: STAND-BY PERSONNEL INC (Tulsa) -> CEO: Paul Hagler | https://www.datanyze.com/companies/stand--by-personnel/216285411
+  sample: ALLIANCE STEEL, INC. (Oklahoma City) -> President: Larry Thomas | https://www.metalconstructionnews.com/news/daily-news/promus-equity-partners-and-jon-s-vesely-announce-associated-steel-group-llcs-acquisition-of-alliance-steel-inc-1/
+  sample: SOUTHWESTERN WIRE INC (Norman) -> Founder: Max Moore | https://southwesternwire.com/about-us/
+LOOKUP 'TRU SOLUTION': 0 PPP loan(s)
+LOOKUP 'TRUE SOLUTION': 4 PPP loan(s)
+  - TRUE SOLUTIONS MANAGEMENT & CONSULTING, LLC | 10 WILLOWBROOK, SHAWNEE 74804-1060 | type=Limited  Liability Company(LLC) | jobs=31 | loan=$236700 | LISTED (rooftop)
+  - TRUE SOLUTIONS MANAGEMENT & CONSULTING | 130 N Broadway Ave Ste 207, Shawnee 74801-6921 | type=Limited  Liability Company(LLC) | jobs=12 | loan=$139600 | merged into a duplicate listing at the same address, or no loan amount
+  - TRUE SOLUTIONS LLC | 3009 Moelling Ln, Woodward 73801-3824 | type=Limited  Liability Company(LLC) | jobs=3 | loan=$61178 | LISTED (rooftop)
+  - TRUE SOLUTIONS LLC | 1307  HILLCREST DR, WOODWARD 73801-4337 | type=Limited  Liability Company(LLC) | jobs=3 | loan=$61100 | LISTED (rooftop)
+LOOKUP 'TRUSOLUTION': 0 PPP loan(s)
+LOOKUP 'JK JANITORIAL': 0 PPP loan(s)
+LOOKUP 'J K JANITORIAL': 0 PPP loan(s)
+LOOKUP 'J&K JANITORIAL': 0 PPP loan(s)
+LOOKUP 'J & K JANITORIAL': 0 PPP loan(s)
+LOOKUP 'J.K. JANITORIAL': 0 PPP loan(s)
+LOOKUP 'JK CLEANING': 0 PPP loan(s)
+LOOKUP 'J K CLEANING': 0 PPP loan(s)
+LOOKUP 'CANDY CREEK': 2 PPP loan(s)
+  - CANDY CREEK CRUSHER LLC | 854 CR 3908, Avant 74001 | type=Limited  Liability Company(LLC) | jobs=6 | loan=$39830 | LISTED (zip)
+  - CANDY CREEK CRUSHER, LLC | 854 County Rd 3908, AVANT 74001-0008 | type=Limited  Liability Company(LLC) | jobs=6 | loan=$39800 | LISTED (zip)
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+skipped (sole proprietors or no location): 66,895
+record-only listings: skipped CP ENERGY ADMINISTRATION, LLC (form5500, 160 employees, $1.7B estimated)
+record-only listings: skipped PANHANDLE OILFIELD SERVICE COMPANIES, INC. (form5500, 131 employees, $1.4B estimated)
+record-only listings: skipped ROONEY HOLDINGS, INC. (form5500, 1,950 employees, $1.9B estimated)
+record-only listings: skipped MAGELLAN MIDSTREAM HOLDINGS GP, LLC (form5500, 1,320 employees, $2.1B estimated)
+record-only listings: skipped LOCKE SUPPLY CO. (form5500, 1,401 employees, $1.6B estimated)
+record-only listings: skipped ONE GAS, INC (form5500, 3,943 employees, $5.2B estimated)
+record-only listings: skipped HEARTBEAT COMPLIANCE LLC (fmcsa, 5,300 employees, $1.2B estimated)
+record-only listings: 5,798 staged (355 already listed or not placeable)
+Calibration: learned corrections for 27 industry segments (0 for-profit)
+  nonprofit  81     x0.50 from 425 examples (raw typically off 2.37x)
+  nonprofit  813    x0.50 from 412 examples (raw typically off 2.39x)
+  nonprofit  62     x0.68 from 360 examples (raw typically off 1.74x)
+  nonprofit  624    x0.70 from 231 examples (raw typically off 1.77x)
+  nonprofit  6241   x0.70 from 151 examples (raw typically off 1.76x)
+  nonprofit  8132   x0.50 from 108 examples (raw typically off 4.71x)
+  nonprofit  71     x0.70 from 108 examples (raw typically off 1.78x)
+  nonprofit  61     x0.69 from 105 examples (raw typically off 1.81x)
+  nonprofit  611    x0.69 from 105 examples (raw typically off 1.81x)
+  nonprofit  8139   x0.62 from 93 examples (raw typically off 1.84x)
+  nonprofit  8131   x0.57 from 85 examples (raw typically off 2.38x)
+  nonprofit  8134   x0.74 from 67 examples (raw typically off 1.97x)
+Growth: 167,455 PPP-era estimates brought up to date at 8% a year
+Calibration: 2,511 estimates adjusted; 173,253 moved 50% of the way up their range
+Pins outside Oklahoma taken off the map: 11
+listed at an approximate (ZIP) location: 9,106
+businesses added or changed: 173,716
+businesses removed: 21
+ppp_loans added or changed: 0
+Estimates re-based on recent retirement-plan headcounts: 0 updated (0 staffing firms/PEOs skipped)
+Estimates re-based on current FMCSA fleets: 0 trucking companies
+Reported financials applied: 1,694 updated
+Verified figures applied: 0
+Owners filled from websites and search results: 1,807
+Owners entered by hand applied: 1
+Lenders: 77,191 business-bank links across 642 lenders
+Sell signals: 39,015 businesses scored, 2,065 at 40+ (8 changed)
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+Map tables failed (non-fatal): consuming input failed: SSL connection has been closed unexpectedly
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+Industry reference failed (non-fatal): connection failed: connection to server at "13.59.95.192", port 5432 failed: FATAL:  the database system is not accepting connections
+DETAIL:  Hot standby mode is disabled.
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+Traceback (most recent call last):
+  File "/home/runner/work/bizestimate/bizestimate/etl/checks.py", line 100, in <module>
+    main()
+  File "/home/runner/work/bizestimate/bizestimate/etl/checks.py", line 80, in main
+    with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/site-packages/psycopg/connection.py", line 119, in connect
+    raise last_ex.with_traceback(None)
+psycopg.OperationalError: connection failed: connection to server at "3.139.14.59", port 5432 failed: FATAL:  the database system is not accepting connections
+DETAIL:  Hot standby mode is disabled.
