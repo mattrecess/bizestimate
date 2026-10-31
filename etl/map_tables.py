@@ -107,9 +107,17 @@ def refresh(conn, state):
     with conn.cursor() as cur:
         cur.execute("select naics_prefix, multiple from industry_overrides where multiple > 0 and naics_prefix ~ '^[0-9]{2,6}$'")
         v = value_sql(cur.fetchall())
-        cur.execute(f"update businesses set est_value_mid = {v} where state = %s and est_value_mid is distinct from {v}", (state,))
-        print(f"Map tables: stored values changed for {cur.rowcount:,} businesses", flush=True)
-        conn.commit()
+        # In batches of ids, each its own transaction: one statement rewriting every row was a lot to ask
+        # of the database right after the load had just rewritten them all.
+        cur.execute("select min(id), max(id) from businesses where state = %s", (state,))
+        lo, hi = cur.fetchone()
+        changed = 0
+        for start in range(lo or 0, (hi or -1) + 1, 20000):
+            cur.execute(f"update businesses set est_value_mid = {v} where state = %s and id >= %s and id < %s "
+                        f"and est_value_mid is distinct from {v}", (state, start, start + 20000))
+            changed += cur.rowcount
+            conn.commit()
+        print(f"Map tables: stored values changed for {changed:,} businesses", flush=True)
 
         cur.execute("drop table if exists map_points_new")
         cur.execute("""

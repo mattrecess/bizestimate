@@ -14,14 +14,14 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -r etl/requirements.txt
-      - if: ${{ inputs.script == 'industry_table' || inputs.script == 'industry_reference' }}
+      - if: ${{ inputs.script == 'industry_table' || inputs.script == 'industry_reference' || inputs.script == 'post_load' }}
         run: python etl/margins.py --fetch; python etl/benchmarks.py --fetch
         env:
           CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
