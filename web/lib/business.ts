@@ -1,6 +1,9 @@
-import { sql } from "./db";
+import { unstable_cache } from "next/cache";
+import { capped, sql } from "./db";
 import { industryMatch, publicAddress } from "./queries";
 import { matchIndustry } from "./industries";
+
+const QUICK = 4000;   // ms: the page's extras (comparables, banks, locations, prospects) give up past this
 
 type Num = string | number | null;
 export type Business = {
@@ -102,11 +105,11 @@ async function getProspects(b: Business): Promise<{ market: string; items: Prosp
     if (!m || seen.has(m.industry.label) || b.naics && m.industry.naics.some((c) => b.naics!.startsWith(c))) continue;
     seen.add(m.industry.label);
     const near = lat == null ? sql`city = ${b.city}` : sql`lat between ${lat - 0.9} and ${lat + 0.9} and lon between ${lon! - 1.1} and ${lon! + 1.1}`;
-    const items = await sql<Prospect[]>`
+    const items = await capped(QUICK, (q) => q<Prospect[]>`
       select id, name, city, industry, est_revenue_mid,
              ${lat == null ? sql`null::float8` : sql`round((69.0 * sqrt(power(lat - ${lat}, 2) + power((lon - ${lon}) * cos(radians(${lat})), 2)))::numeric, 0)::float8`} as miles
       from businesses where (${industryMatch(m.industry.naics)}) and ${near} and not is_individual and coalesce(est_method, '') <> 'branch'
-      order by est_revenue_mid desc nulls last limit 5`.catch(() => [] as Prospect[]);
+      order by est_revenue_mid desc nulls last limit 5`, [] as Prospect[]);
     if (items.length) out.push({ market: m.industry.label, items });
     if (out.length >= 4) break;
   }
@@ -126,17 +129,26 @@ const getSources = (id: string) => sql<SourceRecord[]>`
 
 // The company's other locations (map listings rolled up to it).
 export type Location = { id: string; address: string | null; city: string };
-const getLocations = (id: string) => sql<Location[]>`
+const getLocations = (id: string) => capped(QUICK, (q) => q<Location[]>`
   select c.id, c.address, c.city from businesses c join businesses p on c.parent_key = p.biz_key
-  where p.id = ${id} order by c.city, c.address`.catch(() => [] as Location[]);
+  where p.id = ${id} order by c.city, c.address`, [] as Location[]);
 
 // Banks that lent to the business, with how many other listed businesses each one lends to.
 export type LenderLink = { key: string; name: string; loans: string[]; borrowers: number };
-const getLenders = (id: string) => sql<LenderLink[]>`
-  select bl.lender_key as key, min(bl.lender) as name,
-         array_agg(distinct concat_ws(' ', bl.program, bl.year)) as loans,
-         (select count(distinct x.business_id)::int from business_lenders x where x.lender_key = bl.lender_key) as borrowers
-  from business_lenders bl where bl.business_id = ${id} group by bl.lender_key order by name`.catch(() => [] as LenderLink[]);
+// Each bank's borrower count, for every bank at once, once a day: counting a big bank's borrowers on
+// every page view took over a minute when crawlers were busy.
+const borrowerCounts = unstable_cache(async () => Object.fromEntries((await sql<{ key: string; n: number }[]>`
+  select lender_key as key, count(distinct business_id)::int as n from business_lenders group by 1`).map((r) => [r.key, r.n])),
+  ["lender-borrower-counts"], { revalidate: 86400 });
+async function getLenders(id: string): Promise<LenderLink[]> {
+  const [rows, counts] = await Promise.all([
+    capped(QUICK, (q) => q<Omit<LenderLink, "borrowers">[]>`
+      select bl.lender_key as key, min(bl.lender) as name, array_agg(distinct concat_ws(' ', bl.program, bl.year)) as loans
+      from business_lenders bl where bl.business_id = ${id} group by bl.lender_key order by name`, []),
+    borrowerCounts().catch(() => ({} as Record<string, number>)),
+  ]);
+  return rows.map((r) => ({ ...r, borrowers: counts[r.key] ?? 1 }));
+}
 
 // Retirement-plan participants by year (Form 5500); empty until that table has been loaded.
 const getHeadcounts = (id: string) => sql<Headcount[]>`
@@ -160,7 +172,7 @@ export async function getComparables(b: Business, limit = 6): Promise<Comparable
     const distance = lat == null
       ? sql`null::float8`
       : sql`69.0 * sqrt(power(lat - ${lat}, 2) + power((lon - ${lon}) * cos(radians(${lat})), 2))`;
-    const rows = await sql<Comparable[]>`
+    const rows = await capped(QUICK, (q) => q<Comparable[]>`
       select id, name, city, industry, jobs_reported, est_revenue_mid, est_ebitda_mid, ${distance} as miles
       from businesses
       where naics like ${prefix + "%"} and id <> ${b.id} and est_revenue_mid is not null
@@ -169,7 +181,7 @@ export async function getComparables(b: Business, limit = 6): Promise<Comparable
           ? sql`and lat between ${lat! - 0.75} and ${lat! + 0.75} and lon between ${lon! - 0.9} and ${lon! + 0.9}`
           : sql`and lat is not null`}
       order by ${lat == null ? sql`est_revenue_mid desc` : sql`miles`}
-      limit ${limit}`;
+      limit ${limit}`, [] as Comparable[]);
     if (rows.length >= 3 || (prefix.length === 2 && !near)) return rows;
   }
   return [];

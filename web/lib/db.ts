@@ -20,3 +20,18 @@ export const sql =
   globalForDb.sql ??
   postgres(siteUrl, { ssl: isLocal ? false : "require", prepare: false, max: 5, idle_timeout: 20, connect_timeout: 15 });
 if (process.env.NODE_ENV !== "production") globalForDb.sql = sql;
+
+type Sql = typeof sql;
+/** Runs a query with a time limit (in its own transaction, so it works through the transaction pooler);
+ *  past the limit, or on any error, returns `fallback`. For the extras on a page (comparables, banks,
+ *  locations) that shouldn't hold the database when it's busy: the page shows without them instead. */
+export async function capped<T>(ms: number, run: (q: Sql) => PromiseLike<Iterable<T>>, fallback: T[]): Promise<T[]> {
+  try {
+    return await sql.begin(async (tx) => {
+      await tx`set local statement_timeout = ${sql.unsafe(String(Math.round(ms)))}`;
+      return [...await run(tx as unknown as Sql)];
+    }) as T[];
+  } catch {
+    return fallback;
+  }
+}
