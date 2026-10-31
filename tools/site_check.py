@@ -40,10 +40,11 @@ def check(name, path, test=None):
 
 
 j = lambda b: json.loads(b)   # noqa: E731
-check("home page", "/", lambda b: b"BizEstimate" in b)
-listing = check("business list", "/api/businesses?limit=5", lambda b: j(b)["total"] > 1000 and len(j(b)["results"]) == 5)
+check("home page", "/", lambda b: b"SeeBITDA" in b)
+listing = check("business list", "/api/businesses?limit=5", lambda b: len(j(b)["results"]) == 5)
+check("business count", "/api/businesses/count", lambda b: j(b)["total"] > 1000)
 check("map pins", "/api/points", lambda b: len(j(b)["features"]) > 100)
-check("search", "/api/businesses?q=janitorial&limit=3", lambda b: j(b)["total"] > 0)
+check("search", "/api/businesses?q=janitorial&limit=3", lambda b: len(j(b)["results"]) > 0)
 if listing:
     first = j(listing)["results"][0]["id"]
     check("business profile (panel)", f"/api/businesses/{first}?core=1", lambda b: j(b).get("name"))
