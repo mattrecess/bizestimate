@@ -64,10 +64,19 @@ export default function Home() {
   const listScroll = useRef(0);
   const { sector, city, minRev, maxRev, sort, naics, lender, more: moreFilters } = filters;
 
+  // Phones: Back returns to whichever side the business was opened from (a map pin or the list).
+  const backTo = useRef<"map" | "list">("list");
   function openBusiness(id: number) {
-    if (!selectedId && layout === "map") listScroll.current = panel.current?.scrollTop ?? 0;
+    if (!selectedId) {
+      if (layout === "map") listScroll.current = panel.current?.scrollTop ?? 0;
+      backTo.current = view;
+    }
     setSelectedId(id);
     setView("list");
+  }
+  function closeBusiness() {
+    setSelectedId(null);
+    setView(backTo.current);
   }
 
   useEffect(() => {
@@ -282,8 +291,9 @@ export default function Home() {
   const detail = selectedId ? (
             <div className="detail">
               <div className="detail-bar">
-                <button className="btn" onClick={() => setSelectedId(null)} aria-label={layout === "table" ? "Close" : "Back to list"}>
-                  <Icon name={layout === "table" ? "x" : "back"} size={16} />{layout === "table" ? "Close" : "Back to list"}
+                <button className="btn" onClick={closeBusiness} aria-label={layout === "table" ? "Close" : "Back"}>
+                  <Icon name={layout === "table" ? "x" : "back"} size={16} />{layout === "table" ? "Close"
+                    : backTo.current === "map" && typeof window !== "undefined" && window.matchMedia("(max-width: 860px)").matches ? "Back to map" : "Back to list"}
                 </button>
                 <a className="link-btn" href={`/business/${selectedId}`} target="_blank" rel="noopener">
                   Full page <Icon name="external" size={14} />
