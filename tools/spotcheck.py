@@ -22,3 +22,10 @@ with psycopg.connect(url, connect_timeout=60) as conn, conn.cursor() as cur:
     print("\nlargest values:")
     for r in cur.fetchall():
         print(" | ".join(str(x) for x in r))
+    cur.execute("""select count(*) filter (where s.data ->> 'summary' is not null),
+                          count(*) filter (where jsonb_array_length(coalesce(s.data -> 'products', '[]')) > 0)
+                   from business_sources s where s.source = 'website_offering'""")
+    print("\nwebsite descriptions: with summary, with products:", cur.fetchone())
+    cur.execute("select count(*) from businesses where coalesce(website, '') <> '' and coalesce(est_method, '') <> 'branch'")
+    print("listings with a website:", cur.fetchone()[0])
+
