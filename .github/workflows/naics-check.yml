@@ -1,0 +1,36 @@
+name: NAICS check
+# Runs just the AI industry-code check (also a step of the Public records workflow), on demand.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: etl
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - run: |
+          set -o pipefail
+          python etl/migrate.py
+          python etl/naics_check.py --state OK 2>&1 | tee "$RUNNER_TEMP/naics.log"
+        env:
+          PYTHONUNBUFFERED: "1"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Approved Nov 2: check every described business's industry code (~44,500, ~$5-20).
+          NAICS_CHECK_MAX_TOTAL: ${{ vars.NAICS_CHECK_MAX_TOTAL || '50000' }}
+          NAICS_CHECK_WAIT_MIN: "150"
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b naics-logs
+          cp "$RUNNER_TEMP/naics.log" naics.log 2>/dev/null || echo none > naics.log
+          git add naics.log && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" naics-logs

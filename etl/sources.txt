@@ -12,6 +12,7 @@ contracts
 fmcsa
 website_profile paid   (AI reads company websites; runs in the Public records workflow only)
 website_offering paid   (AI reads company websites: what it does, products, markets, named customers/suppliers)
+naics_check paid   (AI checks filed industry codes against what each website says it does; after website_offering)
 owner_search paid   (Google results via Serper for owners we lack; Public records workflow only)
 deals_news paid   (acquisitions/investments in Google results via Serper + AI; Public records workflow only)
 pe_portfolios paid   (investors' portfolio pages read by AI for Oklahoma companies; Public records workflow only)
