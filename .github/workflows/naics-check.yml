@@ -4,8 +4,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+# Its own queue: in the shared etl queue, a newly queued load cancelled it while it waited (Nov 2).
+# Start it when no load is running; its database work is light (reads, then small updates).
 concurrency:
-  group: etl
+  group: naics-check
   cancel-in-progress: false
 jobs:
   check:
