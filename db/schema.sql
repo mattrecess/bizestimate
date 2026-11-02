@@ -379,3 +379,8 @@ create table if not exists naics_overrides (
   updated_at timestamptz not null default now()
 );
 alter table businesses add column if not exists naics_recorded text;
+
+-- Account plan (free | pro; set by Stripe billing, or by hand in /admin) and when the user accepted the
+-- contact-use terms, which Pro users must do before owners' phone numbers are shown.
+alter table users add column if not exists plan text not null default 'free';
+alter table users add column if not exists contact_terms_at timestamptz;
