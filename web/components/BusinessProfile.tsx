@@ -165,7 +165,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
     ...(founded ? [["calendar", `Since ${founded}`] as [string, string]] : []),
     ...(src.website_profile?.family_owned ? [["user", `Family-owned${src.website_profile.generation ? `, ${ordinal(src.website_profile.generation)} generation` : ""}`] as [string, string]] : []),
     // The industry code, linking to every business with it (as the NAICS filter does).
-    ...(b.naics ? [["briefcase", `NAICS ${b.naics}`, b.industry ? `${b.industry} (NAICS ${b.naics})` : undefined, `/?q=${b.naics}`] as [string, string, string, string]] : []),
+    ...(b.naics ? [["briefcase", b.naics_recorded ? `NAICS ${b.naics} (filed as ${b.naics_recorded})` : `NAICS ${b.naics}`,
+      `${b.industry ? `${b.industry} (NAICS ${b.naics})` : `NAICS ${b.naics}`}${b.naics_recorded ? `. Corrected from ${b.naics_recorded}, the code it filed (e.g. on its PPP loan), which didn't match what it does.` : ""}`,
+      `/?q=${b.naics}`] as [string, string, string, string]] : []),
   ];
 
   return (
