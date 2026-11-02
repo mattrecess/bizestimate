@@ -1,0 +1,14 @@
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+naics_check: 17,425 to check, 17,420 of them retries (27,249 done, 0 in flight, cap 50,000)
+naics_check: submitted batch msgbatch_01UpQjLUysXYaMaix7oj8hFX (5,000 businesses)
+naics_check: submitted batch msgbatch_018UqCP3ozyL7debJnQjQWjd (5,000 businesses)
+naics_check: submitted batch msgbatch_01DpkpthnzVtXTqrU7DhCda4 (5,000 businesses)
+naics_check: submitted batch msgbatch_01DAuY2wzGebjLKiSy1mAAZu (2,425 businesses)
+naics_check: batch msgbatch_01DAuY2wzGebjLKiSy1mAAZu done (2,425 businesses)
+naics_check: batch msgbatch_018UqCP3ozyL7debJnQjQWjd done (5,000 businesses)
+naics_check: batch msgbatch_01DpkpthnzVtXTqrU7DhCda4 done (5,000 businesses)
+naics_check: batch msgbatch_01UpQjLUysXYaMaix7oj8hFX done (5,000 businesses)
+naics_check: unusable answers this run: {'not a 2022 NAICS code': 4890, 'stopped: max_tokens': 6}
+naics_check: this run 12,556,641 input + 4,887,561 output tokens ≈ $1.85
+naics_check: 19,891 agree with the filed code, 10,600 corrected (high confidence), 9,102 for review
