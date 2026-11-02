@@ -45,7 +45,7 @@ SCHEMA = {
 }
 
 INSTRUCTIONS = """You classify a small business into the 2022 North American Industry Classification
-System (NAICS). You get its name, the code it filed on a government form (often chosen loosely), and a
+System (NAICS); use 2022 codes only (2022 renumbered retail into 455-459, for example). You get its name, the code it filed on a government form (often chosen loosely), and a
 description of what it does taken from its own website. Choose the single 6-digit 2022 NAICS code for
 its main activity: what most of its revenue comes from. Keep the filed code when it fits; change it
 only when the description clearly shows a different main activity. Confidence: high when the
@@ -115,12 +115,18 @@ def collect(client, cur, cache, titles, deadline):
                     try:
                         data = json.loads(next(b.text for b in msg.content if b.type == "text"))
                         code = "".join(c for c in str(data.get("naics", "")) if c.isdigit())
-                        if len(code) != 6 or code not in titles:
+                        confidence = data.get("confidence")
+                        if code not in titles:
+                            # Often a 2017 code renumbered in 2022 (retail especially): use the closest broader
+                            # 2022 code (5 or 4 digits), and only as a suggestion for review.
+                            code = next((code[:n] for n in (5, 4) if len(code) >= n and code[:n] in titles), "")
+                            confidence = "medium" if code and confidence in ("high", "medium") else confidence
+                        if not code:
                             error = "not a 2022 NAICS code"
-                        elif data.get("confidence") not in ("high", "medium", "low"):
+                        elif confidence not in ("high", "medium", "low"):
                             error = "no confidence"
                         else:
-                            cache[key] = {"naics": code, "confidence": data["confidence"], "reason": str(data.get("reason", ""))[:200]}
+                            cache[key] = {"naics": code, "confidence": confidence, "reason": str(data.get("reason", ""))[:200]}
                     except (ValueError, StopIteration, KeyError, TypeError):
                         error = "unreadable reply"
                 if error:
