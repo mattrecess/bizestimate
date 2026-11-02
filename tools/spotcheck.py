@@ -7,9 +7,9 @@ import psycopg
 url = os.environ["DATABASE_URL"].strip().strip('"').replace("[", "").replace("]", "")
 with psycopg.connect(url, connect_timeout=60) as conn, conn.cursor() as cur:
     cur.execute("set statement_timeout = '60s'")
-    cur.execute("""select id, name, city, est_method, owner_name, round(est_revenue_mid), round(est_value_mid), est_growth_rate
-                   from businesses where name ilike 'cook feed%' or name ilike '%imagenet%' order by est_revenue_mid desc nulls last limit 8""")
-    print("id | name | city | basis | owner | revenue | value | growth")
+    cur.execute("""select id, name, city, naics, industry, est_method, owner_name, round(est_revenue_mid), round(est_value_mid)
+                   from businesses where name ilike 'cook feed%' or name ilike '%imagenet%' or name ilike '%gideon%' order by est_revenue_mid desc nulls last limit 8""")
+    print("id | name | city | naics | industry | basis | owner | revenue | value")
     for r in cur.fetchall():
         print(" | ".join(str(x) for x in r))
     cur.execute("""select coalesce(est_method, '?'), count(*), round(avg(est_revenue_mid)) from businesses
