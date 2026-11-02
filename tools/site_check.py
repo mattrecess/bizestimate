@@ -54,6 +54,7 @@ check("industry pages", "/oklahoma", lambda b: b"/oklahoma/" in b)
 check("NAICS list", "/api/naics", lambda b: len(j(b)) > 100)
 check("lenders", "/api/lenders", lambda b: isinstance(j(b), list))
 check("sitemap", "/sitemap.xml", lambda b: b"<sitemapindex" in b)
+check("sign-in available", "/api/me", lambda b: j(b).get("signInAvailable") is True or j(b).get("user") is not None)
 
 if problems:
     print("\nProblems:\n  " + "\n  ".join(problems), flush=True)
