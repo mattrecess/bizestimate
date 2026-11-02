@@ -1,9 +1,7 @@
-import { money } from "@/lib/format";
 import Icon from "./Icon";
 import type { SourceRecord } from "./PublicRecords";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type Person = { name: string; role: string; detail?: string; url?: string };
 type Advisor = { kind: string; firm: string; detail: string; url?: string };
 
 const ext = { target: "_blank", rel: "nofollow noopener noreferrer" } as const;
@@ -14,30 +12,13 @@ const tidy = (s: string) => (s === s.toUpperCase()
     .replace(/\b(Llp|Llc|Pllc|Pc|Cpa|Cpas|Pa|Lp|Na|Ii|Iii)\b/g, (w) => w.toUpperCase())
   : s);
 
-/** Company history, leadership and outside advisors, pieced together from public records. */
-export default function PeopleAdvisors({ sources, lenders, owner }: {
+/** Company history and outside advisors, pieced together from public records (its leadership is in the Leadership card). */
+export default function PeopleAdvisors({ sources, lenders }: {
   sources: SourceRecord[];
   lenders: string[];
-  owner?: string | null;
 }) {
   const by: Record<string, any> = Object.fromEntries(sources.map((s) => [s.source, s.data]));
   const web = by.website_profile ?? {};
-  const people: Person[] = [];
-  const seen = new Set(owner ? [owner.toLowerCase()] : []);
-  const add = (p: Person) => {
-    const key = p.name.toLowerCase();
-    if (!seen.has(key)) { seen.add(key); people.push(p); }
-  };
-  for (const p of by.people_search?.people ?? []) add({ name: p.name, role: p.title, detail: "From a web search", url: p.url });
-  for (const p of web.team ?? []) add({ name: p.name, role: p.title, detail: "Company website", url: p.url });
-  for (const p of by.irs990_people?.officers ?? []) {
-    add({ name: p.name, role: tidy(p.title || "Officer"), detail: p.pay > 0 ? `${money(p.pay)} pay (Form 990)` : "Form 990" });
-  }
-  if (by.form5500_people?.signer) {
-    const s = by.form5500_people.signer;
-    add({ name: s.name, role: "Signed for the company", detail: `${s.year} retirement-plan filing (Form 5500)` });
-  }
-
   const advisors: Advisor[] = [];
   if (by.form5500_people?.auditor) {
     const a = by.form5500_people.auditor;
@@ -51,11 +32,11 @@ export default function PeopleAdvisors({ sources, lenders, owner }: {
   if (banks.length) advisors.push({ kind: "Banking", firm: banks.slice(0, 3).join(", "), detail: "PPP / SBA lender" });
 
   const history = web.founded_year || web.founder || web.family_owned || web.history_quote;
-  if (!history && !people.length && !advisors.length) return null;
+  if (!history && !advisors.length) return null;
 
   return (
     <div className="section people">
-      <h2>People &amp; advisors</h2>
+      <h2>History &amp; advisors</h2>
       {history && (
         <div className="history">
           <div className="history-facts">
@@ -70,23 +51,6 @@ export default function PeopleAdvisors({ sources, lenders, owner }: {
             </blockquote>
           )}
         </div>
-      )}
-      {people.length > 0 && (
-        <>
-          <h3>Leadership</h3>
-          <ul className="people-list">
-            {people.slice(0, 12).map((p) => (
-              <li key={p.name}>
-                <div className="avatar sm">{p.name.split(/\s+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}</div>
-                <div>
-                  <div className="who">{p.name}</div>
-                  <div className="src">{p.role}{p.detail ? ` · ${p.detail}` : ""}
-                    {p.url && <> · <a href={p.url} {...ext}>source</a></>}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </>
       )}
       {advisors.length > 0 && (
         <>

@@ -762,3 +762,18 @@ tr.ref-own td { background: #eef4ff; }
 .owner-lookup-head { font-size: 14px; margin-bottom: 4px; }
 .bp-meta li a { display: inline-flex; align-items: center; gap: 6px; color: inherit; }
 .bp-meta li a:hover { color: var(--accent); }
+
+/* Leadership card */
+.bp-owner-h { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.bp-team { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bp-team li { display: flex; gap: 10px; align-items: center; }
+.bp-team-av { width: 32px; height: 32px; flex: none; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--border);
+  color: var(--muted); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.bp-team-who { min-width: 0; }
+.bp-team-who .name { font-weight: 650; font-size: 14px; }
+.bp-team-who .src { font-size: 12.5px; color: var(--muted); }
+.bp-team-who .src a { color: var(--muted); text-decoration: underline; }
+.bp-team-more { align-self: flex-start; padding: 0; font-size: 13px; }
+.bp-depth { font-size: 13px; padding: 8px 10px; border-radius: 10px; line-height: 1.45; }
+.bp-depth.team { background: var(--good-soft); color: var(--good); }
+.bp-depth.owner-run { background: var(--warn-soft); color: var(--warn); }

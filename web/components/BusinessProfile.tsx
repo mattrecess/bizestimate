@@ -13,6 +13,7 @@ import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
 import { estimateValue } from "@/lib/valuation";
 import { displayName } from "@/lib/seo";
+import { leadership } from "@/lib/leadership";
 import { industryLabel, slug } from "@/lib/industries";
 import Icon, { industryIcon } from "./Icon";
 import MiniMap from "./MiniMap";
@@ -63,6 +64,10 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   const src = Object.fromEntries((b.sources ?? []).map((s) => [s.source, s.data as Record<string, any>]));  // eslint-disable-line @typescript-eslint/no-explicit-any
   // The owner's own profile, only while it's for the owner we show (it was found for a name).
   const ownerLinkedIn = src.linkedin?.owner_url && src.linkedin.owner_name === b.owner_name ? src.linkedin.owner_url : null;
+  const lead = leadership(b, b.sources ?? [], ownerLinkedIn);
+  const ownerEntry = lead.people.find((p) => p.owner);
+  const team = lead.people.filter((p) => !p.owner);
+  const [showTeam, setShowTeam] = useState(false);
   const value = estimateValue({ ...b, public_company: !!src.sec || undefined, is_nonprofit: b.is_nonprofit || !!src.irs990 });
   // Earliest of the record-based year and the founding year the company's own site states.
   const founded = [src.founded?.year, src.fdic?.founded, src.fmcsa?.registered, src.website_profile?.founded_year]
@@ -247,8 +252,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         </>
       )}
 
-      {/* Who to talk to: the owner and the ways to reach or keep track of the business. */}
+      {/* Who runs it: the owner, the rest of the leadership team, and the ways to reach the business. */}
       <div className="bp-owner">
+        <div className="bp-owner-h">Leadership</div>
         <div className="bp-owner-top">
           <div className="bp-owner-av" aria-hidden>{b.owner_name ? initials(b.owner_name) : <Icon name="user" size={18} />}</div>
           <div className="bp-owner-who">
@@ -256,11 +262,40 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <div className="src">
               {b.owner_name ? (b.owner_title || "Owner") : "We haven't found the owner in public records"}
               {b.owner_source && <> · <a href={b.owner_source} target="_blank" rel="nofollow noopener noreferrer">source</a></>}
+              {ownerEntry && ownerEntry.sources.length > 1 && <> · confirmed by {ownerEntry.sources.length} sources</>}
               {ownerLinkedIn && <> · <a href={ownerLinkedIn} target="_blank" rel="nofollow noopener noreferrer">LinkedIn</a></>}
             </div>
           </div>
           {sellLabel && <span className={`bp-sell ${Number(b.sell_score) >= 40 ? "hot" : ""}`}>{sellLabel}</span>}
         </div>
+        {/* The rest of the leadership team, most senior first (lib/leadership.ts). */}
+        {team.length > 0 && (
+          <ul className="bp-team">
+            {(showTeam ? team : team.slice(0, 5)).map((p) => (
+              <li key={p.name}>
+                <div className="bp-team-av" aria-hidden>{initials(p.name)}</div>
+                <div className="bp-team-who">
+                  <div className="name">{p.name}</div>
+                  <div className="src">{p.title}
+                    {p.linkedin && <> · <a href={p.linkedin} target="_blank" rel="nofollow noopener noreferrer">LinkedIn</a></>}
+                    {" · "}{p.url ? <a href={p.url} target="_blank" rel="nofollow noopener noreferrer">{p.sources.join(", ")}</a> : p.sources.join(", ")}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {team.length > 5 && (
+          <button type="button" className="link-btn bp-team-more" onClick={() => setShowTeam((v) => !v)}>
+            {showTeam ? "Show fewer" : `Show all ${team.length + 1} people`}</button>
+        )}
+        {lead.depth && (
+          <div className={`bp-depth ${lead.depth}`}>
+            {lead.depth === "team"
+              ? <><b>Has a management team.</b> Someone besides the owner runs part of the business, which buyers pay more for.</>
+              : <><b>Owner-run.</b> We haven&apos;t found a manager besides the owner. Buyers usually pay less when a business depends on its owner.</>}
+          </div>
+        )}
         <div className="bp-owner-actions">
           {b.website && <a className="btn" href={b.website} target="_blank" rel="nofollow noopener noreferrer"><Icon name="globe" size={15} />{siteLabel(b.website)}</a>}
           <a className="btn" href={src.linkedin?.company_url || linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer"><Icon name="linkedin" size={15} />LinkedIn</a>
@@ -477,7 +512,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         </div>
 
       {/* People */}
-          <PeopleAdvisors sources={b.sources ?? []} owner={b.owner_name}
+          <PeopleAdvisors sources={b.sources ?? []}
             lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
           {b.lenders?.length ? (
             <div className="section">
