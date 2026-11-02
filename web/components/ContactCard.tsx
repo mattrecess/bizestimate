@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Contact } from "@/lib/contact";
+import type { OwnerContact } from "@/lib/pdl";
+import { askSignIn } from "@/lib/saved";
 import Icon from "./Icon";
 
 // RocketReach profiles for the owner (or the company), for visitors with their own account.
@@ -16,7 +18,26 @@ export default function ContactCard({ id, name, owner }: { id: string; name: str
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [contact, setContact] = useState<Contact | null>(null);
   const [error, setError] = useState("");
-  useEffect(() => { setContact(null); setState("idle"); }, [id]);
+  const [ownerInfo, setOwnerInfo] = useState<(OwnerContact & { owner: string }) | null>(null);
+  const [ownerState, setOwnerState] = useState<"idle" | "loading">("idle");
+  const [ownerError, setOwnerError] = useState("");
+  useEffect(() => { setContact(null); setState("idle"); setOwnerInfo(null); setOwnerError(""); }, [id]);
+
+  async function lookupOwner() {
+    setOwnerState("loading");
+    setOwnerError("");
+    try {
+      const res = await fetch(`/api/contact/${id}/owner`, { method: "POST" });
+      const data = await res.json();
+      if (res.status === 401) { askSignIn({ contactFor: owner ?? "the owner" }); return; }
+      if (!res.ok) throw new Error(data.error || "Couldn't look up the owner.");
+      setOwnerInfo(data);
+    } catch (e) {
+      setOwnerError(e instanceof Error ? e.message : "Couldn't look up the owner.");
+    } finally {
+      setOwnerState("idle");
+    }
+  }
 
   async function show() {
     setState("loading");
@@ -64,6 +85,33 @@ export default function ContactCard({ id, name, owner }: { id: string; name: str
             </li>
           ))}
         </ul>
+      )}
+      {owner && (
+        <div className="owner-lookup">
+          {!ownerInfo ? (
+            <button className="btn primary" onClick={lookupOwner} disabled={ownerState === "loading"}>
+              {ownerState === "loading" ? "Looking up…" : `Get ${owner.split(/\s+/)[0]}'s email & phone`}
+            </button>
+          ) : !ownerInfo.found ? (
+            <p className="disclaimer">No direct email or phone found for {ownerInfo.owner}.</p>
+          ) : (
+            <>
+              <div className="owner-lookup-head"><b>{ownerInfo.name ?? ownerInfo.owner}</b>{ownerInfo.title ? ` · ${ownerInfo.title}` : ""}</div>
+              <ul className="contact-list">
+                {ownerInfo.emails.map((e) => (
+                  <li key={e.value}><a href={`mailto:${e.value}`}>{e.value}</a><span className="src">{e.kind === "work" ? "Work email" : "Email"}</span></li>
+                ))}
+                {ownerInfo.phones.map((p) => (
+                  <li key={p.value}><a href={`tel:${p.value.replace(/[^\d+]/g, "")}`}>{p.value}</a><span className="src">{p.kind === "mobile" ? "Mobile" : "Phone"}</span></li>
+                ))}
+                {ownerInfo.linkedin && <li><a href={ownerInfo.linkedin} target="_blank" rel="nofollow noopener noreferrer">LinkedIn profile</a><span className="src">LinkedIn</span></li>}
+              </ul>
+              <p className="disclaimer">From People Data Labs. For one-to-one outreach only: no auto-dialing or texting
+                mobile numbers, and include an opt-out in any email.</p>
+            </>
+          )}
+          {ownerError && <p className="disclaimer">{ownerError}</p>}
+        </div>
       )}
       <div className="contact-foot">
         <a href={rocketReachSearch(name, owner)} target="_blank" rel="nofollow noopener noreferrer">
