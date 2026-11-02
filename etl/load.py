@@ -29,7 +29,7 @@ ROOT = os.path.join(HERE, "..")
 DATA_DIR = os.path.join(ROOT, "data")
 
 BIZ_COLS = [
-    "biz_key", "name", "address", "city", "state", "zip", "county", "naics", "industry",
+    "biz_key", "name", "address", "city", "state", "zip", "county", "naics", "naics_recorded", "industry",
     "business_type", "is_individual", "is_nonprofit", "jobs_reported", "lat", "lon",
     "geo_precision", "est_payroll", "est_revenue_low", "est_revenue_mid", "est_revenue_high",
     "est_ebitda_low", "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees", "est_revenue_by_payroll",
@@ -125,6 +125,19 @@ def main():
         with cur.copy(f"copy stage_biz ({', '.join(BIZ_COLS)}) from stdin") as cp:
             for r in extra:
                 cp.write_row([None if r[c] in ("", None) else str(r[c]) for c in BIZ_COLS])
+        # Industry code corrections (/admin/naics) for listings build.py didn't make (map listings, filings):
+        # PPP businesses already have theirs, applied before their estimate.
+        try:
+            with conn.transaction():
+                cur.execute("""
+                    update stage_biz s set naics_recorded = coalesce(s.naics_recorded, s.naics), naics = o.naics,
+                           industry = coalesce((select b.label from industry_benchmarks b where o.naics like b.naics_prefix || '%'
+                                                order by length(b.naics_prefix) desc limit 1), s.industry)
+                    from naics_overrides o where o.biz_key = s.biz_key and s.naics is distinct from o.naics""")
+                if cur.rowcount:
+                    print(f"NAICS corrections applied to {cur.rowcount:,} other listings", flush=True)
+        except psycopg.Error as e:
+            print(f"NAICS corrections skipped (non-fatal): {e}", flush=True)
         # Calibrate the raw estimates: the admin's industry figures, else corrections learned from real ones.
         try:
             with conn.transaction():

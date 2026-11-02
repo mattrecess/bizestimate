@@ -131,7 +131,7 @@ def estimate(loan_amount, draw, naics, jobs, business_type, bench, margins, adju
 
 
 BUSINESS_COLS = [
-    "biz_key", "name", "address", "city", "state", "zip", "county", "naics", "industry",
+    "biz_key", "name", "address", "city", "state", "zip", "county", "naics", "naics_recorded", "industry",
     "business_type", "is_individual", "is_nonprofit", "jobs_reported", "est_payroll",
     "est_revenue_low", "est_revenue_mid", "est_revenue_high", "est_ebitda_low",
     "est_ebitda_mid", "est_ebitda_high", "est_revenue_by_employees", "est_revenue_by_payroll", "est_method",
@@ -189,6 +189,22 @@ def merge_duplicates(loans_by_biz):
     return loans_by_biz
 
 
+def naics_overrides():
+    """Corrected industry codes by business ({biz_key: naics}) from /admin/naics; none without a database."""
+    url = (os.environ.get("DATABASE_URL") or "").strip().strip('"').strip("'")
+    if not url:
+        return {}
+    url = re.sub(r"^(\w+://[^:/@]+:)\[(.*)\](@.*)$", r"\1\2\3", url)
+    try:
+        import psycopg
+        with psycopg.connect(url, connect_timeout=30) as conn, conn.cursor() as cur:
+            cur.execute("select biz_key, naics from naics_overrides")
+            return dict(cur.fetchall())
+    except Exception as e:   # table not created yet, or the database is unreachable: use the filed codes
+        print(f"NAICS corrections unavailable ({e.__class__.__name__}); using filed codes", flush=True)
+        return {}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--state", default="OK")
@@ -198,6 +214,9 @@ def main():
     margins = Margins()
     adjust = Adjust()
     sizes = SizeFactors()
+    fixes = naics_overrides()
+    if fixes:
+        print(f"NAICS corrections: {len(fixes):,}", flush=True)
 
     loans_by_biz = defaultdict(list)
     with open(src, newline="") as f:
@@ -235,7 +254,9 @@ def main():
             # First draws are sized on 2019 payroll; prefer the largest of those.
             primary = max(loans, key=lambda l: (l["draw"] == "first", l["amount"]))
             r = primary["_row"]
-            naics = correct_naics(r.get("BorrowerName"), r.get("NAICSCode"))
+            recorded = (r.get("NAICSCode") or "").strip()
+            # A correction from /admin/naics wins; the code the borrower filed is kept alongside.
+            naics = fixes.get(key) or correct_naics(r.get("BorrowerName"), recorded)
             jobs = max((l["jobs_reported"] or 0) for l in loans) or None
             btype = (r.get("BusinessType") or "").strip()
             _, bench = lookup(bench_all, naics)
@@ -249,6 +270,7 @@ def main():
                 "zip": (r.get("BorrowerZip") or "").strip()[:5],
                 "county": (r.get("ProjectCountyName") or "").strip().title(),
                 "naics": naics,
+                "naics_recorded": recorded if recorded and recorded != naics else "",
                 "industry": bench["label"],
                 "business_type": btype,
                 "is_individual": btype.lower() in INDIVIDUAL_TYPES,

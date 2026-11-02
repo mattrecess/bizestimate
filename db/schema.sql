@@ -368,3 +368,14 @@ create table if not exists estimate_settings (
 );
 alter table businesses add column if not exists est_growth_rate numeric;
 alter table businesses add column if not exists est_tilt numeric;
+
+-- Industry code corrections (set in /admin/naics, later also from the AI check of what a business
+-- does). The load uses the corrected code for the estimate and keeps the filed one in naics_recorded.
+create table if not exists naics_overrides (
+  biz_key text primary key,
+  naics text not null,
+  source text not null default 'admin',   -- admin | ai
+  note text,
+  updated_at timestamptz not null default now()
+);
+alter table businesses add column if not exists naics_recorded text;
