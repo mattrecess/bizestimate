@@ -11,6 +11,8 @@ const MONTHLY = Number(process.env.OWNER_LOOKUPS_PER_MONTH) || 25;
 const LOOKUP_DAYS = 180;
 
 async function tables() {
+  await sql`alter table users add column if not exists plan text not null default 'free'`;
+  await sql`alter table users add column if not exists contact_terms_at timestamptz`;
   await sql`create table if not exists owner_contacts (
     biz_key text primary key, data jsonb not null, found boolean not null, fetched_at timestamptz not null default now())`;
   await sql`create table if not exists owner_contact_reveals (
@@ -51,5 +53,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       on conflict (biz_key) do update set data = excluded.data, found = excluded.found, fetched_at = now()`;
   }
   if (user) await sql`insert into owner_contact_reveals (user_id, biz_key) values (${user.id}, ${b.biz_key}) on conflict do nothing`;
-  return NextResponse.json({ owner: b.owner, ...result }, { headers: { "Cache-Control": "private, no-store" } });
+  // Phone numbers from PDL may be personal cell phones: shown only to Pro users who have accepted the
+  // contact-use terms (no auto-dialing or texting without consent, Do Not Call checks), and to the admin.
+  const phonesBlocked = admin ? null : user?.plan !== "pro" ? "pro" : !user.contact_terms_at ? "terms" : null;
+  const phones = phonesBlocked ? [] : result.phones;
+  return NextResponse.json({ owner: b.owner, ...result, phones, phonesHidden: phonesBlocked ? result.phones.length : 0, phonesBlocked },
+    { headers: { "Cache-Control": "private, no-store" } });
 }

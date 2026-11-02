@@ -797,3 +797,9 @@ tr.ref-own td { background: #eef4ff; }
 @media (prefers-color-scheme: dark) { .bp-link-ic.li { background: #10243a; color: #70b5f9; } }
 .bp-owner .contact-card.embedded { padding-left: 56px; }   /* lined up under the owner's name */
 @media (max-width: 520px) { .bp-owner .contact-card.embedded { padding-left: 0; } }
+.phone-gate { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.phone-gate.terms { border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; background: var(--panel); color: var(--text); }
+.phone-gate.terms p { margin: 4px 0; font-size: 13px; color: var(--muted); }
+.phone-gate.terms ul { margin: 4px 0 8px; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.phone-gate.terms .check { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 8px; }
+.phone-gate.terms .btn { height: 32px; font-size: 13px; }

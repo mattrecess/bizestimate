@@ -141,7 +141,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<Re
       <div className="admin-head">
         <h1>Verified figures</h1>
         <p className="disclaimer">Database connection: {dbTarget.host}:{dbTarget.port} ({dbTarget.mode})</p>
-        <div className="admin-nav"><a href="/admin/industries">Industry figures</a><a href="/admin/naics">Industry codes</a><a href="/admin/corrections">Owner corrections</a><a href="/admin/pipeline">My pipeline</a><a href="/admin/transactions">Transactions</a><a href="/admin/contacts">Removal requests</a><form action={logout}><button className="link-btn">Sign out</button></form></div>
+        <div className="admin-nav"><a href="/admin/industries">Industry figures</a><a href="/admin/naics">Industry codes</a><a href="/admin/users">Users</a><a href="/admin/corrections">Owner corrections</a><a href="/admin/pipeline">My pipeline</a><a href="/admin/transactions">Transactions</a><a href="/admin/contacts">Removal requests</a><form action={logout}><button className="link-btn">Sign out</button></form></div>
       </div>
       <p className="disclaimer">Actual revenue and EBITDA you know for a business. Private by default: they&apos;re used only
         to measure and tune the estimates. Tick &ldquo;show publicly&rdquo; only when the figures may appear on the site.</p>

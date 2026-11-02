@@ -10,7 +10,13 @@ export default function ContactCard({ id, owner, embedded = false }: { id: strin
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [contact, setContact] = useState<Contact | null>(null);
   const [error, setError] = useState("");
-  const [ownerInfo, setOwnerInfo] = useState<(OwnerContact & { owner: string }) | null>(null);
+  const [ownerInfo, setOwnerInfo] = useState<(OwnerContact & { owner: string; phonesHidden?: number; phonesBlocked?: "pro" | "terms" | null }) | null>(null);
+  const [agreed, setAgreed] = useState(false);
+
+  async function acceptTerms() {
+    await fetch("/api/contact/terms", { method: "POST" }).catch(() => {});
+    lookupOwner();
+  }
   const [ownerState, setOwnerState] = useState<"idle" | "loading" | "signin">("idle");
   const [ownerError, setOwnerError] = useState("");
   useEffect(() => { setContact(null); setState("idle"); setOwnerInfo(null); setOwnerError(""); }, [id]);
@@ -102,6 +108,26 @@ export default function ContactCard({ id, owner, embedded = false }: { id: strin
                 ))}
                 {ownerInfo.linkedin && <li><a href={ownerInfo.linkedin} target="_blank" rel="nofollow noopener noreferrer">LinkedIn profile</a><span className="src">LinkedIn</span></li>}
               </ul>
+              {ownerInfo.phonesBlocked === "pro" && !!ownerInfo.phonesHidden && (
+                <p className="phone-gate">{ownerInfo.phonesHidden === 1 ? "A direct phone number is" : `${ownerInfo.phonesHidden} direct phone numbers are`} available
+                  with SeeBITDA Pro.</p>
+              )}
+              {ownerInfo.phonesBlocked === "terms" && !!ownerInfo.phonesHidden && (
+                <div className="phone-gate terms">
+                  <b>Before we show phone numbers</b>
+                  <p>These may be personal cell phones. By continuing you agree to use them only for one-to-one
+                    business outreach, and:</p>
+                  <ul>
+                    <li>not to auto-dial, robocall or text them without the person&apos;s consent (TCPA);</li>
+                    <li>to check the National Do Not Call Registry before any sales call;</li>
+                    <li>to stop contacting anyone who asks you to;</li>
+                    <li>not to resell, share or bulk-export them.</li>
+                  </ul>
+                  <label className="check"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> I agree to these terms
+                    and SeeBITDA&apos;s <a href="/terms" target="_blank">Terms</a></label>
+                  <button className="btn primary" disabled={!agreed} onClick={acceptTerms}>Show phone numbers</button>
+                </div>
+              )}
               <p className="disclaimer">From People Data Labs. For one-to-one outreach only: no auto-dialing or texting
                 mobile numbers, and include an opt-out in any email.</p>
             </>

@@ -7,7 +7,8 @@ import { sql } from "./db";
 const COOKIE = "bizestimate_user";
 const DAYS = 90;
 
-export type User = { id: number; email: string; name: string | null; picture: string | null };
+export type User = { id: number; email: string; name: string | null; picture: string | null;
+  plan: string; contact_terms_at: string | null };   // plan: free | pro (Stripe sets it; admin can too)
 
 export function authConfigured() {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
@@ -41,7 +42,9 @@ async function sessionUserId() {
 export async function currentUser(): Promise<User | null> {
   const id = await sessionUserId();
   if (!id) return null;
-  const [u] = await sql<User[]>`select id, email, name, picture from users where id = ${id}`;
+  // via to_jsonb: tolerant of a database that doesn't have the plan columns yet
+  const [u] = await sql<User[]>`select id, email, name, picture, coalesce(to_jsonb(users) ->> 'plan', 'free') as plan,
+    to_jsonb(users) ->> 'contact_terms_at' as contact_terms_at from users where id = ${id}`;
   return u ?? null;
 }
 

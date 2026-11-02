@@ -33,6 +33,11 @@ export default function Terms() {
             business can <Link href="/contact-request">ask for its contact details to be removed or corrected</Link>.
             Contact details must not be used for unsolicited bulk email, robocalls or texts, or anything that breaks
             the CAN-SPAM Act, the Telephone Consumer Protection Act or the National Do Not Call Registry rules.</p>
+          <p>Owners&apos; direct contact details come from People Data Labs, a licensed data provider, and are shown
+            to signed-in users; phone numbers, which may be personal cell phones, only to SeeBITDA Pro subscribers who
+            agree to use them for one-to-one business outreach: no auto-dialing, robocalls or texts without consent,
+            checking the National Do Not Call Registry before sales calls, honoring requests to stop, and no resale,
+            sharing or bulk export. Anyone can <Link href="/contact-request">ask to have their details removed</Link>.</p>
           <p>If you sign in with Google, we receive your name, email address and profile photo from Google, and keep
             them with the businesses and searches you save, so your lists follow you between devices. We don&apos;t sell
             this, share it, or email you without asking. You can delete your account and lists at any time from the
