@@ -65,7 +65,8 @@ def params(row, titles):
             f"What it does (from its website): {row['summary'] or ''}\n"
             f"Products and services: {', '.join(row['products'][:10])}")
     return {
-        "model": MODEL, "max_tokens": 200, "system": INSTRUCTIONS,
+        # Room for the model's reasoning as well as the answer: at 200, 39% of replies were cut off (Nov 2).
+        "model": MODEL, "max_tokens": 1000, "system": INSTRUCTIONS,
         "output_config": {"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
         "messages": [{"role": "user", "content": text}],
     }
@@ -84,8 +85,16 @@ def pending_batches(cur):
     return dict(cur.fetchall())
 
 
+MAX_TRIES = 2   # an answer that can't be used is asked again once, then left
+
+
+def failed(entry):
+    return isinstance(entry, dict) and "error" in entry
+
+
 def collect(client, cur, cache, titles, deadline):
     usage = [0, 0]
+    problems = {}
     while pending_batches(cur):
         for batch_id in pending_batches(cur):
             if client.messages.batches.retrieve(batch_id).processing_status != "ended":
@@ -99,14 +108,25 @@ def collect(client, cur, cache, titles, deadline):
                 msg = item.result.message
                 usage[0] += msg.usage.input_tokens
                 usage[1] += msg.usage.output_tokens
-                try:
-                    data = json.loads(next(b.text for b in msg.content if b.type == "text"))
-                    code = "".join(c for c in str(data.get("naics", "")) if c.isdigit())
-                    ok = len(code) == 6 and code in titles and data.get("confidence") in ("high", "medium", "low")
-                    cache[key] = {"naics": code, "confidence": data["confidence"],
-                                  "reason": str(data.get("reason", ""))[:200]} if ok else {}
-                except (ValueError, StopIteration, KeyError, TypeError):
-                    cache[key] = {}
+                error = None
+                if msg.stop_reason != "end_turn":
+                    error = f"stopped: {msg.stop_reason}"
+                else:
+                    try:
+                        data = json.loads(next(b.text for b in msg.content if b.type == "text"))
+                        code = "".join(c for c in str(data.get("naics", "")) if c.isdigit())
+                        if len(code) != 6 or code not in titles:
+                            error = "not a 2022 NAICS code"
+                        elif data.get("confidence") not in ("high", "medium", "low"):
+                            error = "no confidence"
+                        else:
+                            cache[key] = {"naics": code, "confidence": data["confidence"], "reason": str(data.get("reason", ""))[:200]}
+                    except (ValueError, StopIteration, KeyError, TypeError):
+                        error = "unreadable reply"
+                if error:
+                    prev = cache.get(key)
+                    cache[key] = {"error": error, "tries": (prev.get("tries", 0) if failed(prev) else 0) + 1}
+                    problems[error] = problems.get(error, 0) + 1
             enrich.state_set(cur, CACHE, cache)
             cur.execute("delete from ai_pending where batch_id = %s", (batch_id,))
             cur.connection.commit()
@@ -114,6 +134,8 @@ def collect(client, cur, cache, titles, deadline):
         if time.time() > deadline:
             break
         time.sleep(60)
+    if problems:
+        print(f"naics_check: unusable answers this run: {problems}", flush=True)
     return usage
 
 
@@ -126,7 +148,7 @@ def apply(cur, rows, cache):
     dismissed = {r[0] for r in cur.fetchall()}
     for row in rows:
         res = cache.get(f"{row['biz_key']}|{fingerprint(row)}")
-        if not res:
+        if not res or failed(res):
             continue
         key, code, filed = row["biz_key"], res["naics"], row["filed"] or ""
         same = filed[:4] == code[:4]
@@ -182,10 +204,17 @@ def main():
             max_total = int(os.environ.get("NAICS_CHECK_MAX_TOTAL") or 50_000)
             cur.execute("select site from ai_pending where job = %s", (JOB,))
             queued = {r[0] for r in cur.fetchall()}
-            todo = [r for r in rows if f"{r['biz_key']}|{fingerprint(r)}" not in cache
-                    and f"{r['biz_key']}|{fingerprint(r)}" not in queued]
-            todo = todo[:max(max_total - len(cache) - len(queued), 0)]
-            print(f"naics_check: {len(todo):,} to check ({len(cache):,} done, {len(queued):,} in flight, cap {max_total:,})", flush=True)
+            # Not yet asked, or asked but the answer couldn't be used (and not too often): a blank {} is
+            # an unusable answer from before tries were counted (Nov 2), asked again too.
+            def due(k):
+                v = cache.get(k)
+                return k not in queued and (v is None or v == {} or (failed(v) and v.get("tries", 0) < MAX_TRIES))
+            retries = sum(1 for r in rows if cache.get(f"{r['biz_key']}|{fingerprint(r)}") is not None
+                          and due(f"{r['biz_key']}|{fingerprint(r)}"))
+            todo = [r for r in rows if due(f"{r['biz_key']}|{fingerprint(r)}")]
+            done = sum(1 for v in cache.values() if v and not failed(v))
+            todo = todo[:max(max_total - done - len(queued), 0)]
+            print(f"naics_check: {len(todo):,} to check, {retries:,} of them retries ({done:,} done, {len(queued):,} in flight, cap {max_total:,})", flush=True)
             for start in range(0, len(todo), BATCH_SIZE):
                 chunk = todo[start:start + BATCH_SIZE]
                 ids = {f"n{start + i}": f"{r['biz_key']}|{fingerprint(r)}" for i, r in enumerate(chunk)}
