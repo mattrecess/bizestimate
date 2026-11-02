@@ -777,3 +777,23 @@ tr.ref-own td { background: #eef4ff; }
 .bp-depth { font-size: 13px; padding: 8px 10px; border-radius: 10px; line-height: 1.45; }
 .bp-depth.team { background: var(--good-soft); color: var(--good); }
 .bp-depth.owner-run { background: var(--warn-soft); color: var(--warn); }
+
+/* Company links under the business name */
+.bp-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; margin-top: 10px; }
+.bp-link { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--panel); color: var(--text); text-decoration: none; min-width: 0; }
+.bp-link:hover { border-color: var(--accent); text-decoration: none; box-shadow: var(--shadow-sm); }
+.bp-link-ic { width: 30px; height: 30px; flex: none; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.bp-link-ic.li { background: #e8f1fb; color: #0a66c2; }
+.bp-link-t { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.bp-link-t b { font-size: 13.5px; }
+.bp-link-t span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-link-out { color: var(--faint); flex: none; }
+/* Contact details inside the Leadership card, under the owner */
+.contact-card.embedded { margin: 0; padding: 0; background: none; border: 0; }
+.contact-card.embedded .contact-head { justify-content: flex-start; }
+.contact-card.embedded .contact-list { margin-top: 2px; }
+.contact-card.embedded .contact-foot { margin-top: 6px; }
+@media (prefers-color-scheme: dark) { .bp-link-ic.li { background: #10243a; color: #70b5f9; } }
+.bp-owner .contact-card.embedded { padding-left: 56px; }   /* lined up under the owner's name */
+@media (max-width: 520px) { .bp-owner .contact-card.embedded { padding-left: 0; } }

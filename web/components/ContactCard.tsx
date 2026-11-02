@@ -6,7 +6,7 @@ import type { OwnerContact } from "@/lib/pdl";
 import { askSignIn } from "@/lib/saved";
 
 // Published contact details, loaded on request so they aren't in the page crawlers read.
-export default function ContactCard({ id, owner }: { id: string; name: string; owner: string | null }) {
+export default function ContactCard({ id, owner, embedded = false }: { id: string; name: string; owner: string | null; embedded?: boolean }) {
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [contact, setContact] = useState<Contact | null>(null);
   const [error, setError] = useState("");
@@ -49,9 +49,9 @@ export default function ContactCard({ id, owner }: { id: string; name: string; o
 
   const empty = contact && !contact.phones.length && !contact.emails.length;
   return (
-    <div className="contact-card">
+    <div className={embedded ? "contact-card embedded" : "contact-card"}>
       <div className="contact-head">
-        <b>Contact</b>
+        {!embedded && <b>Contact</b>}
         {!contact && (
           <button className="btn" onClick={show} disabled={state === "loading"}>
             {state === "loading" ? "Loading…" : "Show contact info"}

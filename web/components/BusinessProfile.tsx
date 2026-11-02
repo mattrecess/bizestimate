@@ -200,6 +200,22 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
             <li key={icon} title={title}><Icon name={icon} size={14} />{text}{title ? " (approx.)" : ""}</li>
           ))}
         </ul>
+        {/* Where to read more about the company: its own website and its LinkedIn page. */}
+        <div className="bp-links">
+          {b.website && (
+            <a className="bp-link" href={b.website} target="_blank" rel="nofollow noopener noreferrer">
+              <span className="bp-link-ic"><Icon name="globe" size={16} /></span>
+              <span className="bp-link-t"><b>Company website</b><span>{siteLabel(b.website)}</span></span>
+              <Icon name="external" size={14} className="bp-link-out" />
+            </a>
+          )}
+          <a className="bp-link" href={src.linkedin?.company_url || linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer">
+            <span className="bp-link-ic li"><Icon name="linkedin" size={16} /></span>
+            <span className="bp-link-t"><b>{src.linkedin?.company_url ? "LinkedIn page" : "Find on LinkedIn"}</b>
+              <span>{src.linkedin?.company_url ? "Company profile and employees" : "Search LinkedIn for this company"}</span></span>
+            <Icon name="external" size={14} className="bp-link-out" />
+          </a>
+        </div>
         {(ownershipChange || src.sec || src.contracts || b.is_nonprofit) && (
           <div className="badges">
             {ownershipChange && <span className="badge warn">New owners FY{ownershipChange}</span>}
@@ -268,6 +284,8 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           </div>
           {sellLabel && <span className={`bp-sell ${Number(b.sell_score) >= 40 ? "hot" : ""}`}>{sellLabel}</span>}
         </div>
+        {/* How to reach them, right under the owner: published contacts, then the owner's own (signed in). */}
+        <ContactCard id={String(b.id)} name={b.name} owner={b.owner_name} embedded />
         {/* The rest of the leadership team, most senior first (lib/leadership.ts). */}
         {team.length > 0 && (
           <ul className="bp-team">
@@ -296,12 +314,7 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               : <><b>Owner-run.</b> We haven&apos;t found a manager besides the owner. Buyers usually pay less when a business depends on its owner.</>}
           </div>
         )}
-        <div className="bp-owner-actions">
-          {b.website && <a className="btn" href={b.website} target="_blank" rel="nofollow noopener noreferrer"><Icon name="globe" size={15} />{siteLabel(b.website)}</a>}
-          <a className="btn" href={src.linkedin?.company_url || linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer"><Icon name="linkedin" size={15} />LinkedIn</a>
-        </div>
       </div>
-      <ContactCard id={String(b.id)} name={b.name} owner={b.owner_name} />
       <PipelineBox id={String(b.id)} />
 
       {/* Everything on one scrolling page: the estimate, then financials, people, and public records. */}
