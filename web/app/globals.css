@@ -760,3 +760,5 @@ tr.ref-own td { background: #eef4ff; }
 .owner-lookup { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .owner-lookup .btn { height: 34px; font-size: 13px; }
 .owner-lookup-head { font-size: 14px; margin-bottom: 4px; }
+.bp-meta li a { display: inline-flex; align-items: center; gap: 6px; color: inherit; }
+.bp-meta li a:hover { color: var(--accent); }

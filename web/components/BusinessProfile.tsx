@@ -158,12 +158,14 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
   }
   const industryText = industryLabel(b.naics) ?? b.industry;
   // Quick facts under the name, each with its icon.
-  const meta: [string, string, string?][] = [
+  const meta: [string, string, string?, string?][] = [
     ["pin", [b.address, b.city].filter(Boolean).join(", ") + (b.city ? ", OK" : ""),
       approximate ? "We couldn't map this address, so the map pin is placed in its ZIP code" : undefined],
     ...(b.locations?.length ? [["map", `${b.locations.length + 1} locations`] as [string, string]] : []),
     ...(founded ? [["calendar", `Since ${founded}`] as [string, string]] : []),
     ...(src.website_profile?.family_owned ? [["user", `Family-owned${src.website_profile.generation ? `, ${ordinal(src.website_profile.generation)} generation` : ""}`] as [string, string]] : []),
+    // The industry code, linking to every business with it (as the NAICS filter does).
+    ...(b.naics ? [["briefcase", `NAICS ${b.naics}`, b.industry ? `${b.industry} (NAICS ${b.naics})` : undefined, `/?q=${b.naics}`] as [string, string, string, string]] : []),
   ];
 
   return (
@@ -185,7 +187,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           </div>
         </div>
         <ul className="bp-meta">
-          {meta.filter(([, text]) => text).map(([icon, text, title]) => (
+          {meta.filter(([, text]) => text).map(([icon, text, title, href]) => href ? (
+            <li key={icon} title={title}><a href={href}><Icon name={icon} size={14} />{text}</a></li>
+          ) : (
             <li key={icon} title={title}><Icon name={icon} size={14} />{text}{title ? " (approx.)" : ""}</li>
           ))}
         </ul>
