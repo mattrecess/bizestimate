@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { money } from "@/lib/format";
+import { estimateValue } from "@/lib/valuation";
+import type { Biz } from "./BizCard";
 import Icon from "./Icon";
 
-type Suggestion = { id: number; name: string; city: string; est_revenue_mid: string };
+type Suggestion = Pick<Biz, "id" | "name" | "city" | "naics" | "is_nonprofit" | "est_method" | "est_revenue_mid" | "est_ebitda_mid" | "est_value_mid">;
 
 // Search input with live business suggestions; Enter searches, picking a suggestion opens it.
 // The suggestions come from the page's own search results, so typing sends a single request.
@@ -80,7 +82,11 @@ export default function SearchBox({ value, onChange, onPick, suggestions, busy =
             <li key={s.id}>
               <button type="button" role="option" aria-selected={i === active} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(s)}>
                 <span className="s-name">{s.name}</span>
-                <span className="s-meta">{s.city} · {money(s.est_revenue_mid)}</span>
+                <span className="s-meta">{s.city} · {(() => {
+                  // Estimated value, as on the cards and pins; revenue where a sale value doesn't apply.
+                  const v = estimateValue(s);
+                  return v ? `${money(v.mid)} value` : `${money(s.est_revenue_mid)} rev`;
+                })()}</span>
               </button>
             </li>
           ))}
