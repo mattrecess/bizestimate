@@ -55,7 +55,7 @@ export default async function Corrections() {
     <main className="page admin">
       <div className="admin-head">
         <h1>Owner corrections</h1>
-        <div className="admin-nav"><a href="/admin">Verified figures</a><a href="/admin/pipeline">My pipeline</a><a href="/admin/contacts">Contacts</a></div>
+        <div className="admin-nav"><a href="/admin">Verified figures</a><a href="/admin/pipeline">My pipeline</a><a href="/admin/contacts">Removal requests</a></div>
       </div>
       <p className="disclaimer">Figures owners sent through the &ldquo;Correct these figures&rdquo; link. Applying one saves it as a
         verified figure: private (tunes the accuracy report) unless the owner asked for it to be shown. Check the email domain
