@@ -23,6 +23,7 @@ import psycopg
 
 import enrich
 from load import database_url
+from brokers import is_broker
 from matching import ordered_name_tokens
 from owners_search import SEARCH_INTERVAL, SEARCH_PRICE, search
 
@@ -163,7 +164,8 @@ def main():
             print("people_search: needs BRAVE_API_KEY and ANTHROPIC_API_KEY; saving cached results only", flush=True)
         rows = {}
         for k, v in cache.items():   # rules apply to saved results too
-            v = {**v, "people": [p for p in v.get("people", []) if keep_person(p)]}
+            v = {**v, "people": [p for p in v.get("people", []) if keep_person(p) and not is_broker(p.get("url"))],
+                 "advisors": [a for a in v.get("advisors", []) if not is_broker(a.get("url"))]}
             v = {key: val for key, val in v.items() if val}
             if v:
                 rows[k] = v

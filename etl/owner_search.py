@@ -25,13 +25,14 @@ from load import database_url
 from matching import ordered_name_tokens
 from netutil import urlopen
 from owners import _valid_name
+from brokers import is_broker
 
 SERPER = "https://google.serper.dev/search"
 MODEL = "claude-haiku-5-5"
 PRICE = (0.10, 0.50)
 SEARCH_PRICE = 1 / 1000          # Serper, after the free allowance
 STATE_KEY = "owner_search_cache"
-SKIP = ("linkedin.com",)
+SKIP = ("linkedin.com",)   # and contact-data brokers (brokers.py)
 
 SCHEMA = {
     "type": "object",
@@ -68,7 +69,7 @@ def google(key, query):
     for p in data.get("peopleAlsoAsk") or []:
         results.append({"kind": "result", "url": p.get("link", ""), "text": f"{p.get('question', '')} {p.get('snippet', '')}"})
     for o in data.get("organic") or []:
-        if not any(d in (o.get("link") or "").lower() for d in SKIP):
+        if not any(d in (o.get("link") or "").lower() for d in SKIP) and not is_broker(o.get("link")):
             results.append({"kind": "result", "url": o.get("link", ""), "text": f"{o.get('title', '')} {o.get('snippet', '')}"})
     return results[:14]
 
@@ -157,7 +158,8 @@ def main():
             print(f"owner_search: {searched:,} searches ≈ ${cost:.2f} (searches free within Serper's allowance)", flush=True)
         else:
             print("owner_search: needs SERPER_API_KEY and ANTHROPIC_API_KEY; saving cached results only", flush=True)
-        rows = {k: v for k, v in cache.items() if v}
+        # Never anything found on a contact-data broker's page (brokers.py), including results saved before.
+        rows = {k: v for k, v in cache.items() if v and not is_broker(v.get("url"))}
         print(f"owner_search: owners for {len(rows):,} of {len(cache):,} searched "
               f"({sum(1 for v in rows.values() if v.get('via') != 'result'):,} from Google's answer box or panel)", flush=True)
         for v in list(rows.values())[:12]:

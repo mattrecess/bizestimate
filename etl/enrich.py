@@ -9,6 +9,7 @@ import re
 from collections import Counter
 
 from benchmarks import load_benchmarks, lookup
+from brokers import PATTERN, is_broker
 from margins import Margins
 
 # Sources whose "revenue" is the business's own reported figure, most trusted first.
@@ -106,11 +107,18 @@ def apply_owners(cur, state):
             cands = [(r, p["name"], p["title"], p.get("url")) for p in people
                      if (r := _owner_rank(p.get("title"))) is not None]
         for c in cands:
+            if is_broker(c[3]):
+                continue   # nothing taken from a contact-data broker's page (brokers.py)
             if key not in best or c[0] < best[key][0]:
                 best[key] = c
     cur.executemany("update businesses set owner_name = %s, owner_title = %s, owner_source = %s where biz_key = %s",
                     [(name, title[:60], url, key) for key, (_, name, title, url) in best.items()])
     print(f"Owners filled from websites and search results: {len(best):,}", flush=True)
+    # Owners found earlier on a contact-data broker's page are removed (brokers.py).
+    cur.execute("update businesses set owner_name = null, owner_title = null, owner_source = null "
+                "where state = %s and owner_source ~* %s", (state, PATTERN.pattern))
+    if cur.rowcount:
+        print(f"Owners removed (sourced from a contact-data broker): {cur.rowcount:,}", flush=True)
     # Owners entered by hand in /admin win over everything found automatically.
     cur.execute("""update businesses b set owner_name = k.owner_name, owner_title = coalesce(k.owner_title, 'Owner'),
                        owner_source = null
