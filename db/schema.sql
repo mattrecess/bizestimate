@@ -179,8 +179,8 @@ create table if not exists contact_optouts (
   created_at timestamptz not null default now()
 );
 
--- Owner contact lookups made from /admin with a paid contact-data account (RocketReach). Private:
--- licensed for the account holder's own use, never shown on public pages.
+-- Owner contact lookups made from /admin with a contact-data provider (no longer used: the RocketReach
+-- integration was removed Nov 2026; its saved lookups are deleted separately).
 create table if not exists contact_lookups (
   id          bigserial primary key,
   biz_key     text not null,
