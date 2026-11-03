@@ -16,7 +16,7 @@ export default function ContactCard({ id, name, owner, embedded = false }: { id:
     await fetch("/api/contact/terms", { method: "POST" }).catch(() => {});
     lookupOwner();
   }
-  const [ownerState, setOwnerState] = useState<"idle" | "loading" | "signin">("idle");
+  const [ownerState, setOwnerState] = useState<"idle" | "loading">("idle");
   const [ownerError, setOwnerError] = useState("");
   useEffect(() => { setContact(null); setState("idle"); setOwnerInfo(null); setOwnerError(""); }, [id]);
 
@@ -26,7 +26,7 @@ export default function ContactCard({ id, name, owner, embedded = false }: { id:
     try {
       const res = await fetch(`/api/contact/${id}/owner`, { method: "POST" });
       const data = await res.json();
-      if (res.status === 401) { setOwnerState("signin"); return; }
+      if (res.status === 401) { setOwnerState("idle"); askSignIn({ contactFor: name }); return; }
       if (!res.ok) throw new Error(data.error || "Couldn't look up the owner.");
       setOwnerInfo(data);
       setOwnerState("idle");
@@ -48,6 +48,7 @@ export default function ContactCard({ id, name, owner, embedded = false }: { id:
         window.dispatchEvent(new CustomEvent("upgrade-needed", { detail: { used: data.used, limit: data.limit, price: data.price } }));
         return;
       }
+      if (data.signIn) { setState("idle"); askSignIn({ contactFor: name }); return; }
       if (!res.ok) throw new Error(data.error || "Couldn't load contact details.");
       setContact(data);
       setState("idle");
@@ -100,10 +101,6 @@ export default function ContactCard({ id, name, owner, embedded = false }: { id:
         <div className="owner-lookup">
           {ownerState === "loading" ? (
             <p className="disclaimer"><span className="spinner" aria-hidden /> Looking up {owner.split(/\s+/)[0]}&apos;s direct contact…</p>
-          ) : ownerState === "signin" ? (
-            <button className="btn primary" onClick={() => askSignIn({ contactFor: owner })}>
-              Sign in to see {owner.split(/\s+/)[0]}&apos;s direct email &amp; phone
-            </button>
           ) : !ownerInfo ? null : !ownerInfo.found ? (
             <p className="disclaimer">No direct email or phone found for {ownerInfo.owner}.</p>
           ) : (
