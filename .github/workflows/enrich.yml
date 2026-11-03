@@ -85,6 +85,9 @@ jobs:
           DEALS_NEWS_MAX_TOTAL: ${{ vars.DEALS_NEWS_MAX_TOTAL }}
           # Approved Oct 28: read every company website (~70,000 sites, ~$15), 15,000 per run.
           WEBSITE_OFFERING_MAX_TOTAL: ${{ vars.WEBSITE_OFFERING_MAX_TOTAL || '80000' }}
+          # Approved Nov 3: read the remaining ~50,000 websites' about/team pages for owners (~$8), 25,000 per run.
+          WEBSITE_PROFILE_MAX_TOTAL: ${{ vars.WEBSITE_PROFILE_MAX_TOTAL || '90000' }}
+          WEBSITE_PROFILE_LIMIT: ${{ vars.WEBSITE_PROFILE_LIMIT || '25000' }}
           # Approved Nov 2: check every described business's industry code (~44,500, ~$5-20).
           NAICS_CHECK_MAX_TOTAL: ${{ vars.NAICS_CHECK_MAX_TOTAL || '50000' }}
       - if: always()
