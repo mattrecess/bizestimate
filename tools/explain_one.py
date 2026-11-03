@@ -5,7 +5,7 @@ import os
 
 import psycopg
 
-NAME = "MINICK MATERIALS COMPANY"
+NAME = "%lightle%"
 url = os.environ["DATABASE_URL"].strip().strip('"').replace("[", "").replace("]", "")
 with psycopg.connect(url, connect_timeout=60) as conn, conn.cursor() as cur:
     cur.execute("""select biz_key, id, name, city, naics, industry, est_method, est_confidence, jobs_reported,
@@ -15,7 +15,8 @@ with psycopg.connect(url, connect_timeout=60) as conn, conn.cursor() as cur:
                           round(est_revenue_by_employees) as rev_by_headcount, round(est_revenue_by_payroll) as rev_by_payroll,
                           total_ppp_amount, est_inflation, est_growth, est_growth_rate, est_tilt, est_calibration,
                           (select count(*) from businesses c where c.parent_key = b.biz_key) as locations
-                   from businesses b where name = %s""", (NAME,))
+                   from businesses b where name ilike %s and coalesce(est_method, '') <> 'branch'
+                   order by est_revenue_mid desc nulls last limit 1""", (NAME,))
     cols = [d.name for d in cur.description]
     row = dict(zip(cols, cur.fetchone()))
     for k, v in row.items():
