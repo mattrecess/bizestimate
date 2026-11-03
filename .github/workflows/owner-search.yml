@@ -1,0 +1,40 @@
+name: Owner search
+# Owner names from Google search results for businesses over $1M revenue without one (owner_search.py).
+# Approved Nov 3: finish the remaining ~75,000 (~$45 of Serper credits). Started by hand; each run searches
+# for up to 5 hours and saves as it goes, so running it again picks up where the last one stopped.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+# The data load's queue: both write owners into the businesses table.
+concurrency:
+  group: etl
+  cancel-in-progress: false
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r etl/requirements.txt
+      - run: |
+          python etl/migrate.py
+          python etl/owner_search.py --state OK 2>&1 | tee "$RUNNER_TEMP/owner_search.log"
+        env:
+          PYTHONUNBUFFERED: "1"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+          OWNER_SEARCH_MAX_TOTAL: ${{ vars.OWNER_SEARCH_MAX_TOTAL || '80000' }}
+          OWNER_SEARCH_MIN_REVENUE: ${{ vars.OWNER_SEARCH_MIN_REVENUE || '1000000' }}
+          OWNER_SEARCH_MINUTES: "300"
+      # Counts only (the samples line is dropped): this branch is public.
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b owner-search-logs
+          grep -v "sample:" "$RUNNER_TEMP/owner_search.log" > owner_search.log 2>/dev/null || echo none > owner_search.log
+          git add owner_search.log && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" owner-search-logs
