@@ -808,3 +808,18 @@ tr.ref-own td { background: #eef4ff; }
 .upgrade-price b { font-size: 28px; color: var(--text); letter-spacing: -.02em; }
 .upgrade-reset { margin: 12px 0 0 !important; font-size: 12.5px !important; }
 .reveals-left { margin: 4px 0 0; }
+
+/* Website preview: the business's own site over half the map, beside its details */
+.site-preview { position: absolute; top: 0; bottom: 0; right: 460px; width: calc((100% - 460px) / 2); z-index: 5;
+  display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--border);
+  box-shadow: -10px 0 28px rgba(15, 27, 45, .16); }
+.explorer[data-layout="table"] .site-preview { right: min(520px, 92vw); width: calc((100% - min(520px, 92vw)) / 2); z-index: 8; }
+.site-preview-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--border);
+  background: var(--panel-2); color: var(--muted); font-size: 13px; }
+.site-preview-host { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
+.site-preview-bar .link-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+.site-preview-bar .signin-close { position: static; }
+.site-preview iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+.bp-link-out.flip { transform: rotate(180deg); }
+@media (max-width: 1099px) { .site-preview { display: none; } }
+.explorer { position: relative; }   /* the website preview sits inside the map area, below the toolbar */

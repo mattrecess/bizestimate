@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Business, Comparable, Headcount, LenderLink, Loan, Location, Prospect, Transaction } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
@@ -49,12 +49,24 @@ const pppYear = (loans: Loan[]) => {
 
 
 // Shared by the full business page and the explorer's side panel (compact: no mini-map).
-export default function BusinessProfile({ b, compact = false, onSelect }: {
+export default function BusinessProfile({ b, compact = false, onSelect, onWebsite }: {
   b: Profile;
   compact?: boolean;
   onSelect?: (id: number) => void;
+  onWebsite?: (url: string) => void;   // shows the website beside the profile (wide screens), where it allows that
 }) {
   const [copied, setCopied] = useState(false);
+  // Whether the company's website can be shown in the preview: checked when the profile opens, so the
+  // click is instant; sites that forbid it (or phones) open in a new tab as before.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    setPreviewUrl(null);
+    if (!onWebsite || !b.website || !window.matchMedia("(min-width: 1100px)").matches) return;
+    const ctrl = new AbortController();
+    fetch(`/api/website-preview/${b.id}`, { signal: ctrl.signal }).then((r) => r.json())
+      .then((d) => { if (d.ok) setPreviewUrl(d.url); }).catch(() => {});
+    return () => ctrl.abort();
+  }, [b.id, b.website, onWebsite]);
   const avg = b.est_method === "industry_average";           // no business-specific data at all
   const noLoan = !b.loans.length;
   const fromPlan = b.est_method === "retirement_plan";       // re-based on the newest Form 5500 count
@@ -205,10 +217,11 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         {/* Where to read more about the company: its own website and its LinkedIn page. */}
         <div className="bp-links">
           {b.website && (
-            <a className="bp-link" href={b.website} target="_blank" rel="nofollow noopener noreferrer">
+            <a className="bp-link" href={b.website} target="_blank" rel="nofollow noopener noreferrer"
+              onClick={(e) => { if (previewUrl && onWebsite && !e.metaKey && !e.ctrlKey) { e.preventDefault(); onWebsite(previewUrl); } }}>
               <span className="bp-link-ic"><Icon name="globe" size={16} /></span>
-              <span className="bp-link-t"><b>Company website</b><span>{siteLabel(b.website)}</span></span>
-              <Icon name="external" size={14} className="bp-link-out" />
+              <span className="bp-link-t"><b>Company website</b><span>{previewUrl ? `Preview ${siteLabel(b.website)} beside this` : siteLabel(b.website)}</span></span>
+              <Icon name={previewUrl ? "back" : "external"} size={14} className={previewUrl ? "bp-link-out flip" : "bp-link-out"} />
             </a>
           )}
           <a className="bp-link" href={src.linkedin?.company_url || linkedInSearch(b)} target="_blank" rel="nofollow noopener noreferrer">

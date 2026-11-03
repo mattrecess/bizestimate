@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import BusinessProfile, { type Profile } from "@/components/BusinessProfile";
 import BizCard, { type Biz } from "@/components/BizCard";
 import BizTable from "@/components/BizTable";
+import WebsitePreview from "@/components/WebsitePreview";
 import FilterBar from "@/components/FilterBar";
 import { SORTS, type FilterState } from "@/lib/filters";
 import { account, askSignIn, saveSearch } from "@/lib/saved";
@@ -60,6 +61,9 @@ export default function Home() {
   // Business shown in the side panel (replaces the list until "Back").
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  // The open business's website, shown over half the map beside its details (wide screens).
+  const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => setPreview(null), [selectedId, layout]);
   const panel = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
   const { sector, city, minRev, maxRev, sort, naics, lender, more: moreFilters } = filters;
@@ -300,7 +304,7 @@ export default function Home() {
                 </a>
               </div>
               {profile && Number(profile.id) === selectedId
-                ? <BusinessProfile b={profile} compact onSelect={openBusiness} />
+                ? <BusinessProfile b={profile} compact onSelect={openBusiness} onWebsite={setPreview} />
                 : (() => {
                     // The card's name and place straight away, while the details load.
                     const card = data?.results.find((x) => Number(x.id) === selectedId);
@@ -417,6 +421,7 @@ export default function Home() {
             )}
           </div>
         </div>
+        {preview && profile && <WebsitePreview url={preview} name={profile.name} onClose={() => setPreview(null)} />}
         {layout === "table" && selectedId && <>
           <div className="drawer-backdrop" onClick={() => setSelectedId(null)} aria-hidden />
           <aside className="table-drawer" ref={drawer}>{detail}</aside>
