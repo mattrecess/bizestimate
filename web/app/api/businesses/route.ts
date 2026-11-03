@@ -33,7 +33,8 @@ export async function GET(req: NextRequest) {
              est_ebitda_low, est_ebitda_mid, est_ebitda_high, est_value_mid, est_confidence, est_method, lat, lon,
              coalesce(owner_name, '') <> '' as has_owner, nullif(owner_name, '') as owner_name,
              coalesce(website, '') <> '' as has_website, to_jsonb(businesses) ->> 'sell_score' as sell_score,
-             (select count(*)::int from businesses c where c.parent_key = businesses.biz_key) as locations
+             coalesce((to_jsonb(businesses) ->> 'chain_locations')::int - 1,
+               (select count(*)::int from businesses c where c.parent_key = businesses.biz_key)) as locations
              ${f.lender?.length ? sql`, (select json_agg(json_build_object('lender', bl.lender, 'program', bl.program, 'year', bl.year)
                  order by bl.year desc nulls last) from business_lenders bl
                  where bl.business_id = businesses.id and bl.lender_key in ${sql(f.lender)}) as lenders` : sql``}

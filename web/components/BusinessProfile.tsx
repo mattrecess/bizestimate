@@ -167,6 +167,8 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
     ["pin", [b.address, b.city].filter(Boolean).join(", ") + (b.city ? ", OK" : ""),
       approximate ? "We couldn't map this address, so the map pin is placed in its ZIP code" : undefined],
     ...(b.locations?.length ? [["map", `${b.locations.length + 1} locations`] as [string, string]] : []),
+    // A chain or kiosk brand shown once (etl/places_only.py): how many Oklahoma locations it has.
+    ...(b.chain_locations ? [["map", `${b.chain_locations.toLocaleString()} Oklahoma locations`] as [string, string]] : []),
     ...(founded ? [["calendar", `Since ${founded}`] as [string, string]] : []),
     ...(src.website_profile?.family_owned ? [["user", `Family-owned${src.website_profile.generation ? `, ${ordinal(src.website_profile.generation)} generation` : ""}`] as [string, string]] : []),
     // The industry code, linking to every business with it (as the NAICS filter does).
@@ -195,9 +197,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
         </div>
         <ul className="bp-meta">
           {meta.filter(([, text]) => text).map(([icon, text, title, href]) => href ? (
-            <li key={icon} title={title}><a href={href}><Icon name={icon} size={14} />{text}</a></li>
+            <li key={text} title={title}><a href={href}><Icon name={icon} size={14} />{text}</a></li>
           ) : (
-            <li key={icon} title={title}><Icon name={icon} size={14} />{text}{title ? " (approx.)" : ""}</li>
+            <li key={text} title={title}><Icon name={icon} size={14} />{text}{title ? " (approx.)" : ""}</li>
           ))}
         </ul>
         {/* Where to read more about the company: its own website and its LinkedIn page. */}

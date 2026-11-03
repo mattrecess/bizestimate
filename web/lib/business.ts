@@ -17,7 +17,7 @@ export type Business = {
   website: string | null; owner_name: string | null; owner_title: string | null;
   owner_source: string | null; payroll_to_revenue: Num; revenue_per_employee: Num; ebitda_margin: Num; benchmark_source: string | null;
   est_ebitda_margin: Num; est_inflation: Num; est_growth: Num;
-  parent_name: string | null; parent_id: string | null; naics_recorded?: string | null;
+  parent_name: string | null; parent_id: string | null; naics_recorded?: string | null; chain_locations?: number | null;
   sell_score: number | null; sell_signals: string[] | null;
 };
 export type Loan = {
@@ -42,7 +42,7 @@ export async function getBusinessRow(id: string): Promise<Business | null> {
            to_jsonb(b) ->> 'est_inflation' as est_inflation, to_jsonb(b) ->> 'est_growth' as est_growth,
            to_jsonb(b) ->> 'est_value_mid' as est_value_mid, to_jsonb(b) ->> 'est_calibration' as est_calibration,
            to_jsonb(b) ->> 'est_growth_rate' as est_growth_rate, to_jsonb(b) ->> 'est_tilt' as est_tilt,
-           to_jsonb(b) ->> 'parent_name' as parent_name, to_jsonb(b) ->> 'naics_recorded' as naics_recorded,
+           to_jsonb(b) ->> 'parent_name' as parent_name, to_jsonb(b) ->> 'naics_recorded' as naics_recorded, (to_jsonb(b) ->> 'chain_locations')::int as chain_locations,
            (to_jsonb(b) ->> 'sell_score')::int as sell_score, to_jsonb(b) -> 'sell_signals' as sell_signals,
            (select p.id from businesses p where p.biz_key = to_jsonb(b) ->> 'parent_key') as parent_id,
            ib.payroll_to_revenue, ib.revenue_per_employee, ib.ebitda_margin, ib.source as benchmark_source
