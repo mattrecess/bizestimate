@@ -333,6 +333,19 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
               </p>
             </div>
           )}
+          {/* How the value and headcount have moved, right after how the estimate was worked out. */}
+        {(() => {
+          // Value over time: needs a headcount basis for today's estimate (PPP grown since, or the latest 401(k) count).
+          const ppp = b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null;
+          const plan = b.headcounts ?? [];
+          const basisNow = b.est_method === "retirement_plan" && plan.length ? plan[plan.length - 1].employees
+            : (b.est_method === "employees" || b.est_method === "blend") && b.jobs_reported ? b.jobs_reported * (Number(b.est_growth) || 1) : null;
+          const points = valueHistory({ valueNow: value?.mid ?? null, employeesNow: basisNow, ppp, plan });
+          return points ? <ValueChart points={points} /> : null;
+        })()}
+        <HeadcountChart
+          ppp={b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null}
+          plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
           <div className="section">
             <h2>What we know</h2>
             <div className="bp-known">
@@ -374,18 +387,6 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <CustomersSuppliers offering={src.website_offering} contracts={src.contracts} onSelect={onSelect} prospects={b.prospects ?? []} />
 
       {/* Financials */}
-        {(() => {
-          // Value over time: needs a headcount basis for today's estimate (PPP grown since, or the latest 401(k) count).
-          const ppp = b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null;
-          const plan = b.headcounts ?? [];
-          const basisNow = b.est_method === "retirement_plan" && plan.length ? plan[plan.length - 1].employees
-            : (b.est_method === "employees" || b.est_method === "blend") && b.jobs_reported ? b.jobs_reported * (Number(b.est_growth) || 1) : null;
-          const points = valueHistory({ valueNow: value?.mid ?? null, employeesNow: basisNow, ppp, plan });
-          return points ? <ValueChart points={points} /> : null;
-        })()}
-        <HeadcountChart
-          ppp={b.jobs_reported && !noLoan ? { year: pppYear(b.loans), employees: b.jobs_reported } : null}
-          plan={b.headcounts ?? []} revenuePerEmployee={b.revenue_per_employee} ebitdaMargin={margin} />
         {b.comps?.length ? (
           <div className="section">
             <h2>Compared with similar businesses nearby</h2>
