@@ -17,7 +17,7 @@ export type Filters = {
   years?: number;         // in business at least this many years
   owner?: boolean; phone?: boolean; email?: boolean; website?: boolean; contractor?: boolean;
   basis?: string[];       // reported | k401 | ppp | avg
-  noBranch?: boolean; noNonprofit?: boolean; noFranchise?: boolean; showPublic?: boolean;
+  noBranch?: boolean; noNonprofit?: boolean; noFranchise?: boolean; showPublic?: boolean; showNonprofit?: boolean;
   bbox?: [number, number, number, number]; // west, south, east, north
   area?: [number, number][];                // a shape drawn on the map: [lon, lat] corners
 };
@@ -60,7 +60,7 @@ export function parseFilters(p: URLSearchParams): Filters {
     website: p.get("website") === "1", contractor: p.get("contractor") === "1",
     basis: list(p.get("basis")).filter((b) => b in BASIS),
     noBranch: p.get("x_branch") === "1", noNonprofit: p.get("x_nonprofit") === "1", noFranchise: p.get("x_franchise") === "1",
-    showPublic: p.get("public") === "1",
+    showPublic: p.get("public") === "1", showNonprofit: p.get("nonprofit") === "1",
     area: parseArea(p.get("area")),
     bbox: bbox?.length === 4 && bbox.every(Number.isFinite) ? (bbox as Filters["bbox"]) : undefined,
   };
@@ -81,9 +81,14 @@ export const notPublic = sql`biz_key not in (select biz_key from business_source
 export const listWhere = (f: Filters) =>
   sql`${where(f)} and coalesce(est_method, '') <> 'branch' ${f.q || f.showPublic ? sql`` : sql`and ${notPublic}`}`;
 
+// Nonprofits and religious, civic and membership organizations (NAICS 813) can't be bought or sold, so
+// they're left out unless searched for by name or asked for ("Include nonprofits").
+const notNonprofit = sql`not is_nonprofit and not starts_with(coalesce(naics, ''), '813')`;
+
 export function where(f: Filters) {
   const prefixes = SECTORS.find((s) => s.label === f.sector)?.prefixes;
   const conds = [sql`true`];
+  if (!f.q && !f.showNonprofit) conds.push(notNonprofit);
   const code = naicsQuery(f.q);
   if (code) {
     // Every business whose code starts with it, plus map listings with only a coarser code that
@@ -197,6 +202,7 @@ export function mapSimple(f: Filters) {
 export function mapWhere(f: Filters) {
   const prefixes = SECTORS.find((s) => s.label === f.sector)?.prefixes;
   const conds = [sql`true`];
+  if (!f.showNonprofit) conds.push(notNonprofit);
   if (prefixes) conds.push(sql`left(naics, 2) in ${sql(prefixes)}`);
   if (f.naics?.length) conds.push(sql`(${industryMatch(f.naics)})`);
   if (f.minRev !== undefined) conds.push(sql`est_revenue_mid >= ${f.minRev}`);

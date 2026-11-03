@@ -46,7 +46,7 @@ export function activeChips(f: FilterState, lenderName: (key: string) => string)
     chips.push({ key: "lender", label: keys.length === 1 ? `Lender: ${lenderName(keys[0])}` : `${keys.length} lenders`, clear: { lender: "" } });
   }
   const flags: [string, string][] = [["owner", "Owner known"], ["phone", "Has phone"], ["email", "Has email"], ["website", "Has website"],
-    ["contractor", "Federal contractor"], ["public", "Incl. public companies"], ["x_branch", "No extra locations"],
+    ["contractor", "Federal contractor"], ["public", "Incl. public companies"], ["nonprofit", "Incl. nonprofits"], ["x_branch", "No extra locations"],
     ["x_nonprofit", "No nonprofits"], ["x_franchise", "No franchises"]];
   for (const [k, label] of flags) if (g(k)) chips.push({ key: k, label, clear: without(k) });
   if (g("basis")) chips.push({ key: "basis", label: `Based on: ${g("basis").split(",").length} source${g("basis").includes(",") ? "s" : ""}`, clear: without("basis") });

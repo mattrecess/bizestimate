@@ -46,7 +46,7 @@ export default function FilterPanel({ state, sections, cities, onApply, onClose 
   const SECTION_KEYS: Record<Section, string[]> = {
     industry: ["sector", "naics"],
     size: ["min_rev", "max_rev", "min_value", "max_value", "min_ebitda", "max_ebitda", "min_emp", "max_emp"],
-    more: ["sell", "years", "owner", "phone", "email", "website", "contractor", "lender", "city", "basis", "public", "x_branch", "x_nonprofit", "x_franchise"],
+    more: ["sell", "years", "owner", "phone", "email", "website", "contractor", "lender", "city", "basis", "public", "nonprofit", "x_branch", "x_nonprofit", "x_franchise"],
   };
   const reset = () => set(Object.fromEntries(sections.flatMap((s) => SECTION_KEYS[s]).map((k) => [k, ""])));
   const apply = () => {
@@ -149,7 +149,7 @@ export default function FilterPanel({ state, sections, cities, onApply, onClose 
               ))}
             </div>
             <h4>Public records</h4>
-            <div className="checks">{flag("contractor", "Federal contractor")}{flag("public", "Include public companies")}</div>
+            <div className="checks">{flag("contractor", "Federal contractor")}{flag("public", "Include public companies")}{flag("nonprofit", "Include nonprofits & religious organizations")}</div>
             <h4>Estimate based on</h4>
             <div className="checks">
               {BASIS.map(([k, label]) => (
@@ -158,7 +158,7 @@ export default function FilterPanel({ state, sections, cities, onApply, onClose 
               ))}
             </div>
             <h4>Leave out</h4>
-            <div className="checks">{flag("x_branch", "Extra locations on the map")}{flag("x_nonprofit", "Nonprofits")}{flag("x_franchise", "Franchises (from SBA loans)")}</div>
+            <div className="checks">{flag("x_branch", "Extra locations on the map")}{flag("x_franchise", "Franchises (from SBA loans)")}</div>
           </section>
         )}
       </div>
