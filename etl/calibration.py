@@ -95,12 +95,40 @@ def learn(cur, state, growth_factor=None):
         print(f"  {r[1]:10} {r[0]:6} x{r[2]:.2f} from {r[3]:,} examples (raw typically off {r[4]:.2f}x)", flush=True)
 
 
+def revenue_scale(scale):
+    """The admin's margin-by-size scale, entered as [[EBITDA, margin], ...] (an HVAC company with $500K of
+    EBITDA runs about 14%, one with $10M about 30%), as [(revenue, margin), ...] sorted by revenue: margin
+    can't be read off EBITDA directly, since EBITDA is revenue x margin."""
+    points = []
+    for item in scale or []:
+        try:
+            ebitda, m = float(item[0]), float(item[1])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if ebitda > 0 and 0 < m < 1:
+            points.append((ebitda / m, m))
+    return sorted(points) or None
+
+
+def scaled_margin(points, revenue):
+    """Margin at a revenue: straight between the scale's points (on a log revenue scale), flat beyond them."""
+    if revenue <= points[0][0]:
+        return points[0][1]
+    for (r0, m0), (r1, m1) in zip(points, points[1:]):
+        if revenue <= r1:
+            t = math.log(revenue / r0) / math.log(r1 / r0)
+            return m0 + t * (m1 - m0)
+    return points[-1][1]
+
+
 class Calibration:
     def __init__(self, cur):
         cur.execute("select naics_prefix, segment, revenue_factor from industry_calibration")
         self.learned = {(p, s): float(f) for p, s, f in cur.fetchall()}
-        cur.execute("select naics_prefix, revenue_per_employee, ebitda_margin, multiple from industry_overrides")
-        self.overrides = {p: (rpe, margin, mult) for p, rpe, margin, mult in cur.fetchall()}
+        # to_jsonb: tolerant of a database without the margin_scale column yet
+        cur.execute("""select naics_prefix, revenue_per_employee, ebitda_margin, multiple, to_jsonb(o) -> 'margin_scale'
+                       from industry_overrides o""")
+        self.overrides = {p: (rpe, margin, mult, revenue_scale(scale)) for p, rpe, margin, mult, scale in cur.fetchall()}
         self.bench, self.adjust = load_benchmarks(), Adjust()
         cur.execute("select value from estimate_settings where key = 'annual_growth'")
         row = cur.fetchone()
@@ -143,9 +171,15 @@ class Calibration:
                 return self.learned[(code[:n], segment)]
         return 1.0
 
-    def margin(self, naics):
+    def margin(self, naics, revenue=None):
+        """The admin's EBITDA margin for the industry: from its margin-by-size scale at this revenue when it
+        has one, else its single margin; None when the admin hasn't set either."""
         o = self._override(naics)
-        return float(o[1]) if o and o[1] else None
+        if not o:
+            return None
+        if o[3] and revenue:
+            return scaled_margin(o[3], revenue)
+        return float(o[1]) if o[1] else None
 
     def apply_growth(self, cur):
         """Bring PPP-era staged estimates up to date at the annual growth rate (before calibration, and
@@ -176,11 +210,12 @@ class Calibration:
             f, margin = 1.0, None
             if method in CALIBRATED:
                 f = self.factor(naics, str(nonprofit).lower() in ("true", "t"))
-                margin = self.margin(naics)
+                margin = self.margin(naics, rm * f)
                 calibrated += abs(f - 1) >= 0.005 or margin is not None
             rl, rm, rh = (x * f if x is not None else None for x in (rl, rm, rh))
             if margin is not None:
-                el, em, eh = (x * margin if x is not None else None for x in (rl, rm, rh))
+                # Each end of the range at its own size's margin, where the admin set a margin-by-size scale.
+                el, em, eh = (x * (self.margin(naics, x) or margin) if x is not None else None for x in (rl, rm, rh))
             else:
                 el, em, eh = (x * f if x is not None else None for x in (el, em, eh))
             rm, em = self.tilted(rm, rh), self.tilted(em, eh)

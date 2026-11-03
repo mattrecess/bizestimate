@@ -384,3 +384,7 @@ alter table businesses add column if not exists naics_recorded text;
 -- contact-use terms, which Pro users must do before owners' phone numbers are shown.
 alter table users add column if not exists plan text not null default 'free';
 alter table users add column if not exists contact_terms_at timestamptz;
+
+-- The admin's EBITDA margin by company size for an industry, as [[EBITDA, margin], ...]
+-- (e.g. 238220: [[500000, 0.14], [1000000, 0.18], [5000000, 0.24], [10000000, 0.30]]); wins over ebitda_margin.
+alter table industry_overrides add column if not exists margin_scale jsonb;
