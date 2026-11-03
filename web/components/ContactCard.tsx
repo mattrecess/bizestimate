@@ -5,9 +5,9 @@ import type { OwnerContact } from "@/lib/pdl";
 import { askSignIn } from "@/lib/saved";
 
 // Published contact details, loaded on request so they aren't in the page crawlers read.
-export default function ContactCard({ id, owner, embedded = false }: { id: string; name: string; owner: string | null; embedded?: boolean }) {
+export default function ContactCard({ id, name, owner, embedded = false }: { id: string; name: string; owner: string | null; embedded?: boolean }) {
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
-  const [contact, setContact] = useState<Contact | null>(null);
+  const [contact, setContact] = useState<(Contact & { allowance?: { used: number; limit: number; plan: string } | null }) | null>(null);
   const [error, setError] = useState("");
   const [ownerInfo, setOwnerInfo] = useState<(OwnerContact & { owner: string; phonesHidden?: number; phonesBlocked?: "pro" | "terms" | null }) | null>(null);
   const [agreed, setAgreed] = useState(false);
@@ -41,6 +41,13 @@ export default function ContactCard({ id, owner, embedded = false }: { id: strin
     try {
       const res = await fetch(`/api/contact/${id}`);
       const data = await res.json();
+      // Signed-in users only, so many businesses a month on the free plan (lib/reveals.ts).
+      if (res.status === 401) { setState("idle"); askSignIn({ contactFor: name }); return; }
+      if (res.status === 402) {
+        setState("idle");
+        window.dispatchEvent(new CustomEvent("upgrade-needed", { detail: { used: data.used, limit: data.limit, price: data.price } }));
+        return;
+      }
       if (!res.ok) throw new Error(data.error || "Couldn't load contact details.");
       setContact(data);
       setState("idle");
@@ -64,6 +71,10 @@ export default function ContactCard({ id, owner, embedded = false }: { id: strin
         )}
       </div>
       {state === "error" && <p className="disclaimer">{error}</p>}
+      {contact?.allowance && contact.allowance.plan !== "pro" && (
+        <p className="disclaimer reveals-left">{Math.max(contact.allowance.limit - contact.allowance.used, 0)} of {contact.allowance.limit} free
+          contact lookups left this month</p>
+      )}
       {contact?.hidden && <p className="disclaimer">This business asked for its contact details not to be shown.</p>}
       {empty && !contact?.hidden && <p className="disclaimer">No published phone or email found yet.</p>}
       {contact && (

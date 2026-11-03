@@ -3,11 +3,11 @@ import { sql } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { lookupOwner, pdlConfigured, type OwnerContact } from "@/lib/pdl";
+import { revealedThisMonth } from "@/lib/reveals";
 
-// "Get owner contact": the owner's email and phone from People Data Labs, for signed-in users, a set
-// number of businesses a month each. A lookup is saved and reused for everyone (PDL is paid per match),
+// "Get owner contact": the owner's email and phone from People Data Labs, for signed-in users who have
+// revealed this business's contacts this month (which is what's counted, lib/reveals.ts). A lookup is saved and reused for everyone (PDL is paid per match),
 // and redone after LOOKUP_DAYS in case the person changed jobs.
-const MONTHLY = Number(process.env.OWNER_LOOKUPS_PER_MONTH) || 25;
 const LOOKUP_DAYS = 180;
 
 async function tables() {
@@ -33,10 +33,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (optout) return NextResponse.json({ error: "This business asked for its contact details not to be shown." }, { status: 403 });
 
   await tables();
-  if (user) {
-    const [{ n }] = await sql<{ n: number }[]>`select count(*)::int as n from owner_contact_reveals
-      where user_id = ${user.id} and revealed_at > date_trunc('month', now()) and biz_key <> ${b.biz_key}`;
-    if (n >= MONTHLY) return NextResponse.json({ error: `You've used this month's ${MONTHLY} owner lookups.` }, { status: 429 });
+  // Counted with the business's contacts (lib/reveals.ts): the owner's come only after those were shown.
+  if (user && !admin && !(await revealedThisMonth(user, b.biz_key))) {
+    return NextResponse.json({ error: "Show this business's contact info first." }, { status: 402 });
   }
 
   const [saved] = await sql<{ data: OwnerContact }[]>`select data from owner_contacts
@@ -52,7 +51,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     await sql`insert into owner_contacts (biz_key, data, found) values (${b.biz_key}, ${sql.json(result)}, ${result.found})
       on conflict (biz_key) do update set data = excluded.data, found = excluded.found, fetched_at = now()`;
   }
-  if (user) await sql`insert into owner_contact_reveals (user_id, biz_key) values (${user.id}, ${b.biz_key}) on conflict do nothing`;
   // Phone numbers from PDL may be personal cell phones: shown only to Pro users who have accepted the
   // contact-use terms (no auto-dialing or texting without consent, Do Not Call checks), and to the admin.
   const phonesBlocked = admin ? null : user?.plan !== "pro" ? "pro" : !user.contact_terms_at ? "terms" : null;

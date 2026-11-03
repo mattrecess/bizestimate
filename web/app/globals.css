@@ -803,3 +803,8 @@ tr.ref-own td { background: #eef4ff; }
 .phone-gate.terms ul { margin: 4px 0 8px; padding-left: 18px; font-size: 13px; color: var(--muted); }
 .phone-gate.terms .check { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 8px; }
 .phone-gate.terms .btn { height: 32px; font-size: 13px; }
+.upgrade-list { text-align: left; margin: 0 auto 14px; padding-left: 20px; max-width: 280px; font-size: 14px; color: var(--text); line-height: 1.7; }
+.upgrade-price { font-size: 15px; color: var(--muted); margin-bottom: 14px; }
+.upgrade-price b { font-size: 28px; color: var(--text); letter-spacing: -.02em; }
+.upgrade-reset { margin: 12px 0 0 !important; font-size: 12.5px !important; }
+.reveals-left { margin: 4px 0 0; }
