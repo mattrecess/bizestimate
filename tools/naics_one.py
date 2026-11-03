@@ -5,7 +5,7 @@ import os
 
 import psycopg
 
-NAME = "%gideon steel%"
+NAME = "%minick%"
 url = os.environ["DATABASE_URL"].strip().strip('"').replace("[", "").replace("]", "")
 with psycopg.connect(url, connect_timeout=60) as conn, conn.cursor() as cur:
     cur.execute("select biz_key, id, name, naics, to_jsonb(b) ->> 'naics_recorded', est_method from businesses b where name ilike %s", (NAME,))
