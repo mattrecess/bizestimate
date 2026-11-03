@@ -307,11 +307,9 @@ export default function BusinessProfile({ b, compact = false, onSelect }: {
           <button type="button" className="link-btn bp-team-more" onClick={() => setShowTeam((v) => !v)}>
             {showTeam ? "Show fewer" : `Show all ${team.length + 1} people`}</button>
         )}
-        {lead.depth && (
-          <div className={`bp-depth ${lead.depth}`}>
-            {lead.depth === "team"
-              ? <><b>Has a management team.</b> Someone besides the owner runs part of the business, which buyers pay more for.</>
-              : <><b>Owner-run.</b> We haven&apos;t found a manager besides the owner. Buyers usually pay less when a business depends on its owner.</>}
+        {lead.depth === "team" && (
+          <div className="bp-depth team">
+            <b>Has a management team.</b> Someone besides the owner runs part of the business, which buyers pay more for.
           </div>
         )}
       </div>
