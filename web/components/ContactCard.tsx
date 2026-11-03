@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import type { Contact } from "@/lib/contact";
 import type { OwnerContact } from "@/lib/pdl";
 import { askSignIn } from "@/lib/saved";
@@ -135,9 +134,6 @@ export default function ContactCard({ id, owner, embedded = false }: { id: strin
           {ownerError && <p className="disclaimer">{ownerError}</p>}
         </div>
       )}
-      <div className="contact-foot">
-        <Link href={`/contact-request?business=${id}`}>Request removal or correction</Link>
-      </div>
     </div>
   );
 }
