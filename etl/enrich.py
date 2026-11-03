@@ -37,6 +37,12 @@ def save(cur, state, source, rows):
 
 def apply_reported(cur, state):
     """Use reported revenue (SEC, bank call reports, Form 990) in place of our estimate."""
+    # A Form 990 filer is a nonprofit, whatever its loan application said: the site leaves nonprofits
+    # out of the map and list unless asked (web/lib/queries.ts).
+    cur.execute("""update businesses b set is_nonprofit = true from business_sources s
+                   where s.biz_key = b.biz_key and s.source = 'irs990' and b.state = %s and not b.is_nonprofit""", (state,))
+    if cur.rowcount:
+        print(f"Nonprofits flagged from Form 990 filings: {cur.rowcount:,}", flush=True)
     cur.execute("""
         select distinct on (s.biz_key) s.biz_key, s.source, s.data, b.naics, b.est_method, b.est_revenue_mid
         from business_sources s join businesses b on b.biz_key = s.biz_key
