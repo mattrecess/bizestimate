@@ -1,6 +1,6 @@
 """One-off (Nov 3, at the owner's request): wholesale figures. All wholesalers (NAICS 42): $550K revenue per
 employee in today's dollars (Census wholesale figures, dominated by big distributors, put small Oklahoma
-wholesalers at about 3x their real revenue: Minick Materials ~$17M actual vs $52M estimated). Building-material
+wholesalers at several times their real revenue). Building-material
 distributors (4233): 10% EBITDA margin. Same rows the /admin/industries form writes; other figures already
 set for these codes are kept. Run via the DB probe workflow (script: set_wholesale)."""
 import os
