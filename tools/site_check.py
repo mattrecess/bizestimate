@@ -7,6 +7,7 @@ Exits with an error listing what failed (the Run alerts workflow then opens an i
 import json
 import sys
 import time
+import urllib.error
 import urllib.request
 
 BASE = (sys.argv[1] if len(sys.argv) > 1 else "https://www.seebitda.com").rstrip("/")
@@ -50,6 +51,15 @@ if listing:
     check("business profile (panel)", f"/api/businesses/{first}?core=1", lambda b: j(b).get("name"))
     check("business profile (related)", f"/api/businesses/{first}/related", lambda b: "comps" in j(b))
     check("business page", f"/business/{first}", lambda b: b"Est" in b)
+    # Contact info is for signed-in users only: signed out, it's refused (401).
+    try:
+        get(f"/api/contact/{first}")
+        print("FAIL contact info shown without signing in", flush=True)
+        problems.append("contact info shown without signing in")
+    except urllib.error.HTTPError as e:
+        print(f"{'ok  ' if e.code == 401 else 'FAIL'}        contact info needs sign-in ({e.code})", flush=True)
+        if e.code != 401:
+            problems.append(f"contact info: unexpected {e.code}")
 check("industry pages", "/oklahoma", lambda b: b"/oklahoma/" in b)
 check("NAICS list", "/api/naics", lambda b: len(j(b)) > 100)
 check("lenders", "/api/lenders", lambda b: isinstance(j(b), list))
