@@ -23,7 +23,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       : `${name} (${where}): owner, revenue & value | SeeBITDA`,
     description: `${b.owner_name ? `${name} is owned by ${b.owner_name}. ` : ""}${b.industry ?? "Business"} in ${where} with estimated ` +
       `revenue of ${money(b.est_revenue_mid)} and EBITDA of ${money(b.est_ebitda_mid)}, from public records. Owner, value, employees and history.`,
-    alternates: { canonical: `/business/${b.id}` },
+    // A branch location's page points search engines at its company's page, so the company's name
+    // ranks as one page rather than several near-copies competing with each other.
+    alternates: { canonical: `/business/${b.est_method === "branch" && b.parent_id ? b.parent_id : b.id}` },
   };
 }
 
