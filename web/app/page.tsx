@@ -61,7 +61,7 @@ export default function Home() {
   // Business shown in the side panel (replaces the list until "Back").
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  // The open business's website, shown over half the map beside its details (wide screens).
+  // The open business's website, shown over two-thirds of the map beside its details (wide screens).
   const [preview, setPreview] = useState<string | null>(null);
   useEffect(() => setPreview(null), [selectedId, layout]);
   const panel = useRef<HTMLDivElement>(null);
