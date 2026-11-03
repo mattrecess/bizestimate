@@ -251,6 +251,45 @@ def group_chains(added, cities, margins):
     return folded
 
 
+MASS_CHAIN = 15        # a name on this many map-only listings is a chain or kiosk brand, not that many businesses
+BIG_CITIES = ("Oklahoma City", "Tulsa")
+
+
+def chain_key(name):
+    return " ".join(re.sub(r"[^a-z0-9 ]", " ", (name or "").lower().replace("'", "")).split())
+
+
+def collapse_mass_chains(added):
+    """National chains and kiosk brands (Western Union counters, Blue Rhino propane cages, Dollar General,
+    Redbox...) appear on the map once per store: hundreds of "businesses", each with the same industry-average
+    estimate. Each such name becomes one listing that says how many Oklahoma locations it has; the other
+    copies are dropped. A longer name that starts with a chain's name joins it ("Blue Rhino Propane Exchange"
+    with "Blue Rhino"). Only map-only listings: a business with its own loan or filings stays as it is."""
+    counts = defaultdict(int)
+    for r in added:
+        if r["est_method"] == "industry_average":
+            counts[chain_key(r["name"])] += 1
+    # A family is a name and every longer name starting with it. A one-word name ("Subway") heads a family
+    # only when it's a chain by itself, so a lone "Bank" or "Quality" can't gather unrelated businesses.
+    def family(root):
+        return sum(n for k, n in counts.items() if k == root or k.startswith(root + " "))
+    roots = sorted((k for k in counts if len(k) >= 3 and (counts[k] >= MASS_CHAIN or len(k.split()) >= 2)), key=len)
+    mass = [k for k in roots if family(k) >= MASS_CHAIN]
+    group_of = {k: next((m for m in mass if k == m or k.startswith(m + " ")), None) for k in counts}
+    groups = defaultdict(list)
+    for r in added:
+        g = group_of.get(chain_key(r["name"])) if r["est_method"] == "industry_average" else None
+        if g:
+            groups[g].append(r)
+    drop = set()
+    for g, members in groups.items():
+        head = max(members, key=lambda r: (r.get("city") in BIG_CITIES, bool(r.get("website")), bool(r.get("phone"))))
+        head["chain_locations"] = len(members)
+        drop.update(id(r) for r in members if r is not head)
+    kept = [r for r in added if id(r) not in drop]
+    return kept, len(groups), len(drop)
+
+
 SUMMED = ("est_revenue_low", "est_revenue_mid", "est_revenue_high", "est_ebitda_low", "est_ebitda_mid",
           "est_ebitda_high", "jobs_reported", "est_payroll", "est_revenue_by_employees", "est_revenue_by_payroll",
           "total_ppp_amount")
@@ -418,6 +457,8 @@ def main():
             "phone": pick_phone(get("phones")) or "", "source": "overture",
         })
 
+    added, chains, collapsed = collapse_mass_chains(added)
+    print(f"Places-only: {chains:,} chain and kiosk brands shown once each ({collapsed:,} repeat listings dropped)", flush=True)
     grouped = group_chains(added, cities, margins)
     write_rows(BIZ_CSV, fields, rows + added)
     print(f"Places-only: added {len(added):,} businesses without loan data; skipped {dict(skipped)}; "

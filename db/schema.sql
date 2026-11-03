@@ -388,3 +388,7 @@ alter table users add column if not exists contact_terms_at timestamptz;
 -- The admin's EBITDA margin by company size for an industry, as [[EBITDA, margin], ...]
 -- (e.g. 238220: [[500000, 0.14], [1000000, 0.18], [5000000, 0.24], [10000000, 0.30]]); wins over ebitda_margin.
 alter table industry_overrides add column if not exists margin_scale jsonb;
+
+-- A chain or kiosk brand shown once on the map (etl/places_only.py collapse_mass_chains): its number of
+-- Oklahoma locations.
+alter table businesses add column if not exists chain_locations int;
