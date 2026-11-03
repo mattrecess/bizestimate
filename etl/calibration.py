@@ -150,11 +150,15 @@ class Calibration:
         return (1 + self.growth) ** years / (self.adjust.inflation(2020) * (job_growth or 1))
 
     def _override(self, naics):
+        """The admin's figures for this code, each from the most specific industry that sets it: a margin
+        for 4233 and a revenue per employee for all of 42 both apply to a 423320 business."""
         code = naics or ""
+        found = [None, None, None, None]
         for n in range(min(len(code), 6), 1, -1):
-            if code[:n] in self.overrides:
-                return self.overrides[code[:n]]
-        return None
+            o = self.overrides.get(code[:n])
+            if o:
+                found = [mine if mine is not None else theirs for mine, theirs in zip(found, o)]
+        return tuple(found) if any(v is not None for v in found) else None
 
     def factor(self, naics, nonprofit):
         """Revenue factor for a raw estimate: the admin's revenue per employee, else the learned one, else 1."""
