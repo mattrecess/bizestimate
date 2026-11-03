@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Industry figures | Admin | SeeBITDA", robots: { index: false, follow: false } };
 
 type Override = { naics_prefix: string; revenue_per_employee: string | null; ebitda_margin: string | null; multiple: string | null;
+  margin_scale: [number, number][] | null;
   note: string | null; updated_at: string; label: string | null; bench_rpe: string | null; businesses: number };
 type Reference = { naics_prefix: string; label: string | null; businesses: number; revenue_per_employee: string | null;
   margin_1m: string | null; margin_5m: string | null; margin_20m: string | null; multiple: string | null;
@@ -43,6 +44,26 @@ async function save(form: FormData) {
     values (${prefix}, ${rpe}, ${margin}, ${multiple}, ${String(form.get("note") ?? "").trim() || null}, now())
     on conflict (naics_prefix) do update set revenue_per_employee = excluded.revenue_per_employee,
       ebitda_margin = excluded.ebitda_margin, multiple = excluded.multiple, note = excluded.note, updated_at = now()`;
+  revalidatePath("/admin/industries");
+  redirect("/admin/industries?saved=1");
+}
+
+// "500k:14%, 1M:18%, 5M:24%, 10M:30%" -> [[500000, 0.14], ...]: EBITDA size -> margin. Empty clears it.
+async function saveScale(form: FormData) {
+  "use server";
+  await guard();
+  const prefix = String(form.get("naics") ?? "").trim();
+  if (!/^\d{2,6}$/.test(prefix)) redirect("/admin/industries?error=naics");
+  const text = String(form.get("scale") ?? "").trim();
+  const points = text ? text.split(/[,;\n]+/).map((part) => {
+    const [size, m] = part.split(/[:=@]| at /i).map((x) => x.trim());
+    return [dollars(size), share(m)] as [number | null, number | null];
+  }) : [];
+  if (points.some(([e, m]) => !e || !m || m >= 1)) redirect("/admin/industries?error=scale");
+  const scale = points.length ? (points as [number, number][]).sort((a, b) => a[0] - b[0]) : null;
+  await sql`alter table industry_overrides add column if not exists margin_scale jsonb`;
+  await sql`insert into industry_overrides (naics_prefix, margin_scale, updated_at) values (${prefix}, ${scale ? sql.json(scale) : null}, now())
+    on conflict (naics_prefix) do update set margin_scale = excluded.margin_scale, updated_at = now()`;
   revalidatePath("/admin/industries");
   redirect("/admin/industries?saved=1");
 }
@@ -86,7 +107,7 @@ export default async function Industries({ searchParams }: { searchParams: Promi
   await guard();
   const p = await searchParams;
   const overrides = await sql<Override[]>`
-    select o.naics_prefix, o.revenue_per_employee, o.ebitda_margin, o.multiple, o.note, o.updated_at::date::text,
+    select o.naics_prefix, o.revenue_per_employee, o.ebitda_margin, o.multiple, to_jsonb(o) -> 'margin_scale' as margin_scale, o.note, o.updated_at::date::text,
            (select label from industry_benchmarks where o.naics_prefix like naics_prefix || '%' order by length(naics_prefix) desc limit 1) as label,
            (select revenue_per_employee from industry_benchmarks where o.naics_prefix like naics_prefix || '%' order by length(naics_prefix) desc limit 1) as bench_rpe,
            (select count(*)::int from businesses where naics like o.naics_prefix || '%') as businesses
@@ -113,6 +134,7 @@ export default async function Industries({ searchParams }: { searchParams: Promi
       {p.saved && <p className="badge good">Saved. It takes effect on the next data load.</p>}
       {p.error === "naics" && <p className="badge warn">Enter a NAICS code of 2 to 6 digits.</p>}
       {p.error === "empty" && <p className="badge warn">Enter at least one figure.</p>}
+      {p.error === "scale" && <p className="badge warn">Write the scale as EBITDA:margin pairs, e.g. 500k:14%, 1M:18%, 5M:24%, 10M:30%.</p>}
       {p.error === "growth" && <p className="badge warn">Enter a growth rate between 0% and 50%.</p>}
       {p.error === "tilt" && <p className="badge warn">Enter a tilt between 0% (middle) and 100% (top of the range).</p>}
       <h2>Growth since 2020</h2>
@@ -144,6 +166,15 @@ export default async function Industries({ searchParams }: { searchParams: Promi
         <input name="note" placeholder="Source / note (private)" />
         <button className="btn primary">Save</button>
       </form>
+      <h3>EBITDA margin by company size</h3>
+      <p className="disclaimer">For industries where bigger companies run fatter margins: the margin at a few EBITDA sizes. In between,
+        the margin rises smoothly; below the smallest size it stays at the first margin, above the largest at the last. Wins over the
+        single margin above. Leave the scale empty and save to remove it.</p>
+      <form action={saveScale} className="admin-form">
+        <input name="naics" placeholder="NAICS code (e.g. 238220)" required inputMode="numeric" />
+        <input name="scale" placeholder="EBITDA:margin, e.g. 500k:14%, 1M:18%, 5M:24%, 10M:30%" style={{ minWidth: 340 }} />
+        <button className="btn primary">Save scale</button>
+      </form>
       {overrides.length > 0 && (
         <table>
           <thead><tr><th>Industry</th><th className="num">Revenue / employee (yours, today vs Census, survey year)</th><th className="num">EBITDA margin</th><th className="num">Multiple</th><th /></tr></thead>
@@ -153,7 +184,10 @@ export default async function Industries({ searchParams }: { searchParams: Promi
                 <td><b>{o.naics_prefix}</b> {labelOf(o.naics_prefix) ?? o.label}<div className="disclaimer" style={{ margin: 0 }}>
                   {o.businesses.toLocaleString()} businesses · {o.updated_at}{o.note ? ` · ${o.note}` : ""}</div></td>
                 <td className="num">{o.revenue_per_employee ? money(o.revenue_per_employee) : "—"} / {money(o.bench_rpe)}</td>
-                <td className="num">{o.ebitda_margin ? `${(Number(o.ebitda_margin) * 100).toFixed(1)}%` : "—"}</td>
+                <td className="num">{o.margin_scale?.length
+                  ? o.margin_scale.map(([e, m]) => `${money(e)}: ${Math.round(m * 1000) / 10}%`).join(" · ")
+                  : o.ebitda_margin ? `${(Number(o.ebitda_margin) * 100).toFixed(1)}%` : "—"}
+                  {o.margin_scale?.length ? <div className="disclaimer" style={{ margin: 0 }}>by EBITDA size</div> : null}</td>
                 <td className="num">{o.multiple ? `${Number(o.multiple).toFixed(1)}×` : "—"}<div className="disclaimer" style={{ margin: 0 }}>
                   ours {estimateValue({ naics: o.naics_prefix, est_ebitda_mid: 1e6 })?.multiple ?? "—"}×</div></td>
                 <td><form action={remove}><input type="hidden" name="naics" value={o.naics_prefix} /><button className="link-btn">Remove</button></form></td>

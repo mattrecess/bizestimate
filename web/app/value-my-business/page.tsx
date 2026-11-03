@@ -14,7 +14,21 @@ export const metadata = {
 };
 
 type Ref = { naics_prefix: string; margin_1m: string | null; margin_5m: string | null; margin_20m: string | null };
-type Override = { naics_prefix: string; ebitda_margin: string | null; multiple: string | null };
+type Override = { naics_prefix: string; ebitda_margin: string | null; multiple: string | null; margin_scale: [number, number][] | null };
+
+// The admin's margin-by-size scale ([[EBITDA, margin], ...]) at a revenue, as the data load reads it
+// (etl/calibration.py): points turned into revenue (EBITDA / margin), straight between them on a log
+// revenue scale, flat beyond.
+function scaledMargin(scale: [number, number][], revenue: number) {
+  const pts = scale.filter(([e, m]) => e > 0 && m > 0 && m < 1).map(([e, m]) => [e / m, m]).sort((a, b) => a[0] - b[0]);
+  if (!pts.length) return null;
+  if (revenue <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    const [r0, m0] = pts[i - 1], [r1, m1] = pts[i];
+    if (revenue <= r1) return m0 + (Math.log(revenue / r0) / Math.log(r1 / r0)) * (m1 - m0);
+  }
+  return pts[pts.length - 1][1];
+}
 
 // Longest NAICS prefix in the table that the code starts with.
 const longest = <T extends { naics_prefix: string }>(rows: T[], code: string) =>
@@ -25,7 +39,8 @@ const longest = <T extends { naics_prefix: string }>(rows: T[], code: string) =>
 async function industries(): Promise<CalcIndustry[]> {
   const [refs, overrides] = await Promise.all([
     sql<Ref[]>`select naics_prefix, margin_1m, margin_5m, margin_20m from industry_reference`.catch(() => [] as Ref[]),
-    sql<Override[]>`select naics_prefix, ebitda_margin, multiple from industry_overrides`.catch(() => [] as Override[]),
+    sql<Override[]>`select naics_prefix, ebitda_margin, multiple, to_jsonb(o) -> 'margin_scale' as margin_scale
+      from industry_overrides o`.catch(() => [] as Override[]),
   ]);
   const atRef = sizeMultiple(1_000_000);
   return INDUSTRIES.map((i) => {
@@ -37,7 +52,8 @@ async function industries(): Promise<CalcIndustry[]> {
       label: i.label, slug: slug(i.label),
       // The admin's multiple is for a company with about $1M of EBITDA; it scales with size like the rest.
       factor: o?.multiple ? Number(o.multiple) / atRef : industryFactor(code),
-      margins: o?.ebitda_margin ? [Number(o.ebitda_margin), Number(o.ebitda_margin), Number(o.ebitda_margin)]
+      margins: o?.margin_scale?.length ? [1e6, 5e6, 2e7].map((r) => scaledMargin(o.margin_scale!, r) ?? 0.1)
+        : o?.ebitda_margin ? [Number(o.ebitda_margin), Number(o.ebitda_margin), Number(o.ebitda_margin)]
         : r ? [n(r.margin_1m) ?? 0.1, n(r.margin_5m) ?? 0.1, n(r.margin_20m) ?? 0.1] : [0.1, 0.1, 0.1],
     };
   }).sort((a, b) => a.label.localeCompare(b.label));
