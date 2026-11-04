@@ -5,9 +5,14 @@ import os
 
 import psycopg
 
-NAMES = ["%lightle%", "%vantage point%"]
+NAMES = ["%lightle%", "%vantage point%", "minick%", "earnheart%", "imagenet%"]
 url = os.environ["DATABASE_URL"].strip().strip('"').replace("[", "").replace("]", "")
 with psycopg.connect(url, connect_timeout=60) as conn, conn.cursor() as cur:
+    cur.execute("select source, year, count(*) from headcounts group by 1, 2 order by 1, 2")
+    print("headcounts by source and year:", cur.fetchall())
+    cur.execute("""select count(*) from businesses b where exists (select 1 from headcounts h where h.biz_key = b.biz_key
+                   and h.source = 'form5500' and h.year >= extract(year from now())::int - 2)""")
+    print("businesses with a 401(k) count from the last two plan years:", cur.fetchone()[0])
     for NAME in NAMES:
         print("=====", NAME)
         cur.execute("""select biz_key, id, name, city, naics, industry, est_method, est_confidence, jobs_reported,
