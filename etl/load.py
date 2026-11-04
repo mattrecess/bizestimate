@@ -12,6 +12,7 @@ import csv
 import os
 import re
 import time
+import urllib.request
 from urllib.parse import unquote, urlparse
 
 import psycopg
@@ -266,6 +267,20 @@ def main():
             industry_reference.refresh(cur, state.upper())
     except psycopg.Error as e:
         print(f"Industry reference failed (non-fatal): {e}", flush=True)
+    # Stamp the load, then ask the site to refresh its cached pages (it does only when there's a newer
+    # stamp than its last refresh: /api/revalidate). Otherwise business pages kept old figures for a day.
+    try:
+        with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
+            cur.execute("insert into etl_state (key, value, updated_at) values ('last_load', to_jsonb(now()), now()) "
+                        "on conflict (key) do update set value = excluded.value, updated_at = now()")
+    except psycopg.Error as e:
+        print(f"Load stamp failed (non-fatal): {e}", flush=True)
+    site = os.environ.get("SITE_URL", "https://www.seebitda.com").rstrip("/")
+    try:
+        with urllib.request.urlopen(f"{site}/api/revalidate", timeout=60) as r:
+            print(f"Site pages refreshed: {r.read()[:200].decode('utf-8', 'replace')}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"Site page refresh failed (non-fatal): {e!r}", flush=True)
 
 
 if __name__ == "__main__":
