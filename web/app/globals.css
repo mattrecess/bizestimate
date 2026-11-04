@@ -777,6 +777,11 @@ tr.ref-own td { background: #eef4ff; }
   .bp-own.corporate { background: #3a2a12; color: #ffc77a; border-color: #4d3818; }
 }
 .bp-owner-site { display: inline-flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 13px; font-weight: 600; color: var(--accent); }
+.bp-own.sm { margin: 0; font-size: 11.5px; padding: 1px 7px; white-space: nowrap; }
+.t-pro { border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); border-radius: 999px; font-size: 11.5px;
+  font-weight: 650; padding: 1px 8px; cursor: pointer; }
+.t-pro::before { content: "🔒 "; }
+.t-nowrap { white-space: nowrap; }
 .bp-owner-h { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .bp-team { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .bp-team li { display: flex; gap: 10px; align-items: center; }

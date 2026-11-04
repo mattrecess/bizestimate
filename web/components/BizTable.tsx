@@ -1,4 +1,6 @@
 "use client";
+import { useEffect, useState } from "react";
+import type { Extras } from "@/lib/extras";
 import { money } from "@/lib/format";
 import { industryLabel } from "@/lib/industries";
 import { displayName } from "@/lib/seo";
@@ -16,14 +18,36 @@ const COLS: { label: string; sort?: string; flip?: string; num?: boolean; cls?: 
   { label: "Revenue", sort: "revenue_desc", flip: "revenue_asc", num: true },
   { label: "EBITDA", sort: "ebitda_desc", num: true },
   { label: "Employees", sort: "jobs_desc", num: true },
-  { label: "Owner", cls: "hide-md" },
+  { label: "Ownership" },
+  { label: "Owner" },
+  { label: "Bank", cls: "hide-md" },
+  { label: "Email" },
+  { label: "Phone" },
   { label: "Sale signs", sort: "sell_desc", num: true },
 ];
+
+// Columns that aren't in the list results (ownership, current owner, bank, Pro contacts), for the rows shown.
+function useExtras(ids: string[]) {
+  const [state, setState] = useState<{ pro: boolean; extras: Record<number, Extras> }>({ pro: false, extras: {} });
+  const key = ids.join(",");
+  useEffect(() => {
+    if (!key) return;
+    let live = true;
+    fetch(`/api/businesses/extras?ids=${key}`).then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (live && d) setState((s) => ({ pro: d.pro, extras: { ...s.extras, ...d.extras } })); }).catch(() => {});
+    return () => { live = false; };
+  }, [key]);
+  return state;
+}
+
+const upgrade = () => window.dispatchEvent(new CustomEvent("upgrade-needed", { detail: { used: 0, limit: 0, price: "$99", kind: "table" } }));
 
 // The search as a spreadsheet-style table: every column at a glance, sortable from the headers.
 export default function BizTable({ rows, sort, onSort, onOpen, selectedId }: {
   rows: Biz[]; sort: string; onSort: (sort: string) => void; onOpen: (id: number) => void; selectedId: number | null;
 }) {
+  const { pro, extras } = useExtras(rows.map((b) => String(b.id)).slice(0, 200));
+  const locked = <button type="button" className="t-pro" onClick={(e) => { e.stopPropagation(); upgrade(); }}>Pro</button>;
   return (
     <table className="biz-table">
       <thead>
@@ -60,7 +84,19 @@ export default function BizTable({ rows, sort, onSort, onOpen, selectedId }: {
               <td className="num">{money(b.est_revenue_mid)}</td>
               <td className="num">{money(b.est_ebitda_mid)}</td>
               <td className="num">{b.jobs_reported ?? "—"}</td>
-              <td className="hide-md">{b.owner_name ?? <span className="t-muted">—</span>}</td>
+              {(() => {
+                const x = extras[Number(b.id)];
+                const dash = <span className="t-muted">—</span>;
+                return (<>
+                  <td>{x ? <span className={`bp-own sm ${x.ownership.kind}`}>{x.ownership.label}</span> : dash}</td>
+                  <td>{x?.current_owner ?? b.owner_name ?? dash}</td>
+                  <td className="hide-md t-muted">{x?.bank ?? "—"}</td>
+                  <td onClick={(e) => e.stopPropagation()}>{!pro ? locked : x?.email
+                    ? <a href={`mailto:${x.email}`} title={x.email_owner ? "Owner's email" : "Business email"}>{x.email}</a> : dash}</td>
+                  <td onClick={(e) => e.stopPropagation()} className="t-nowrap">{!pro ? locked : x?.phone
+                    ? <a href={`tel:${x.phone}`} title={x.phone_owner ? "Owner's phone" : "Business phone"}>{x.phone}</a> : dash}</td>
+                </>);
+              })()}
               <td className="num">{sell >= 20 ? <span className={`badge ${sell >= 40 ? "warn" : ""}`}>{sell}</span> : <span className="t-muted">—</span>}</td>
               <td className="t-radar" onClick={(e) => e.stopPropagation()}><RadarButton compact id={String(b.id)} name={b.name} city={b.city} /></td>
             </tr>

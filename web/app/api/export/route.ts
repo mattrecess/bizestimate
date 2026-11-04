@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
+import { isAdmin } from "@/lib/admin";
+import { extrasFor } from "@/lib/extras";
 import { listWhere, parseFilters, relevance, valueSql } from "@/lib/queries";
 import { estimateValue } from "@/lib/valuation";
 import { SITE_URL } from "@/lib/site";
@@ -19,14 +21,18 @@ const COLUMNS: Column[] = [
   { header: "Industry", width: 30 }, { header: "NAICS", width: 9 }, { header: "Employees (reported)", width: 12 },
   { header: "Revenue low", money: true }, { header: "Revenue estimate", money: true }, { header: "Revenue high", money: true },
   { header: "EBITDA estimate", money: true }, { header: "Value estimate", money: true }, { header: "Basis", width: 14 },
-  { header: "Owner", width: 22 }, { header: "Owner title", width: 14 }, { header: "Website", width: 28 },
+  { header: "Ownership", width: 16 }, { header: "Current owner", width: 24 }, { header: "Owner / previous owner", width: 22 },
+  { header: "Owner title", width: 14 }, { header: "Bank", width: 24 }, { header: "Email", width: 28 }, { header: "Phone", width: 16 },
+  { header: "Website", width: 28 },
   { header: "Likely-to-sell score", width: 10 }, { header: "SeeBITDA page", width: 40 },
 ];
 
-// The table as an Excel file: the same filters and order, first MAX_ROWS businesses. Estimates and
-// public facts only; contact details aren't included. Signed-in visitors only.
+// The table as an Excel file: the same filters and order, first MAX_ROWS businesses, with the table's
+// columns (ownership, current owner, bank, email and phone as lib/extras.ts gives them). Pro users and the admin.
 export async function GET(req: NextRequest) {
-  if (!(await currentUser())) return NextResponse.json({ error: "Sign in to export" }, { status: 401 });
+  const [user, admin] = await Promise.all([currentUser(), isAdmin()]);
+  if (!user && !admin) return NextResponse.json({ error: "Sign in to export" }, { status: 401 });
+  if (!admin && user?.plan !== "pro") return NextResponse.json({ error: "Exporting is part of Pro." }, { status: 402 });
   const p = req.nextUrl.searchParams;
   const f = parseFilters(p);
   const sort = SORTS[p.get("sort") ?? "revenue_desc"] ?? SORTS.revenue_desc;
@@ -37,10 +43,13 @@ export async function GET(req: NextRequest) {
            to_jsonb(businesses) ->> 'sell_score' as sell_score
     from businesses where ${listWhere(f)} order by ${relevance(f)} ${sort} limit ${MAX_ROWS}`;
   const whole = (v: unknown) => (v == null || v === "" ? null : Math.round(Number(v)));
+  const extras = await extrasFor(rows.map((r) => Number(r.id)), { phones: admin || !!user?.contact_terms_at });
   const data = rows.map((r) => [
     r.name, r.address, r.city, r.zip, r.industry, r.naics, r.jobs_reported == null ? null : Number(r.jobs_reported),
     whole(r.est_revenue_low), whole(r.est_revenue_mid), whole(r.est_revenue_high), whole(r.est_ebitda_mid),
-    whole(estimateValue(r)?.mid), r.est_method, r.owner_name, r.owner_title, r.website,
+    whole(estimateValue(r)?.mid), r.est_method,
+    extras[Number(r.id)]?.ownership.label ?? null, extras[Number(r.id)]?.current_owner ?? null, r.owner_name, r.owner_title,
+    extras[Number(r.id)]?.bank ?? null, extras[Number(r.id)]?.email ?? null, extras[Number(r.id)]?.phone ?? null, r.website,
     r.sell_score == null ? null : Number(r.sell_score), `${SITE_URL}/business/${r.id}`,
   ]);
   const date = new Date().toISOString().slice(0, 10);

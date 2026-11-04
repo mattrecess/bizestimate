@@ -93,7 +93,7 @@ export default function Home() {
     });
     // A shared link to a business opens its profile (on phones, the list side rather than the map).
     if (u.get("id") && /^\d+$/.test(u.get("id")!)) { setSelectedId(Number(u.get("id"))); setView("list"); }
-    if (u.get("layout") === "table" && !window.matchMedia("(max-width: 860px)").matches) setLayout("table");
+    if (u.get("layout") === "table" && account() && !window.matchMedia("(max-width: 860px)").matches) setLayout("table");
     setArea("");   // drawing an area on the map was removed; old links with one show the plain view
     setReady(true);
     fetch("/api/cities").then((r) => r.json()).then(setCities).catch(() => {});
@@ -329,7 +329,11 @@ export default function Home() {
         <FilterBar value={filters} cities={cities} onChange={(next) => setFilters((f) => ({ ...f, ...next }))} />
         <div className="layout-switch" role="group" aria-label="View">
           {(["map", "table"] as const).map((l) => (
-            <button key={l} type="button" aria-pressed={layout === l} onClick={() => { setLayout(l); setSelectedId(null); }}>
+            <button key={l} type="button" aria-pressed={layout === l} onClick={() => {
+              // The table is for signed-in users.
+              if (l === "table" && !account()) { askSignIn({ table: true }); return; }
+              setLayout(l); setSelectedId(null);
+            }}>
               <Icon name={l === "map" ? "map" : "list"} size={15} />{l === "map" ? "Map" : "Table"}
             </button>
           ))}
@@ -370,7 +374,21 @@ export default function Home() {
                 {layout === "table" && (
                   <button className="link-btn export-btn" onClick={() => {
                     if (!account()) { askSignIn({ exporting: true }); return; }
-                    window.location.href = `/api/export?${new URLSearchParams(filterParams + `&sort=${sort}`)}`;
+                    // Pro only: a free account gets the upgrade prompt instead of the file.
+                    fetch(`/api/export?${new URLSearchParams(filterParams + `&sort=${sort}`)}`).then(async (res) => {
+                      if (res.status === 401) { askSignIn({ exporting: true }); return; }
+                      if (res.status === 402) {
+                        window.dispatchEvent(new CustomEvent("upgrade-needed", { detail: { used: 0, limit: 0, price: "$99", kind: "export" } }));
+                        return;
+                      }
+                      if (!res.ok) return;
+                      const url = URL.createObjectURL(await res.blob());
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = res.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ?? "seebitda.xlsx";
+                      a.click();
+                      setTimeout(() => URL.revokeObjectURL(url), 5000);
+                    }).catch(() => {});
                   }}><Icon name="download" size={14} />Export to Excel</button>
                 )}
               </span>

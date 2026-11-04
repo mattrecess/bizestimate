@@ -95,7 +95,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
     setOwnerSearch({ busy: true });
     try {
       const res = await fetch(`/api/owner-search/${b.id}`, { method: "POST" });
-      if (res.status === 401) { setOwnerSearch({}); askSignIn({ contactFor: b.name }); return; }
+      if (res.status === 401) { setOwnerSearch({}); askSignIn({ ownerFor: b.name }); return; }
       const data = await res.json();
       if (res.status === 402) {
         setOwnerSearch({});
