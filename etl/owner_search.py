@@ -130,7 +130,8 @@ def main():
     # Only businesses at least this big (estimated revenue) are searched; 0 = all.
     min_revenue = float(os.environ.get("OWNER_SEARCH_MIN_REVENUE") or 0)
     # Stop searching after this many minutes (0 = no limit), leaving time to save before the job's limit.
-    deadline = time.time() + 60 * float(os.environ.get("OWNER_SEARCH_MINUTES") or 0) or None
+    minutes = float(os.environ.get("OWNER_SEARCH_MINUTES") or 0)
+    deadline = time.time() + 60 * minutes if minutes > 0 else None
     with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
         cache = enrich.state_get(cur, STATE_KEY, {})
         if serper and key:
