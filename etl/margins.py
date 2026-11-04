@@ -31,7 +31,7 @@ BASE = "https://www.irs.gov/pub/irs-soi/{yy}co{table}ccr.xlsx"
 YEARS = [19, 20, 21, 22]
 REFRESH_DAYS = 90
 SIZE_FACTOR_BOUNDS = (0.7, 1.6)
-MARGIN_BOUNDS = (0.02, 0.45)
+MARGIN_BOUNDS = (0.08, 0.45)   # no estimate below an 8% EBITDA margin (the owner's floor, Nov 4)
 SOURCE = "IRS SOI S-corporation returns 2019-2022"
 
 # IRS industry column (first header segment, lower case) -> NAICS prefixes it covers. Names

@@ -18,6 +18,7 @@ from collections import defaultdict
 HERE = os.path.dirname(os.path.abspath(__file__))
 MULTIPLES = os.path.join(HERE, "..", "web", "lib", "multiples.json")
 CELL = 100   # cells per degree
+MIN_MULTIPLE = 3.0
 REFERENCE_EBITDA = 1_000_000   # the admin's multiple for an industry is for a company of about this size
 
 
@@ -33,7 +34,8 @@ def value_sql(overrides=()):
     own = [(p, float(x) / reference) for p, x in sorted(overrides, key=lambda r: -len(r[0]))]
     ind = " ".join(f"when starts_with(naics, '{prefix}') then {round(f, 4)}"
                    for prefix, f in own + sorted(m["industry"], key=lambda r: -len(r[0])))
-    multiple = f"round((case {size} else {m['size'][0][1]} end) * (case {ind} else 1 end), 1)"
+    # Never below MIN_MULTIPLE (the owner's floor, Nov 4; MIN_MULTIPLE in web/lib/valuation.ts too).
+    multiple = f"greatest({MIN_MULTIPLE}, round((case {size} else {m['size'][0][1]} end) * (case {ind} else 1 end), 1))"
     return (f"(case when est_ebitda_mid > 0 and not is_nonprofit and not starts_with(coalesce(naics, ''), '5221') "
             f"and not starts_with(coalesce(naics, ''), '813') then round(est_ebitda_mid * {multiple}) end)")
 

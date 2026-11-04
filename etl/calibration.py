@@ -44,6 +44,7 @@ PPP_YEAR_MID = datetime.date(2020, 7, 1)
 # revenue per employee (the admin's figure, else the Census one kept within these bounds) = revenue;
 # x the industry EBITDA margin = EBITDA; x the size and industry multiple = value (map_tables).
 RPE_BOUNDS = (100_000, 500_000)
+MIN_MARGIN = 0.08
 SIMPLE_RANGE = (0.75, 1.3)
 EMPLOYEE_METHODS = ("employees", "blend")
 
@@ -213,7 +214,8 @@ class Calibration:
         years = max(0.0, (datetime.date.today() - as_of).days / 365.25)
         growth = (1 + self.growth) ** years
         revenue = float(employees) * growth * rpe
-        margin = self.margin(naics, revenue) or self.irs.margin(naics, revenue)
+        # Never below MIN_MARGIN, whichever figure applies (the owner's floor, Nov 4).
+        margin = max(MIN_MARGIN, self.margin(naics, revenue) or self.irs.margin(naics, revenue))
         lo, hi = SIMPLE_RANGE
         ebitda = revenue * margin
         return {"est_revenue_low": round(revenue * lo), "est_revenue_mid": round(revenue), "est_revenue_high": round(revenue * hi),
