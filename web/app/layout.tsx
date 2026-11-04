@@ -40,6 +40,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        {/* Tells Google "SeeBITDA" is this site's name (a brand, not a misspelling of EBITDA), for brand searches. */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([
+          { "@context": "https://schema.org", "@type": "WebSite", name: "SeeBITDA", alternateName: ["See EBITDA", "seebitda.com"], url: `${SITE_URL}/` },
+          { "@context": "https://schema.org", "@type": "Organization", name: "SeeBITDA", url: `${SITE_URL}/`, logo: `${SITE_URL}/icon.svg`,
+            description: "Estimated revenue, EBITDA and value for Oklahoma private businesses, from public records." },
+        ]) }} />
         <header className="top">
           <Link href="/" className="brand" aria-label="SeeBITDA home"><BrandMark /><span>See<span className="brand-em">BITDA</span></span></Link>
           <span className="state-chip">Oklahoma</span>
