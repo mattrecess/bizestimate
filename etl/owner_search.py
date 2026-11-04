@@ -8,7 +8,7 @@ business directories); Claude reads those and the top results and returns the pe
 business's owner, founder or president. A name is kept only if it appears verbatim in the cited
 result, and an ordinary result must also name the business and its city or Oklahoma (the answer box
 and knowledge panel answer our exact question, so they need only the business name). LinkedIn
-results are never used. OWNER_SEARCH_MAX_TOTAL caps businesses ever searched (default 2,500: the
+pages are used only through a profile's Google title (see LINKEDIN_PROFILE). OWNER_SEARCH_MAX_TOTAL caps businesses ever searched (default 2,500: the
 free Serper allowance). Results, misses included, are kept in the database (etl_state).
 """
 import argparse
@@ -34,7 +34,11 @@ MODEL = "claude-haiku-5-5"
 PRICE = (0.10, 0.50)
 SEARCH_PRICE = 1 / 1000          # Serper, after the free allowance
 STATE_KEY = "owner_search_cache"
-SKIP = ("linkedin.com",)   # and contact-data brokers (brokers.py)
+# A LinkedIn profile counts only by the title Google lists for it ("Steven Lampson - President/CEO Vantage Point
+# ITAD | LinkedIn"), never LinkedIn's page, and only with an owner-level role and the company's full name (Nov 4,
+# as the site's owner search button does). Other LinkedIn pages, and contact-data brokers (brokers.py), are skipped.
+LINKEDIN_PROFILE = re.compile(r"linkedin\.com/in/", re.I)
+OWNER_ROLE = re.compile(r"\b(owner|co-owner|founder|co-founder|president|ceo|chief executive|principal|managing (member|partner))\b", re.I)
 
 SCHEMA = {
     "type": "object",
@@ -85,8 +89,13 @@ def google(key, query):
     for p in data.get("peopleAlsoAsk") or []:
         results.append({"kind": "result", "url": p.get("link", ""), "text": f"{p.get('question', '')} {p.get('snippet', '')}"})
     for o in data.get("organic") or []:
-        if not any(d in (o.get("link") or "").lower() for d in SKIP) and not is_broker(o.get("link")):
-            results.append({"kind": "result", "url": o.get("link", ""), "text": f"{o.get('title', '')} {o.get('snippet', '')}"})
+        link = o.get("link") or ""
+        if is_broker(link) or ("linkedin.com" in link.lower() and not LINKEDIN_PROFILE.search(link)):
+            continue
+        if LINKEDIN_PROFILE.search(link):
+            results.append({"kind": "profile", "url": link, "text": o.get("title") or ""})
+        else:
+            results.append({"kind": "result", "url": link, "text": f"{o.get('title', '')} {o.get('snippet', '')}"})
     return results[:14]
 
 
@@ -117,6 +126,10 @@ def ask(client, biz, results):
         return {}, usage
     if r["kind"] == "result" and ((lead and lead not in words) or not (local & words)):
         return {}, usage
+    if r["kind"] == "profile":
+        distinct = [t for t in ordered_name_tokens(biz["name"]) if len(t) >= 2]
+        if not OWNER_ROLE.search(r["text"]) or not distinct or not all(t in words for t in distinct):
+            return {}, usage
     return {"name": name, "title": data["title"].strip() or "Owner", "url": r["url"], "via": r["kind"]}, usage
 
 
