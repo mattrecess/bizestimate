@@ -776,6 +776,7 @@ tr.ref-own td { background: #eef4ff; }
   .bp-own.public { background: #16284a; color: #9cc2ff; border-color: #22396a; }
   .bp-own.corporate { background: #3a2a12; color: #ffc77a; border-color: #4d3818; }
 }
+.bp-owner-site { display: inline-flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 13px; font-weight: 600; color: var(--accent); }
 .bp-owner-h { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .bp-team { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .bp-team li { display: flex; gap: 10px; align-items: center; }

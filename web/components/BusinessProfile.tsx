@@ -304,6 +304,10 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
               <div className="name">{own.owner}</div>
               <div className="src">{own.kind === "pe" ? "Private equity owner" : "Parent company"}
                 {own.since && <> · since {new Date(own.since + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short" })}</>}</div>
+              {own.ownerUrl && (
+                <a className="bp-owner-site" href={own.ownerUrl} target="_blank" rel="noopener noreferrer">
+                  <Icon name="globe" size={13} />{own.ownerUrl.replace(/^https?:\/\/(www\.)?/, "")}</a>
+              )}
             </div>
           </div>
         )}

@@ -5,7 +5,7 @@
 import type { Transaction } from "./business";
 
 export type Ownership = { label: string; kind: "public" | "pe" | "corporate" | "family" | "founder" | "independent";
-  owner?: string; since?: string | null; detail?: string };
+  owner?: string; ownerUrl?: string | null; since?: string | null; detail?: string };
 
 const PE_DEALS = /investment|recapitalization|buyout/i;
 const CONTROL = /acquisition|merger/i;
@@ -15,7 +15,9 @@ export function ownershipType(b: { owner_title?: string | null; owner_name?: str
   if (src.sec) return { label: "Public", kind: "public", detail: "Files annual reports with the SEC" };
   // Newest deal first (lib/business.ts orders them so).
   const pe = transactions.find((t) => t.investor || PE_DEALS.test(t.deal_type));
-  if (pe) return { label: "PE-backed", kind: "pe", owner: pe.buyer, since: pe.deal_date, detail: `Private equity: ${pe.buyer}` };
+  // The firm's own site: its homepage, from the address saved for it in /admin's investors list.
+  const site = (() => { try { return pe?.investor_url ? new URL(pe.investor_url).origin : null; } catch { return null; } })();
+  if (pe) return { label: "PE-backed", kind: "pe", owner: pe.buyer, ownerUrl: site, since: pe.deal_date, detail: `Private equity: ${pe.buyer}` };
   const bought = transactions.find((t) => CONTROL.test(t.deal_type));
   if (bought) return { label: "Corporate-owned", kind: "corporate", owner: bought.buyer, since: bought.deal_date, detail: `Owned by ${bought.buyer}` };
   if (src.website_profile?.family_owned) return { label: "Family-owned", kind: "family", detail: "Its website describes it as family-owned" };
