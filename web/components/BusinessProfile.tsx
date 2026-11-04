@@ -80,16 +80,31 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   const ownerEntry = lead.people.find((p) => p.owner);
   // Executives found with the "Search the web for executives" button are added at once (and saved).
   const [execSearch, setExecSearch] = useState<{ busy?: boolean; message?: string; found?: { name: string; title: string; url: string }[] }>({});
-  const team = [...lead.people.filter((p) => !p.owner),
+  const team = [...lead.people.filter((p) => !p.owner && !fixed.hidden.includes(p.name.toLowerCase())
+      && p.name.toLowerCase() !== fixed.owner?.name.toLowerCase()),
     ...(execSearch.found ?? []).filter((f) => !lead.people.some((p) => p.name.toLowerCase() === f.name.toLowerCase()))
       .map((f) => ({ name: f.name, title: f.title, sources: ["Web search"], url: f.url, linkedin: undefined as string | undefined }))];
+  // Your corrections (signed in to /admin): set the owner, take a wrong person off the page.
+  const [admin, setAdmin] = useState(false);
+  const [editOwner, setEditOwner] = useState<{ name: string; title: string } | null>(null);
+  const [fixed, setFixed] = useState<{ owner?: { name: string; title: string }; hidden: string[] }>({ hidden: [] });
+  useEffect(() => {
+    setAdmin(false); setEditOwner(null); setFixed({ hidden: [] });
+    fetch(`/api/admin/people/${b.id}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d) => setAdmin(!!d?.admin)).catch(() => {});
+  }, [b.id]);
+  async function fixPeople(body: { action: "owner" | "hide"; name: string; title?: string }) {
+    const r = await fetch(`/api/admin/people/${b.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) return;
+    if (body.action === "owner") { setFixed((f) => ({ ...f, owner: { name: body.name, title: body.title || "Owner" } })); setEditOwner(null); }
+    else setFixed((f) => ({ ...f, hidden: [...f.hidden, body.name.toLowerCase()] }));
+  }
   const [showTeam, setShowTeam] = useState(false);
   // "Search the web for the owner" (app/api/owner-search): a found owner shows here at once and is saved.
   const [ownerSearch, setOwnerSearch] = useState<{ busy?: boolean; done?: boolean; message?: string;
     found?: { name: string; title: string; url: string } }>({});
-  const ownerName = b.owner_name ?? ownerSearch.found?.name ?? null;
-  const ownerTitle = b.owner_name ? b.owner_title : ownerSearch.found?.title;
-  const ownerSource = b.owner_name ? b.owner_source : ownerSearch.found?.url;
+  const ownerName = fixed.owner?.name ?? b.owner_name ?? ownerSearch.found?.name ?? null;
+  const ownerTitle = fixed.owner ? fixed.owner.title : b.owner_name ? b.owner_title : ownerSearch.found?.title;
+  const ownerSource = fixed.owner ? null : b.owner_name ? b.owner_source : ownerSearch.found?.url;
   // Earliest of the record-based year and the founding year the company's own site states.
   const founded = [src.founded?.year, src.fdic?.founded, src.fmcsa?.registered, src.website_profile?.founded_year]
     .filter((y): y is number => typeof y === "number").sort((a, b) => a - b)[0] ?? null;
@@ -361,6 +376,18 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
           {/* Sale likelihood is about the owner, so it's shown only once we know who that is. */}
           {sellLabel && ownerName && <span className={`bp-sell ${Number(b.sell_score) >= 40 ? "hot" : ""}`}>{sellLabel}</span>}
         </div>
+        {/* Yours only (signed in to /admin): correct the owner right here. */}
+        {admin && (editOwner ? (
+          <form className="bp-fix" onSubmit={(e) => { e.preventDefault(); if (editOwner.name.trim()) fixPeople({ action: "owner", name: editOwner.name.trim(), title: editOwner.title.trim() }); }}>
+            <input value={editOwner.name} onChange={(e) => setEditOwner({ ...editOwner, name: e.target.value })} placeholder="Owner's full name" aria-label="Owner's name" autoFocus />
+            <input value={editOwner.title} onChange={(e) => setEditOwner({ ...editOwner, title: e.target.value })} placeholder="Title (Owner)" aria-label="Title" />
+            <button className="btn primary" type="submit">Save</button>
+            <button className="btn" type="button" onClick={() => setEditOwner(null)}>Cancel</button>
+          </form>
+        ) : (
+          <button type="button" className="link-btn bp-fix-link" onClick={() => setEditOwner({ name: "", title: "Owner" })}>
+            {ownerName ? "Wrong owner? Set the right one" : "Know the owner? Set it"}</button>
+        ))}
         {/* Contact details only once we know who the owner is. */}
         {ownerName ? (
           <ContactCard id={String(b.id)} name={b.name} owner={ownerName} embedded />
@@ -388,6 +415,14 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
                     {" · "}{p.url ? <a href={p.url} target="_blank" rel="nofollow noopener noreferrer">{p.sources.join(", ")}</a> : p.sources.join(", ")}
                   </div>
                 </div>
+                {admin && (
+                  <span className="bp-fix-acts">
+                    <button type="button" className="link-btn" title="Make this person the owner"
+                      onClick={() => fixPeople({ action: "owner", name: p.name, title: /role not listed|signs company/i.test(p.title) ? "Owner" : p.title })}>Owner</button>
+                    <button type="button" className="bp-fix-x" aria-label={`Remove ${p.name}`} title="Not with this company: remove"
+                      onClick={() => fixPeople({ action: "hide", name: p.name })}>✕</button>
+                  </span>
+                )}
               </li>
             ))}
           </ul>

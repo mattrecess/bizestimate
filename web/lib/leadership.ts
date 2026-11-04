@@ -55,11 +55,14 @@ export function leadership(b: { owner_name?: string | null; owner_title?: string
   for (const p of by.website_profile?.team ?? []) add({ name: p.name, title: p.title, source: "Company website", url: p.url });
   for (const p of by.people_search?.people ?? []) add({ name: p.name, title: p.title, source: "Web search", url: p.url });
   // From the "Search the web for executives" button (app/api/leadership-search).
-  for (const p of by.leadership_lookup?.people ?? []) add({ name: p.name, title: p.title, source: "Web search", url: p.url });
+  for (const p of by.leadership_lookup?.people ?? []) add({ name: p.name, title: p.title || "Role not listed", source: "Web search", url: p.url });
   for (const p of by.irs990_people?.officers ?? []) add({ name: p.name, title: p.title || "Officer", source: "Form 990" });
   const signer = by.form5500_people?.signer;
   if (signer?.name) add({ name: signer.name, title: "", source: `Form 5500 (${signer.year})` });
   for (const p of people) p.title ||= "Signs company filings";
+  // People you took off this business's page (app/api/admin/people).
+  const hidden = new Set(((by.people_hidden?.names ?? []) as string[]).map(personKey));
+  for (let i = people.length - 1; i >= 0; i--) if (!people[i].owner && hidden.has(personKey(people[i].name))) people.splice(i, 1);
 
   people.sort((a, c) => Number(!!c.owner) - Number(!!a.owner) || rank(a.title) - rank(c.title) || c.sources.length - a.sources.length);
   // Only judged when we know at least the owner: with no names at all, we can't say.

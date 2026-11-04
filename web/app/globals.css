@@ -805,6 +805,13 @@ tr.ref-own td { background: #eef4ff; }
 .t-nowrap { white-space: nowrap; }
 .biz-table tr.t-upsell td { padding: 18px 14px; background: linear-gradient(180deg, var(--panel) 0%, var(--accent-soft) 100%); cursor: default; }
 .biz-table tr.t-upsell div { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+.bp-fix { display: flex; flex-wrap: wrap; gap: 6px; }
+.bp-fix input { flex: 1 1 140px; height: 34px; border: 1px solid var(--border-strong); border-radius: 8px; padding: 0 10px; font: inherit; font-size: 13.5px; background: var(--panel); color: var(--text); }
+.bp-fix .btn { height: 34px; font-size: 13px; }
+.bp-fix-link { align-self: flex-start; padding: 0; font-size: 12.5px; }
+.bp-fix-acts { margin-left: auto; display: inline-flex; gap: 10px; align-items: center; font-size: 12.5px; }
+.bp-fix-x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; }
+.bp-fix-x:hover { color: #c0392b; }
 .bp-owner-h { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .bp-team { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .bp-team li { display: flex; gap: 10px; align-items: center; }
