@@ -3,6 +3,18 @@ import { useEffect, useState } from "react";
 import type { Contact } from "@/lib/contact";
 import type { OwnerContact } from "@/lib/pdl";
 import { askSignIn } from "@/lib/saved";
+import Icon from "./Icon";
+
+// One line of contact info: icon, the phone or email (link), and where it came from, kept on one line.
+function Row({ kind, value, href, note, noteUrl }: { kind: "phone" | "mail"; value: string; href: string; note: string; noteUrl?: string }) {
+  return (
+    <li className="c-row">
+      <Icon name={kind} size={14} />
+      <a className="c-val" href={href} title={value}>{value}</a>
+      <span className="c-src">{noteUrl ? <a href={noteUrl} target="_blank" rel="nofollow noopener noreferrer">{note}</a> : note}</span>
+    </li>
+  );
+}
 
 // Published contact details, loaded on request so they aren't in the page crawlers read.
 export default function ContactCard({ id, name, owner, embedded = false }: { id: string; name: string; owner: string | null; embedded?: boolean }) {
@@ -72,75 +84,71 @@ export default function ContactCard({ id, name, owner, embedded = false }: { id:
         )}
       </div>
       {state === "error" && <p className="disclaimer">{error}</p>}
-      {contact?.allowance && contact.allowance.plan !== "pro" && (
-        <p className="disclaimer reveals-left">{Math.max(contact.allowance.limit - contact.allowance.used, 0)} of {contact.allowance.limit} free
-          contact lookups left this month</p>
-      )}
       {contact?.hidden && <p className="disclaimer">This business asked for its contact details not to be shown.</p>}
-      {empty && !contact?.hidden && <p className="disclaimer">No published phone or email found yet.</p>}
-      {contact && (
-        <ul className="contact-list">
-          {contact.phones.map((p) => (
-            <li key={p.value}>
-              <a href={`tel:${p.value.replace(/\D/g, "")}`}>{p.value}</a>
-              <span className="src">{p.url ? <a href={p.url} target="_blank" rel="nofollow noopener noreferrer">{p.source}</a> : p.source}</span>
-            </li>
-          ))}
-          {contact.emails.map((e) => (
-            <li key={e.value}>
-              <a href={`mailto:${e.value}`}>{e.value}</a>
-              <span className="src">
-                {e.owner && <span className="badge good">Likely {owner ? owner.split(/\s+/)[0] + "'s" : "the owner's"}</span>}{" "}
-                {e.url ? <a href={e.url} target="_blank" rel="nofollow noopener noreferrer">{e.source}</a> : e.source}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+      {empty && !contact?.hidden && !ownerInfo?.found && <p className="disclaimer">No published phone or email found yet.</p>}
+      {contact && !contact.hidden && (() => {
+        // The owner's own contacts first (People Data Labs, and any published email that looks like theirs),
+        // then the company's.
+        const direct = ownerInfo?.found ? ownerInfo : null;
+        const ownerEmails = [...(direct?.emails ?? []).map((e) => ({ value: e.value, note: e.kind === "work" ? "Work email" : "Email" })),
+          ...contact.emails.filter((e) => e.owner).map((e) => ({ value: e.value, note: e.source, url: e.url }))]
+          .filter((e, i, all) => all.findIndex((x) => x.value.toLowerCase() === e.value.toLowerCase()) === i);
+        const ownerPhones = (direct?.phones ?? []).map((p) => ({ value: p.value, note: p.kind === "mobile" ? "Mobile" : "Direct" }));
+        const companyEmails = contact.emails.filter((e) => !e.owner && !ownerEmails.some((o) => o.value.toLowerCase() === e.value.toLowerCase()));
+        const first = owner ? owner.split(/\s+/)[0] : "Owner";
+        return (<>
+          {(ownerEmails.length > 0 || ownerPhones.length > 0) && (
+            <div className="c-group">
+              <div className="c-label">{first}&apos;s direct</div>
+              <ul className="contact-list">
+                {ownerPhones.map((p) => <Row key={p.value} kind="phone" value={p.value} href={`tel:${p.value.replace(/[^\d+]/g, "")}`} note={p.note} />)}
+                {ownerEmails.map((e) => <Row key={e.value} kind="mail" value={e.value} href={`mailto:${e.value}`} note={e.note} noteUrl={"url" in e ? (e.url as string | undefined) ?? undefined : undefined} />)}
+              </ul>
+            </div>
+          )}
+          {(contact.phones.length > 0 || companyEmails.length > 0) && (
+            <div className="c-group">
+              <div className="c-label">Company</div>
+              <ul className="contact-list">
+                {contact.phones.map((p) => <Row key={p.value} kind="phone" value={p.value} href={`tel:${p.value.replace(/\D/g, "")}`} note={p.source} noteUrl={p.url ?? undefined} />)}
+                {companyEmails.map((e) => <Row key={e.value} kind="mail" value={e.value} href={`mailto:${e.value}`} note={e.source} noteUrl={e.url ?? undefined} />)}
+              </ul>
+            </div>
+          )}
+        </>);
+      })()}
       {owner && contact && !contact.hidden && (
         <div className="owner-lookup">
-          {ownerState === "loading" ? (
-            <p className="disclaimer"><span className="spinner" aria-hidden /> Looking up {owner.split(/\s+/)[0]}&apos;s direct contact…</p>
-          ) : !ownerInfo ? null : !ownerInfo.found ? (
-            <p className="disclaimer">No direct email or phone found for {ownerInfo.owner}.</p>
-          ) : (
-            <>
-              <div className="owner-lookup-head"><b>{ownerInfo.name ?? ownerInfo.owner}</b>{ownerInfo.title ? ` · ${ownerInfo.title}` : ""}</div>
-              <ul className="contact-list">
-                {ownerInfo.emails.map((e) => (
-                  <li key={e.value}><a href={`mailto:${e.value}`}>{e.value}</a><span className="src">{e.kind === "work" ? "Work email" : "Email"}</span></li>
-                ))}
-                {ownerInfo.phones.map((p) => (
-                  <li key={p.value}><a href={`tel:${p.value.replace(/[^\d+]/g, "")}`}>{p.value}</a><span className="src">{p.kind === "mobile" ? "Mobile" : "Phone"}</span></li>
-                ))}
-                {ownerInfo.linkedin && <li><a href={ownerInfo.linkedin} target="_blank" rel="nofollow noopener noreferrer">LinkedIn profile</a><span className="src">LinkedIn</span></li>}
+          {ownerState === "loading" && <p className="disclaimer"><span className="spinner" aria-hidden /> Looking up {owner.split(/\s+/)[0]}&apos;s direct contact…</p>}
+          {ownerInfo && !ownerInfo.found && <p className="disclaimer">No direct email or phone found for {ownerInfo.owner}.</p>}
+          {ownerInfo?.found && ownerInfo.phonesBlocked === "pro" && !!ownerInfo.phonesHidden && (
+            <p className="phone-gate">{ownerInfo.phonesHidden === 1 ? "A direct phone number is" : `${ownerInfo.phonesHidden} direct phone numbers are`} available
+              with SeeBITDA Pro.</p>
+          )}
+          {ownerInfo?.found && ownerInfo.phonesBlocked === "terms" && !!ownerInfo.phonesHidden && (
+            <div className="phone-gate terms">
+              <b>Before we show phone numbers</b>
+              <p>These may be personal cell phones. By continuing you agree to use them only for one-to-one
+                business outreach, and:</p>
+              <ul>
+                <li>not to auto-dial, robocall or text them without the person&apos;s consent (TCPA);</li>
+                <li>to check the National Do Not Call Registry before any sales call;</li>
+                <li>to stop contacting anyone who asks you to;</li>
+                <li>not to resell, share or bulk-export them.</li>
               </ul>
-              {ownerInfo.phonesBlocked === "pro" && !!ownerInfo.phonesHidden && (
-                <p className="phone-gate">{ownerInfo.phonesHidden === 1 ? "A direct phone number is" : `${ownerInfo.phonesHidden} direct phone numbers are`} available
-                  with SeeBITDA Pro.</p>
-              )}
-              {ownerInfo.phonesBlocked === "terms" && !!ownerInfo.phonesHidden && (
-                <div className="phone-gate terms">
-                  <b>Before we show phone numbers</b>
-                  <p>These may be personal cell phones. By continuing you agree to use them only for one-to-one
-                    business outreach, and:</p>
-                  <ul>
-                    <li>not to auto-dial, robocall or text them without the person&apos;s consent (TCPA);</li>
-                    <li>to check the National Do Not Call Registry before any sales call;</li>
-                    <li>to stop contacting anyone who asks you to;</li>
-                    <li>not to resell, share or bulk-export them.</li>
-                  </ul>
-                  <label className="check"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> I agree to these terms
-                    and SeeBITDA&apos;s <a href="/terms" target="_blank">Terms</a></label>
-                  <button className="btn primary" disabled={!agreed} onClick={acceptTerms}>Show phone numbers</button>
-                </div>
-              )}
-              <p className="disclaimer">From People Data Labs. For one-to-one outreach only: no auto-dialing or texting
-                mobile numbers, and include an opt-out in any email.</p>
-            </>
+              <label className="check"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /> I agree to these terms
+                and SeeBITDA&apos;s <a href="/terms" target="_blank">Terms</a></label>
+              <button className="btn primary" disabled={!agreed} onClick={acceptTerms}>Show phone numbers</button>
+            </div>
           )}
           {ownerError && <p className="disclaimer">{ownerError}</p>}
         </div>
+      )}
+      {contact && !contact.hidden && (
+        <p className="c-foot">
+          {ownerInfo?.found && <>Direct contacts from People Data Labs, for one-to-one outreach only. </>}
+          {contact.allowance && contact.allowance.plan !== "pro" && <>{Math.max(contact.allowance.limit - contact.allowance.used, 0)} of {contact.allowance.limit} free lookups left this month.</>}
+        </p>
       )}
     </div>
   );
