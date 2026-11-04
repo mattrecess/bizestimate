@@ -78,12 +78,6 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   const ownerLinkedIn = src.linkedin?.owner_url && src.linkedin.owner_name === b.owner_name ? src.linkedin.owner_url : null;
   const lead = leadership(b, b.sources ?? [], ownerLinkedIn);
   const ownerEntry = lead.people.find((p) => p.owner);
-  // Executives found with the "Search the web for executives" button are added at once (and saved).
-  const [execSearch, setExecSearch] = useState<{ busy?: boolean; message?: string; found?: { name: string; title: string; url: string }[] }>({});
-  const team = [...lead.people.filter((p) => !p.owner && !fixed.hidden.includes(p.name.toLowerCase())
-      && p.name.toLowerCase() !== fixed.owner?.name.toLowerCase()),
-    ...(execSearch.found ?? []).filter((f) => !lead.people.some((p) => p.name.toLowerCase() === f.name.toLowerCase()))
-      .map((f) => ({ name: f.name, title: f.title, sources: ["Web search"], url: f.url, linkedin: undefined as string | undefined }))];
   // Your corrections (signed in to /admin): set the owner, take a wrong person off the page.
   const [admin, setAdmin] = useState(false);
   const [editOwner, setEditOwner] = useState<{ name: string; title: string } | null>(null);
@@ -98,6 +92,12 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
     if (body.action === "owner") { setFixed((f) => ({ ...f, owner: { name: body.name, title: body.title || "Owner" } })); setEditOwner(null); }
     else setFixed((f) => ({ ...f, hidden: [...f.hidden, body.name.toLowerCase()] }));
   }
+  // Executives found with the "Search the web for executives" button are added at once (and saved).
+  const [execSearch, setExecSearch] = useState<{ busy?: boolean; message?: string; found?: { name: string; title: string; url: string }[] }>({});
+  const team = [...lead.people.filter((p) => !p.owner && !fixed.hidden.includes(p.name.toLowerCase())
+      && p.name.toLowerCase() !== fixed.owner?.name.toLowerCase()),
+    ...(execSearch.found ?? []).filter((f) => !lead.people.some((p) => p.name.toLowerCase() === f.name.toLowerCase()))
+      .map((f) => ({ name: f.name, title: f.title, sources: ["Web search"], url: f.url, linkedin: undefined as string | undefined }))];
   const [showTeam, setShowTeam] = useState(false);
   // "Search the web for the owner" (app/api/owner-search): a found owner shows here at once and is saved.
   const [ownerSearch, setOwnerSearch] = useState<{ busy?: boolean; done?: boolean; message?: string;
