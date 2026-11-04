@@ -26,9 +26,13 @@ const COLS: { label: string; sort?: string; flip?: string; num?: boolean; cls?: 
   { label: "Sale signs", sort: "sell_desc", num: true },
 ];
 
+// Extras are fetched for every loaded row (Pro) or just the visible ones (free).
+const pro_limit = (n: number) => Math.min(n, 200);
+
 // Columns that aren't in the list results (ownership, current owner, bank, Pro contacts), for the rows shown.
 function useExtras(ids: string[]) {
-  const [state, setState] = useState<{ pro: boolean; extras: Record<number, Extras> }>({ pro: false, extras: {} });
+  // pro: null until the first answer (rows stay limited until then).
+  const [state, setState] = useState<{ pro: boolean | null; extras: Record<number, Extras> }>({ pro: null, extras: {} });
   const key = ids.join(",");
   useEffect(() => {
     if (!key) return;
@@ -40,13 +44,20 @@ function useExtras(ids: string[]) {
   return state;
 }
 
-const upgrade = () => window.dispatchEvent(new CustomEvent("upgrade-needed", { detail: { used: 0, limit: 0, price: "$99", kind: "table" } }));
+const upgrade = (kind: "table" | "table-rows" = "table") =>
+  window.dispatchEvent(new CustomEvent("upgrade-needed", { detail: { used: 0, limit: 0, price: "$99", kind } }));
+// Free accounts see this many rows; the rest are part of Pro.
+export const FREE_ROWS = 3;
 
 // The search as a spreadsheet-style table: every column at a glance, sortable from the headers.
-export default function BizTable({ rows, sort, onSort, onOpen, selectedId }: {
+export default function BizTable({ rows, sort, onSort, onOpen, selectedId, total, onPro }: {
   rows: Biz[]; sort: string; onSort: (sort: string) => void; onOpen: (id: number) => void; selectedId: number | null;
+  total?: number | null; onPro?: (pro: boolean) => void;
 }) {
-  const { pro, extras } = useExtras(rows.map((b) => String(b.id)).slice(0, 200));
+  const { pro, extras } = useExtras(rows.map((b) => String(b.id)).slice(0, pro_limit(rows.length)));
+  useEffect(() => { if (pro !== null) onPro?.(pro); }, [pro, onPro]);
+  const shown = pro ? rows : rows.slice(0, FREE_ROWS);
+  const hidden = Math.max((total ?? rows.length) - shown.length, 0);
   const locked = <button type="button" className="t-pro" onClick={(e) => { e.stopPropagation(); upgrade(); }}>Pro</button>;
   return (
     <table className="biz-table">
@@ -69,7 +80,7 @@ export default function BizTable({ rows, sort, onSort, onOpen, selectedId }: {
         </tr>
       </thead>
       <tbody>
-        {rows.map((b) => {
+        {shown.map((b) => {
           const value = estimateValue(b);
           const sell = Number(b.sell_score) || 0;
           return (
@@ -102,6 +113,16 @@ export default function BizTable({ rows, sort, onSort, onOpen, selectedId }: {
             </tr>
           );
         })}
+        {!pro && hidden > 0 && (
+          <tr className="t-upsell">
+            <td colSpan={COLS.length + 1}>
+              <div>
+                <b>{hidden.toLocaleString()} more businesses</b> in this table, with owners, banks, email and phone.
+                <button type="button" className="btn primary" onClick={() => upgrade("table-rows")}>Upgrade to Pro to see them all</button>
+              </div>
+            </td>
+          </tr>
+        )}
       </tbody>
     </table>
   );

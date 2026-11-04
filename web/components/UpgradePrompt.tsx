@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Icon from "./Icon";
 
-export type UpgradeNeeded = { used: number; limit: number; price: string; kind?: "contact" | "owner-search" | "table" | "export" };
+export type UpgradeNeeded = { used: number; limit: number; price: string; kind?: "contact" | "owner-search" | "table" | "table-rows" | "export" };
 
 // "You've used this month's free contact lookups / owner searches": opened by the contact card (a 402 from
 // /api/contact) or the owner search button (a 402 from /api/owner-search).
@@ -34,12 +34,14 @@ export default function UpgradePrompt() {
         <button type="button" className="signin-close" aria-label="Close" onClick={() => setInfo(null)}><Icon name="x" size={18} /></button>
         <div className="signin-icon"><Icon name="user" size={24} /></div>
         <h2 id="upgrade-title">Upgrade to SeeBITDA Pro</h2>
-        <p>{info.kind === "table" ? <>Email and phone numbers in the table are part of Pro.</>
+        <p>{info.kind === "table-rows" ? <>Free accounts see the first 3 rows of the table. Pro shows every business.</>
+          : info.kind === "table" ? <>Email and phone numbers in the table are part of Pro.</>
           : info.kind === "export" ? <>Exporting to Excel is part of Pro.</>
           : info.kind === "owner-search"
           ? <>You&apos;ve used all {info.limit} of this month&apos;s free owner searches.</>
           : <>You&apos;ve seen contact info for {info.used} of {info.limit} businesses this month on the free plan.</>}</p>
         <ul className="upgrade-list">
+          <li>The full table: every business, sortable</li>
           <li>Owner and business email and phone in the table</li>
           <li>Export any list to Excel</li>
           <li>Unlimited owner searches</li>

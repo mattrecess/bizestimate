@@ -57,6 +57,7 @@ export default function Home() {
   const [view, setView] = useState<"map" | "list">("map");
   // Wide screens: the map with a list beside it, or a full-width table of the whole state.
   const [layout, setLayout] = useState<"map" | "table">("map");
+  const [tablePro, setTablePro] = useState(false);   // the table shows every row (Pro) or the first few
   const drawer = useRef<HTMLDivElement>(null);
   // Business shown in the side panel (replaces the list until "Back").
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -245,16 +246,18 @@ export default function Home() {
     return () => ctrl.abort();
   }, [ready, params, attempt]);
 
-  // Load the next batch when the bottom of the list comes within a screen of view.
+  // Load the next batch when the bottom of the list comes within a screen of view (not for a free account's
+  // table, which shows only its first rows).
   useEffect(() => {
     const el = sentinel.current;
     if (!el || !data || data.key !== listKey || loading || failed || data.done) return;
+    if (layout === "table" && !tablePro) return;
     const io = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) setMore({ key: listKey, offset: data.results.length });
     }, { root: panel.current, rootMargin: "800px 0px" });
     io.observe(el);
     return () => io.disconnect();
-  }, [data, listKey, loading, failed]);
+  }, [data, listKey, loading, failed, layout, tablePro]);
 
   useEffect(() => {
     if (!ready || layout === "table") return;   // no map, no pins
@@ -402,7 +405,7 @@ export default function Home() {
             )}
             {layout === "table" && data && data.results.length > 0 && (
               <div className={`table-scroll ${updating ? "stale" : ""}`}>
-                <BizTable rows={data.results} sort={sort} selectedId={selectedId} onOpen={openBusiness}
+                <BizTable rows={data.results} sort={sort} selectedId={selectedId} onOpen={openBusiness} total={total} onPro={setTablePro}
                   onSort={(s) => setFilters((f) => ({ ...f, sort: s }))} />
               </div>
             )}
