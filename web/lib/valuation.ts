@@ -42,8 +42,11 @@ export function industryFactor(naics: string | null | undefined) {
   return adj;
 }
 
+// No business is valued below this multiple of EBITDA (the owner's floor, Nov 4; etl/map_tables.py too).
+export const MIN_MULTIPLE = 3;
+
 function multipleFor(naics: string | null | undefined, ebitda: number) {
-  return Math.round(sizeMultiple(ebitda) * industryFactor(naics) * 10) / 10;
+  return Math.max(MIN_MULTIPLE, Math.round(sizeMultiple(ebitda) * industryFactor(naics) * 10) / 10);
 }
 
 /** Null when a sale value doesn't apply: nonprofits, banks, public companies, or no positive EBITDA.
@@ -57,7 +60,7 @@ export function estimateValue(b: {
   if (!Number.isFinite(mid) || mid <= 0 || b.is_nonprofit || b.public_company) return null;
   if (b.naics?.startsWith("5221") || b.naics?.startsWith("813")) return null;
   const stored = Number(b.est_value_mid);
-  const multiple = stored > 0 ? Math.round((stored / mid) * 10) / 10 : multipleFor(b.naics, mid);
+  const multiple = Math.max(MIN_MULTIPLE, stored > 0 ? Math.round((stored / mid) * 10) / 10 : multipleFor(b.naics, mid));
   const low = Number(b.est_ebitda_low) || mid * 0.8;
   const high = Number(b.est_ebitda_high) || mid * 1.2;
   // Wider than the EBITDA range: the multiple itself varies a turn or two either way.

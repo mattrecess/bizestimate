@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { money, parseDollars } from "@/lib/format";
 import { blurOnEnter } from "@/lib/touch";
-import { SIZE, sizeMultiple } from "@/lib/valuation";
+import { MIN_MULTIPLE, SIZE, sizeMultiple } from "@/lib/valuation";
 
 // factor: the industry's adjustment to the size multiple; margins: typical EBITDA margin at $1M, $5M and $20M revenue.
 export type CalcIndustry = { label: string; slug: string; factor: number; margins: number[] };
@@ -11,13 +11,14 @@ export type CalcIndustry = { label: string; slug: string; factor: number; margin
 const OTHER: CalcIndustry = { label: "Other / not listed", slug: "", factor: 1, margins: [0.1, 0.1, 0.1] };
 
 // Margin for a revenue, read along the $1M / $5M / $20M points (on a log scale), flat past either end.
+// Never below 8% (the site's floor for estimated margins, etl/margins.py).
 function typicalMargin(ind: CalcIndustry, revenue: number) {
   const pts = [1e6, 5e6, 2e7];
-  if (revenue <= pts[0]) return ind.margins[0];
-  if (revenue >= pts[2]) return ind.margins[2];
+  if (revenue <= pts[0]) return Math.max(0.08, ind.margins[0]);
+  if (revenue >= pts[2]) return Math.max(0.08, ind.margins[2]);
   const i = revenue < pts[1] ? 0 : 1;
   const t = Math.log(revenue / pts[i]) / Math.log(pts[i + 1] / pts[i]);
-  return ind.margins[i] + t * (ind.margins[i + 1] - ind.margins[i]);
+  return Math.max(0.08, ind.margins[i] + t * (ind.margins[i + 1] - ind.margins[i]));
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -47,14 +48,14 @@ export default function ValueCalculator({ industries, initial }: {
     const margin = revenue ? typicalMargin(ind, revenue) : null;
     const ebitda = given ?? (revenue && margin ? revenue * margin : null);
     if (!ebitda || ebitda <= 0) return null;
-    const multiple = round1(sizeMultiple(ebitda) * ind.factor);
+    const multiple = Math.max(MIN_MULTIPLE, round1(sizeMultiple(ebitda) * ind.factor));
     // A typical margin is a guess at your profit too, so its range is wider.
     const spread = given ? 1 : 1.25;
     const next = SIZE.find(([floor]) => floor > ebitda);
     return {
       ebitda, multiple, margin, estimated: !given,
       mid: ebitda * multiple, low: (ebitda / spread) * multiple * 0.8, high: ebitda * spread * multiple * 1.2,
-      next: next && next[0] <= ebitda * 3 ? { ebitda: next[0], multiple: round1(next[1] * ind.factor) } : null,
+      next: next && next[0] <= ebitda * 3 ? { ebitda: next[0], multiple: Math.max(MIN_MULTIPLE, round1(next[1] * ind.factor)) } : null,
     };
   }, [ind, revenue, given]);
 
