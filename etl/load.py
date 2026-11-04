@@ -36,6 +36,7 @@ BIZ_COLS = [
     "est_method", "est_confidence", "total_ppp_amount", "website", "owner_name", "owner_title", "owner_source",
     "source", "est_ebitda_margin", "est_inflation", "est_growth", "parent_key", "parent_name",
     "phone", "site_phone", "site_email", "contact_page", "est_calibration", "est_growth_rate", "est_tilt", "chain_locations",
+    "est_employees", "est_count_year", "est_rpe",
 ]
 LOAN_COLS = ["loan_number", "biz_key", "draw", "date_approved", "amount", "payroll_proceed",
              "forgiveness_amount", "loan_status", "lender", "jobs_reported"]
@@ -143,6 +144,7 @@ def main():
             with conn.transaction():
                 calibration.learn(cur, state, calibration.Calibration(cur).growth_factor)
                 cal = calibration.Calibration(cur)
+                cal.apply_simple(cur)
                 cal.apply_growth(cur)
                 cal.apply_stage(cur)
         except psycopg.Error as e:

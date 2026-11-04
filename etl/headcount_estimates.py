@@ -3,13 +3,13 @@
 Called by load.py (same transaction, so pages never show the PPP-era figure in between) and by
 form5500.py after it refreshes the headcounts table.
 
-revenue = latest plan participants x industry revenue per employee; EBITDA = revenue x the
-industry's IRS margin adjusted for that revenue (margins.py).
+The simple estimate (calibration.simple): latest plan participants, grown at the annual growth rate since
+the plan year, x industry revenue per employee; EBITDA = revenue x the industry margin.
 
-Skipped (the existing estimate stands) when the count is likely to be partial rather than the
-workforce: fewer than MIN_PARTICIPANTS (often an owners-only plan), under half the PPP headcount
-(plans can exclude part-timers and new hires, so a big "drop" is more often coverage), or over
-MAX_GROWTH times it (more often a wrong match or a parent company's plan than real growth).
+Skipped (the existing estimate stands) when the count is unlikely to be this company's workforce: fewer
+than MIN_PARTICIPANTS (often an owners-only plan), or over MAX_GROWTH times the PPP headcount (more often a
+wrong match or a parent company's plan than real growth). A recent 401(k) count otherwise always wins
+(the owner's rule, Nov 4), even when it's lower than the PPP one.
 Staffing firms and PEOs are skipped too: their plans cover workers placed at other companies.
 
 The filing's own industry code replaces ours when ours is vague (a 2-5 digit code) or came from map
@@ -18,39 +18,41 @@ data, since the revenue per employee and margin depend on it.
 from datetime import date
 
 from benchmarks import correct_naics, load_benchmarks, lookup
-from calibration import Calibration
-from adjust import Adjust
-from margins import Margins
-from size_factors import SizeFactors
+from calibration import PPP_YEAR_MID, Calibration
 
 MIN_PARTICIPANTS = 3
 MAX_GROWTH = 4           # more than 4x the PPP headcount is more often a mismatched or company-wide plan
 RECENT_YEARS = 2          # counts for plan years from (this year - 2) onward
-RANGE = (0.8, 1.5)        # participants undercount staff somewhat, so the range leans upward
 STAFFING = ("5613",)      # employment placement, temp help, PEOs
 
 
+def _write(cur, updates, extra_sets):
+    if not updates:
+        return
+    cols = [c for c in updates[0] if c != "key"]
+    cur.executemany(f"update businesses set {', '.join(f'{c} = %({c})s' for c in cols)}, {extra_sets} where biz_key = %(key)s",
+                    updates)
+
+
 def apply(cur, state):
+    """The newest 401(k) headcount, where it's recent, replaces the PPP one: the simple estimate from it."""
     since = date.today().year - RECENT_YEARS
     cur.execute("""
         with latest as (
-            select distinct on (biz_key) biz_key, employees, naics
+            select distinct on (biz_key) biz_key, employees, naics, year
             from headcounts where source = 'form5500' and year >= %(since)s
             order by biz_key, year desc
         )
-        select b.biz_key, b.naics, b.source, l.naics, l.employees, b.est_method, b.est_revenue_mid,
-               b.est_ebitda_mid, b.industry, b.name, b.is_nonprofit
+        select b.biz_key, b.naics, b.source, l.naics, l.employees, l.year, b.name, b.industry,
+               b.est_method, b.est_revenue_mid, b.est_ebitda_mid
         from businesses b join latest l on l.biz_key = b.biz_key
         where b.state = %(state)s and l.employees >= %(min)s
           and coalesce(b.est_method, '') not in ('reported', 'verified', 'branch')   -- actual figures win
-          and (b.jobs_reported is null
-               or l.employees between 0.5 * b.jobs_reported and %(max_growth)s * b.jobs_reported)""",
+          and (b.jobs_reported is null or l.employees <= %(max_growth)s * b.jobs_reported)""",
                 {"since": since, "state": state, "min": MIN_PARTICIPANTS, "max_growth": MAX_GROWTH})
-    margins, bench, adjust, sizes = Margins(), load_benchmarks(), Adjust(), SizeFactors()
-    cal = Calibration(cur)
-    lo, hi = RANGE
+    bench, cal = load_benchmarks(), Calibration(cur)
     updates, staffing = [], 0
-    for key, naics, source, filed_naics, employees, method, cur_rev, cur_ebitda, cur_industry, name, nonprofit in cur.fetchall():
+    for key, naics, source, filed_naics, employees, year, name, cur_industry, method, cur_rev, cur_ebitda in cur.fetchall():
         naics = naics or ""
         # The filing's code is more specific than a map listing's, but plan paperwork often carries a
         # parent's or a generic code (an engineering contractor filed as a petroleum wholesaler), so it
@@ -61,70 +63,42 @@ def apply(cur, state):
         if naics.startswith(STAFFING):
             staffing += 1
             continue
-        _, b = lookup(bench, naics)
-        if not b.get("revenue_per_employee"):
+        # Counted at the end of the plan year.
+        e = cal.simple(naics, float(employees), date(int(year), 12, 31))
+        if not e:
             continue
-        # Recent headcount, so only prices need bringing up to date (benchmark year -> now).
-        inflation = adjust.inflation(b.get("year"))
-        factor = cal.factor(naics, nonprofit)
-        revenue = float(employees) * sizes.rpe(naics, employees, b["revenue_per_employee"]) * inflation * factor
-        margin = cal.margin(naics) or margins.margin(naics, revenue)
-        ebitda = revenue * margin
-        shown, shown_ebitda = cal.tilted(revenue, revenue * hi), cal.tilted(ebitda, ebitda * hi)   # up the range
-        if method == "retirement_plan" and cur_rev is not None and round(shown) == round(float(cur_rev)) \
-                and cur_ebitda is not None and round(shown_ebitda) == round(float(cur_ebitda)) and cur_industry == b["label"]:
+        _, b = lookup(bench, naics)
+        if method == "retirement_plan" and cur_rev is not None and round(float(cur_rev)) == e["est_revenue_mid"] \
+                and cur_ebitda is not None and round(float(cur_ebitda)) == e["est_ebitda_mid"] and cur_industry == b["label"]:
             continue   # already current: don't rewrite the row
-        updates.append((round(revenue * lo), round(shown), round(revenue * hi),
-                        round(ebitda * lo), round(shown_ebitda), round(ebitda * hi),
-                        margin if margins.data else None, naics, b["label"], inflation, round(factor, 4), cal.tilt, key))
-    cur.executemany("""
-        update businesses set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
-            est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_ebitda_margin = %s,
-            naics = %s, industry = %s, est_inflation = %s, est_calibration = %s, est_tilt = %s, est_growth = 1,
-            est_method = 'retirement_plan', est_confidence = 'medium'
-        where biz_key = %s""", updates)
+        updates.append({**e, "naics": naics, "industry": b["label"], "key": key})
+    _write(cur, updates, "est_method = 'retirement_plan', est_confidence = 'medium'")
     print(f"Estimates re-based on recent retirement-plan headcounts: {len(updates):,} updated "
           f"({staffing:,} staffing firms/PEOs skipped)", flush=True)
 
 
 TRUCKING = ("484", "4854", "4855", "4859")
-FLEET_RANGE = (0.7, 1.4)
 
 
 def apply_fleet(cur, state):
     """Trucking and bus companies: size from the drivers (or trucks) on their current FMCSA
-    registration where that's more than the 2020 PPP headcount, or where there was none (a map listing
-    on an industry average). Actual and 401(k) figures win."""
+    registration where that's more than the 2020 PPP headcount grown since, or where there was none (a map
+    listing on an industry average). Actual and 401(k) figures win."""
     cur.execute("""
-        select b.biz_key, b.naics, b.name, b.jobs_reported, b.est_growth, b.is_nonprofit,
+        select b.biz_key, b.naics, b.name, b.jobs_reported,
                (s.data ->> 'drivers')::numeric, (s.data ->> 'power_units')::numeric
         from businesses b join business_sources s on s.biz_key = b.biz_key and s.source = 'fmcsa'
         where b.state = %s and b.naics ~ '^(484|4854|4855|4859)'
           and coalesce(b.est_method, '') not in ('reported', 'verified', 'branch', 'retirement_plan', 'fleet')""", (state,))
-    margins, bench, adjust, sizes = Margins(), load_benchmarks(), Adjust(), SizeFactors()
     cal = Calibration(cur)
-    lo, hi = FLEET_RANGE
+    ppp_growth = (1 + cal.growth) ** ((date.today() - PPP_YEAR_MID).days / 365.25)
     updates = []
-    for key, naics, name, jobs, growth, nonprofit, drivers, units in cur.fetchall():
+    for key, naics, name, jobs, drivers, units in cur.fetchall():
         fleet = max(float(drivers or 0), float(units or 0))
-        ppp_now = float(jobs or 0) * float(growth or 1)
-        if fleet < 2 or (ppp_now and fleet < 1.2 * ppp_now):
+        if fleet < 2 or (jobs and fleet < 1.2 * float(jobs) * ppp_growth):
             continue   # the PPP count (office and shop staff included) is the better headcount
-        naics = correct_naics(name, naics)
-        _, b = lookup(bench, naics)
-        if not b.get("revenue_per_employee"):
-            continue
-        inflation = adjust.inflation(b.get("year"))
-        factor = cal.factor(naics, nonprofit)
-        revenue = fleet * sizes.rpe(naics, fleet, b["revenue_per_employee"]) * inflation * factor
-        margin = cal.margin(naics) or margins.margin(naics, revenue)
-        ebitda = revenue * margin
-        updates.append((round(revenue * lo), round(cal.tilted(revenue, revenue * hi)), round(revenue * hi),
-                        round(ebitda * lo), round(cal.tilted(ebitda, ebitda * hi)), round(ebitda * hi),
-                        margin if margins.data else None, inflation, round(factor, 4), cal.tilt, key))
-    cur.executemany("""
-        update businesses set est_revenue_low = %s, est_revenue_mid = %s, est_revenue_high = %s,
-            est_ebitda_low = %s, est_ebitda_mid = %s, est_ebitda_high = %s, est_ebitda_margin = %s,
-            est_inflation = %s, est_calibration = %s, est_tilt = %s, est_growth = 1, est_method = 'fleet', est_confidence = 'medium'
-        where biz_key = %s""", updates)
+        e = cal.simple(correct_naics(name, naics), fleet, date.today())   # the registration is current
+        if e:
+            updates.append({**e, "key": key})
+    _write(cur, updates, "est_method = 'fleet', est_confidence = 'medium'")
     print(f"Estimates re-based on current FMCSA fleets: {len(updates):,} trucking companies", flush=True)

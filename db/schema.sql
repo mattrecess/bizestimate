@@ -368,6 +368,11 @@ create table if not exists estimate_settings (
 );
 alter table businesses add column if not exists est_growth_rate numeric;
 alter table businesses add column if not exists est_tilt numeric;
+-- The simple estimate's inputs (calibration.simple): the headcount used, the year it was counted, and the
+-- industry revenue per employee applied.
+alter table businesses add column if not exists est_employees numeric;
+alter table businesses add column if not exists est_count_year int;
+alter table businesses add column if not exists est_rpe numeric;
 
 -- Industry code corrections (set in /admin/naics, later also from the AI check of what a business
 -- does). The load uses the corrected code for the estimate and keeps the filed one in naics_recorded.

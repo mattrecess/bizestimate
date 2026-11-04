@@ -20,22 +20,32 @@ from collections import defaultdict
 
 from adjust import Adjust
 from benchmarks import load_benchmarks, lookup
+from margins import Margins
 
 MIN_EXAMPLES = 20      # fewer than this in an industry and segment: no learned correction
 SHRINK = 20            # factor = exp(median log ratio x n / (n + SHRINK)): few examples, small correction
 BOUNDS = (0.5, 2.0)
 BLEND_WITHIN = 3.0     # same rule as build.py: headcount and payroll combined when within 3x
-CALIBRATED = ("employees", "blend", "payroll", "industry_average", "retirement_plan", "fleet")
+# Employee-based estimates (PPP, 401(k), fleet) use the simple formula (Calibration.simple) and are left out
+# of calibration, growth adjustment and the range tilt below.
+CALIBRATED = ("payroll", "industry_average")
 # PPP-era estimates (2020 headcount and payroll, and the industry averages drawn from them) are brought
 # up to date at the admin's annual growth rate (estimate_settings 'annual_growth', default 8%), in place
 # of inflation and Oklahoma industry job growth. Calibration then measures the result against real figures.
-PPP_ERA = ("employees", "blend", "payroll", "owner_earnings", "industry_average")
+PPP_ERA = ("payroll", "owner_earnings", "industry_average")
 DEFAULT_GROWTH = 0.08
 # The shown estimate is moved toward the top of its range by this share of the way, measured on a
 # log scale (estimate_settings 'range_tilt'; 0 = middle, 1 = top). Learning keeps using the raw figures.
 DEFAULT_TILT = 0.5
 TILTED = CALIBRATED + ("owner_earnings",)
 PPP_YEAR_MID = datetime.date(2020, 7, 1)
+# The simple estimate (Nov 4, the owner's rule): employees (newest count we have: a recent 401(k) filing, else
+# the 2020 PPP loan, or a trucking fleet) grown at the annual growth rate since that count, x the industry's
+# revenue per employee (the admin's figure, else the Census one kept within these bounds) = revenue;
+# x the industry EBITDA margin = EBITDA; x the size and industry multiple = value (map_tables).
+RPE_BOUNDS = (100_000, 500_000)
+SIMPLE_RANGE = (0.75, 1.3)
+EMPLOYEE_METHODS = ("employees", "blend")
 
 
 def raw_estimate(by_emp, by_pay):
@@ -129,7 +139,7 @@ class Calibration:
         cur.execute("""select naics_prefix, revenue_per_employee, ebitda_margin, multiple, to_jsonb(o) -> 'margin_scale'
                        from industry_overrides o""")
         self.overrides = {p: (rpe, margin, mult, revenue_scale(scale)) for p, rpe, margin, mult, scale in cur.fetchall()}
-        self.bench, self.adjust = load_benchmarks(), Adjust()
+        self.bench, self.adjust, self.irs = load_benchmarks(), Adjust(), Margins()
         cur.execute("select value from estimate_settings where key = 'annual_growth'")
         row = cur.fetchone()
         self.growth = float(row[0]) if row else DEFAULT_GROWTH
@@ -184,6 +194,50 @@ class Calibration:
         if o[3] and revenue:
             return scaled_margin(o[3], revenue)
         return float(o[1]) if o[1] else None
+
+    def rpe(self, naics):
+        """Revenue per employee for the industry: the admin's figure, else the Census one within RPE_BOUNDS."""
+        o = self._override(naics)
+        if o and o[0]:
+            return float(o[0])
+        _, b = lookup(self.bench, naics)
+        if not b.get("revenue_per_employee"):
+            return None
+        return min(RPE_BOUNDS[1], max(RPE_BOUNDS[0], float(b["revenue_per_employee"])))
+
+    def simple(self, naics, employees, as_of):
+        """The simple estimate from a headcount counted on date as_of; None without an industry figure."""
+        rpe = self.rpe(naics)
+        if not rpe or not employees or employees <= 0:
+            return None
+        years = max(0.0, (datetime.date.today() - as_of).days / 365.25)
+        growth = (1 + self.growth) ** years
+        revenue = float(employees) * growth * rpe
+        margin = self.margin(naics, revenue) or self.irs.margin(naics, revenue)
+        lo, hi = SIMPLE_RANGE
+        ebitda = revenue * margin
+        return {"est_revenue_low": round(revenue * lo), "est_revenue_mid": round(revenue), "est_revenue_high": round(revenue * hi),
+                "est_ebitda_low": round(ebitda * lo), "est_ebitda_mid": round(ebitda), "est_ebitda_high": round(ebitda * hi),
+                "est_ebitda_margin": round(margin, 4), "est_revenue_by_employees": round(revenue),
+                "est_employees": float(employees), "est_count_year": as_of.year, "est_rpe": round(rpe),
+                "est_growth": round(growth, 4), "est_growth_rate": self.growth,
+                "est_inflation": 1, "est_calibration": 1, "est_tilt": 0}
+
+    def apply_simple(self, cur):
+        """PPP businesses with an employee count: the simple estimate from that count (mid-2020)."""
+        cur.execute("select biz_key, naics, jobs_reported from stage_biz where est_method = any(%s) "
+                    "and coalesce(jobs_reported, '') <> ''", (list(EMPLOYEE_METHODS),))
+        updates = []
+        for key, naics, jobs in cur.fetchall():
+            e = self.simple(naics, float(jobs), PPP_YEAR_MID)
+            if e:
+                updates.append({**e, "key": key})
+        cols = [c for c in (updates[0] if updates else {}) if c != "key"]
+        if updates:
+            cur.executemany(f"update stage_biz set {', '.join(f'{c} = %({c})s' for c in cols)}, est_method = 'employees', "
+                            f"est_confidence = 'medium' where biz_key = %(key)s",
+                            [{k: (str(v) if v is not None else None) for k, v in u.items()} for u in updates])
+        print(f"Simple estimate: {len(updates):,} businesses from their PPP headcount, grown {self.growth:.0%} a year", flush=True)
 
     def apply_growth(self, cur):
         """Bring PPP-era staged estimates up to date at the annual growth rate (before calibration, and

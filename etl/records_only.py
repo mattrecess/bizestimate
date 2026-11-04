@@ -12,16 +12,15 @@ participants for sponsors); EBITDA = revenue x the industry's IRS margin for tha
 import json
 import re
 
-from adjust import Adjust
+from datetime import date
+
 from benchmarks import correct_naics, load_benchmarks, lookup
+from calibration import Calibration
 from geocode import jitter, zip_centroids
-from margins import Margins
 from matching import full_name
-from size_factors import SizeFactors
 
 PREFIX = {"fmcsa": "DOT|", "form5500": "EIN|"}
 COMPANY = re.compile(r"\b(LLC|L\.L\.C|INC|INCORPORATED|CORP|CORPORATION|CO|COMPANY|LTD|LP|LLP|PLLC|PC|PA)\b\.?", re.I)
-RANGE = {"fmcsa": (0.7, 1.4), "form5500": (0.8, 1.5)}
 STAFFING = ("5613",)
 MAX_REVENUE = 1e9
 
@@ -59,7 +58,7 @@ def stage(cur, state, cols):
     except OSError as e:
         print(f"record-only listings: ZIP centroids unavailable ({e!r}); none added", flush=True)
         return []
-    bench, adjust, margins, sizes = load_benchmarks(), Adjust(), Margins(), SizeFactors()
+    bench, cal = load_benchmarks(), Calibration(cur)
     out, skipped = [], 0
     for key, source, d in records:
         zip5 = str(d.get("zip") or "")[:5]
@@ -74,17 +73,19 @@ def stage(cur, state, cols):
             continue
         listed.add(ident)
         employees = float(d["employees"])
-        inflation = adjust.inflation(b.get("year"))
-        # Calibration and the range tilt are applied with the other staged rows (load.py).
-        revenue = employees * sizes.rpe(naics, employees, b["revenue_per_employee"]) * inflation
+        # The simple estimate: a 401(k) count from the end of its plan year, a fleet as of now.
+        as_of = date(int(d["year"]), 12, 31) if source == "form5500" and d.get("year") else date.today()
+        e = cal.simple(naics, employees, as_of)
+        if not e:
+            skipped += 1
+            continue
+        revenue = e["est_revenue_mid"]
         if revenue > MAX_REVENUE:
             # Too big to be an unknown company: more likely a parent's plan or a wrong industry code.
             print(f"record-only listings: skipped {d['name']} ({source}, {employees:,.0f} employees, "
                   f"${revenue / 1e9:.1f}B estimated)", flush=True)
             skipped += 1
             continue
-        margin = margins.margin(naics, revenue)
-        lo, hi = RANGE[source]
         lat, lon = zips[zip5]
         dlat, dlon = jitter(key)
         row = {c: "" for c in cols}
@@ -93,10 +94,7 @@ def stage(cur, state, cols):
             "city": (d.get("city") or "").strip().title(), "state": state, "zip": zip5, "naics": naics,
             "industry": b["label"], "is_individual": "False", "is_nonprofit": "False",
             "lat": round(lat + dlat, 6), "lon": round(lon + dlon, 6), "geo_precision": "zip",
-            "est_revenue_low": round(revenue * lo), "est_revenue_mid": round(revenue), "est_revenue_high": round(revenue * hi),
-            "est_ebitda_low": round(revenue * lo * margin), "est_ebitda_mid": round(revenue * margin),
-            "est_ebitda_high": round(revenue * hi * margin), "est_ebitda_margin": margin if margins.data else "",
-            "est_inflation": inflation, "est_growth": 1, "est_confidence": "low",
+            **e, "est_confidence": "low",
             "est_method": "fleet" if source == "fmcsa" else "retirement_plan",
             "phone": d.get("phone") or "", "source": source,
         })

@@ -95,7 +95,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
     : fromPlan ? "the employee count on its latest 401(k) filing"
     : fleet && src.fmcsa ? `${Math.round(src.fmcsa.drivers || 0).toLocaleString()} drivers and ${Math.round(src.fmcsa.power_units).toLocaleString()} trucks on its federal motor carrier registration`
     : fleet ? "the drivers and trucks on its federal motor carrier registration"
-    : b.est_method === "employees" ? `${b.jobs_reported} employees reported for PPP in ${pppYear(b.loans)}, grown at the industry's Oklahoma rate since`
+    : b.est_method === "employees" ? `${b.jobs_reported} employees reported for PPP in ${pppYear(b.loans)}, grown ${Math.round((Number(b.est_growth_rate) || 0.08) * 100)}% a year since`
     : b.est_method === "blend" ? `its ${b.jobs_reported} employees and its payroll, both reported for PPP in ${pppYear(b.loans)} and brought up to date`
     : b.est_method === "payroll" ? `PPP payroll (${pppYear(b.loans)})`
     : b.est_method === "owner_earnings" ? `owner earnings on its PPP loan (${pppYear(b.loans)})`
@@ -136,8 +136,19 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   {
     const mid = Number(b.est_revenue_mid), emp = Number(b.est_revenue_by_employees), pay = Number(b.est_revenue_by_payroll);
     let base: number | null = null;
+    // The simple estimate (employees grown since they were counted x revenue per employee), when the load stored its inputs.
+    const counted = Number(b.est_employees), rpe = Number(b.est_rpe), year = Number(b.est_count_year);
+    const simple = !reported && b.est_method !== "verified" && counted > 0 && rpe > 0
+      && ["employees", "retirement_plan", "fleet"].includes(String(b.est_method));
     if (reported || b.est_method === "verified") {
       mathRows.push({ label: b.est_method === "verified" ? "Verified revenue" : `Reported revenue, ${reportedSrc}`, value: money(mid), kind: "total" });
+    } else if (simple) {
+      const growth = Number(b.est_growth) || 1, rate = Number(b.est_growth_rate) || 0.08;
+      const what = b.est_method === "fleet" ? "drivers/trucks (FMCSA registration)"
+        : b.est_method === "retirement_plan" ? `employees (${year} 401(k) filing)` : `employees (PPP loan, ${year})`;
+      mathRows.push({ label: `${counted.toLocaleString()} ${what}`, value: counted.toLocaleString() });
+      if (growth > 1.001) mathRows.push({ label: `× ${growth.toFixed(2)} growth (${Math.round(rate * 100)}% a year since ${year})`, value: `${Math.round(counted * growth).toLocaleString()} today` });
+      mathRows.push({ label: `× ${money(rpe)} revenue per employee (${(industryLabel(b.naics) ?? b.industry).toLowerCase()})`, value: money(mid), kind: "total" });
     } else {
       if ((b.est_method === "blend" || b.est_method === "employees") && b.jobs_reported && emp) {
         mathRows.push({ label: `${b.jobs_reported} employees × ${money(emp / b.jobs_reported)} each`, value: money(emp) });
@@ -341,7 +352,6 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
                 ))}
               </div>
               <p className="disclaimer" style={{ marginTop: 8 }}>
-                <button className="link-btn" onClick={(e) => e.currentTarget.closest(".profile")?.querySelector("#calculation")?.scrollIntoView({ behavior: "smooth" })}>Full calculation</button>{" · "}
                 <Link href={`/correct?business=${b.id}`}>Own this business? Correct these figures</Link>
               </p>
             </div>
@@ -426,46 +436,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
           </div>
         ) : null}
         <div className="section" id="calculation">
-          <h2>The full calculation</h2>
-          {b.est_method === "employees" && (
-            <table><tbody>
-              <tr><td>Employees reported to the SBA</td><td className="num">{b.jobs_reported}</td></tr>
-              <tr><td>Industry revenue per employee</td><td className="num">{money(b.revenue_per_employee)}</td></tr>
-              <tr><td>Revenue = employees × revenue per employee</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
-              <tr><td>EBITDA margin{irsMargin ? " (industry, adjusted for size)" : " (industry)"}</td><td className="num">{pct(margin)}</td></tr>
-              <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
-              <tr><td>Cross-check: revenue implied by PPP payroll</td><td className="num">{money(b.est_revenue_by_payroll)}</td></tr>
-            </tbody></table>
-          )}
-          {b.est_method === "blend" && (
-            <table><tbody>
-              <tr><td>Employees reported to the SBA</td><td className="num">{b.jobs_reported}</td></tr>
-              <tr><td>Revenue from headcount (employees × revenue per employee for companies this size)</td><td className="num">{money(b.est_revenue_by_employees)}</td></tr>
-              <tr><td>Revenue from PPP payroll (payroll ÷ payroll&apos;s share of revenue for companies this size)</td><td className="num">{money(b.est_revenue_by_payroll)}</td></tr>
-              <tr><td>Estimate: the two combined (geometric mean)</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
-              <tr><td>EBITDA margin{irsMargin ? " (industry, adjusted for size)" : " (industry)"}</td><td className="num">{pct(margin)}</td></tr>
-              <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
-            </tbody></table>
-          )}
-          {b.est_calibration != null && Math.abs(Number(b.est_calibration) - 1) >= 0.01 && (
-            <p className="disclaimer">Calibrated: revenue {Number(b.est_calibration) < 1 ? "lowered" : "raised"} to{" "}
-              {Math.round(Number(b.est_calibration) * 100)}% of the industry-average estimate, to match what businesses in this industry
-              actually report.</p>
-          )}
-          {Number(b.est_tilt) > 0 && (
-            <p className="disclaimer">Figures are shown toward the upper part of their range rather than at its middle.</p>
-          )}
-          {b.est_growth_rate != null ? (
-            <p className="disclaimer">Brought up to date assuming revenue has grown {(Number(b.est_growth_rate) * 100).toFixed(0)}% a year
-              since 2020, when the PPP figures were reported; included above.</p>
-          ) : (Number(b.est_inflation) > 1.001 || Math.abs(Number(b.est_growth || 1) - 1) > 0.001) && (
-            <p className="disclaimer">Brought up to date: {Number(b.est_inflation) > 1.001 && <>
-              prices are {Math.round((Number(b.est_inflation) - 1) * 100)}% higher than in the benchmark&apos;s year</>}
-              {Number(b.est_inflation) > 1.001 && Math.abs(Number(b.est_growth || 1) - 1) > 0.001 && " and "}
-              {Math.abs(Number(b.est_growth || 1) - 1) > 0.001 && <>Oklahoma employment in this industry has
-                {Number(b.est_growth) >= 1 ? " grown " : " fallen "}{Math.abs(Math.round((Number(b.est_growth) - 1) * 100))}% since 2020</>}
-              , both included above.</p>
-          )}
+          <h2>Ranges &amp; sources</h2>
           {b.est_method === "payroll" && (
             <table><tbody>
               <tr><td colSpan={2}>No employee count was reported, so this uses the PPP loan instead.</td></tr>
@@ -488,28 +459,6 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
               : src.fdic ? "its FDIC call report" : "its IRS Form 990 filing"}, not an estimate.
               {!src.sec && !src.fdic && " EBITDA applies the industry margin to reported revenue."}</p>
           )}
-          {value && (
-            <table><tbody>
-              <tr><td>Estimated value = EBITDA × typical sale multiple</td><td className="num">{money(value.mid)}</td></tr>
-              <tr><td>Multiple for this size and industry</td><td className="num">{value.multiple}×</td></tr>
-              <tr><td>Value range</td><td className="num">{moneyRange(value.low, value.high)}</td></tr>
-            </tbody></table>
-          )}
-          {fromPlan && latest && (
-            <table><tbody>
-              <tr><td>Employees in its retirement plan ({latest.year} Form 5500)</td><td className="num">{latest.employees.toLocaleString()}</td></tr>
-              <tr><td>Industry revenue per employee</td><td className="num">{money(b.revenue_per_employee)}</td></tr>
-              <tr><td>Revenue = employees × revenue per employee</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
-              <tr><td>EBITDA margin{irsMargin ? " (industry, adjusted for size)" : " (industry)"}</td><td className="num">{pct(margin)}</td></tr>
-              <tr><td>EBITDA = revenue × margin</td><td className="num">{money(b.est_ebitda_mid)}</td></tr>
-              {b.jobs_reported ? <tr><td>For comparison: employees reported for PPP ({pppYear(b.loans)})</td><td className="num">{b.jobs_reported}</td></tr> : null}
-            </tbody></table>
-          )}
-          {fromPlan && (
-            <p className="disclaimer">Uses the newest headcount we have: participants in the company&apos;s retirement plan from its
-              Form 5500 filing with the Department of Labor. Plans can leave out part-timers and new hires, so the range
-              leans higher than the estimate.</p>
-          )}
           {avg && (
             <p>This business has no PPP loan on record, so there is no business-specific data. The figures are the
               typical estimated revenue of {b.industry} businesses in our Oklahoma data: the middle value, with the
@@ -521,9 +470,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
             <tr><td>EBITDA range</td><td className="num">{moneyRange(b.est_ebitda_low, b.est_ebitda_high)}</td></tr>
             <tr><td>Industry (NAICS)</td><td className="num">{b.industry} ({b.naics ? <a href={`/?q=${b.naics}`} title="Every business with this NAICS code">{b.naics}</a> : "n/a"})</td></tr>
           </tbody></table>
-          {b.est_confidence === "low" && (b.est_method === "employees" || b.est_method === "blend") && (
-            <p className="disclaimer">Low confidence: the employee-based and payroll-based estimates differ by more than 2×.</p>
-          )}
+          {value && <table><tbody><tr><td>Value range</td><td className="num">{moneyRange(value.low, value.high)}</td></tr></tbody></table>}
           {irsMargin && (
             <p className="disclaimer">EBITDA margin: from IRS tax returns of S corporations in this industry (2019–2022),
               adjusted for company size: smaller companies typically run higher margins. EBITDA here is after
