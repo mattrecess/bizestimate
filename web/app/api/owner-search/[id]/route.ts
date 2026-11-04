@@ -5,11 +5,11 @@ import { currentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { ownerSearchConfigured, searchOwner } from "@/lib/owner-search";
 
-// "Search the web for the owner": signed-in users only. Each business is searched at most once every
-// RETRY_DAYS (a search costs about a fifth of a cent, but shouldn't be repeatable at will), and each user
+// "Search the web for the owner": signed-in users only. Each business is searched at most once a day
+// (RETRY_DAYS; a search costs about a fifth of a cent, so it shouldn't be repeatable at will), and each user
 // may start PER_USER_DAY searches a day. A found owner is saved for everyone: on the business now, and as an
 // 'owner_lookup' source so data loads keep it (etl/enrich.py apply_owners).
-const RETRY_DAYS = 30;
+const RETRY_DAYS = 1;
 const PER_USER_DAY = 25;
 
 async function tables() {
@@ -31,7 +31,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   // The admin can search again at any time (e.g. after the search itself was improved).
   const [recent] = admin ? [] : await sql`select found from owner_lookups
     where biz_key = ${b.biz_key} and searched_at > now() - make_interval(days => ${RETRY_DAYS})`;
-  if (recent) return NextResponse.json({ owner: null, message: "We searched the web for this owner recently and didn't find a name. We'll try again later." });
+  if (recent) return NextResponse.json({ owner: null, message: "We searched the web for this owner in the last day and didn't find a name. Try again tomorrow." });
   if (user && !admin) {
     const [{ n }] = await sql`select count(*)::int as n from owner_lookups where user_id = ${user.id} and searched_at > now() - interval '1 day'`;
     if (n >= PER_USER_DAY) return NextResponse.json({ error: "You've reached today's limit for owner searches. Try again tomorrow." }, { status: 429 });
