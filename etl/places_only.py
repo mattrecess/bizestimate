@@ -252,10 +252,8 @@ def group_chains(added, cities, margins):
 
 
 MASS_CHAIN = 15        # a name on this many map-only listings is a chain or kiosk brand, not that many businesses
-# Each location is its own (usually independently owned, sellable) business, even under a big brand: franchise
-# restaurants and hotels, branded gas stations, salons, insurance and real-estate agencies, hardware stores.
-# Nov 4: grouping these hid ~8,500 real businesses (Farmers and State Farm agents, Shell stations, Sonics).
-KEEP_EACH = FRANCHISE_HEAVY + ("5242", "5312", "44413")
+# Franchise brands (Sonic, Shell stations, State Farm agents...) are grouped too, at the owner's request (Nov 4):
+# one listing per brand with its location count, rather than hundreds of identical industry-average pins.
 BIG_CITIES = ("Oklahoma City", "Tulsa")
 
 
@@ -270,7 +268,7 @@ def collapse_mass_chains(added):
     copies are dropped. A longer name that starts with a chain's name joins it ("Blue Rhino Propane Exchange"
     with "Blue Rhino"). Only map-only listings: a business with its own loan or filings stays as it is."""
     def eligible(r):
-        return r["est_method"] == "industry_average" and not (r.get("naics") or "").startswith(KEEP_EACH)
+        return r["est_method"] == "industry_average"
     counts = defaultdict(int)
     for r in added:
         if eligible(r):
