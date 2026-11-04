@@ -390,13 +390,6 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
               ))}
             </div>
           </div>
-          {b.sell_score != null && b.sell_signals?.length ? (
-            <div className="section">
-              <h2>Signs of a sale <span className={`badge ${b.sell_score >= 40 ? "warn" : ""}`}>{sellLabel}</span></h2>
-              <ul className="bp-list">{b.sell_signals.map((s) => <li key={s}>{s}</li>)}</ul>
-              <p className="disclaimer">From public records and the company&apos;s website, not a statement that it&apos;s for sale.</p>
-            </div>
-          ) : null}
           <WhatTheyDo offering={src.website_offering} industry={industryLabel(b.naics) ?? b.industry} />
           {b.transactions?.length ? (
             <div className="section">
