@@ -765,6 +765,17 @@ tr.ref-own td { background: #eef4ff; }
 .bp-meta li a:hover { color: var(--accent); }
 
 /* Leadership card */
+.bp-own { display: inline-block; margin: 4px 0 2px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 650;
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+.bp-own.pe { background: #efe9ff; color: #5b3cc4; border-color: #ddd3ff; }
+.bp-own.public { background: #e8f1ff; color: #1d5fd1; border-color: #cfe0ff; }
+.bp-own.corporate { background: #fff3e0; color: #a65a00; border-color: #ffe0b3; }
+.bp-own.founder, .bp-own.family { background: var(--good-soft); color: var(--good); border-color: transparent; }
+@media (prefers-color-scheme: dark) {
+  .bp-own.pe { background: #2a2147; color: #c8b8ff; border-color: #3b2f66; }
+  .bp-own.public { background: #16284a; color: #9cc2ff; border-color: #22396a; }
+  .bp-own.corporate { background: #3a2a12; color: #ffc77a; border-color: #4d3818; }
+}
 .bp-owner-h { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .bp-team { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .bp-team li { display: flex; gap: 10px; align-items: center; }

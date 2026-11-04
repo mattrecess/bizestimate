@@ -79,9 +79,11 @@ async function coreParts(id: string) {
 }
 
 // Public ownership transactions (acquisitions, investments); price and multiple only when marked public.
-export type Transaction = { deal_date: string | null; buyer: string; deal_type: string; summary: string | null; source_url: string | null };
+// investor: the buyer is a private-equity firm (in /admin's investors list, or found on its portfolio page).
+export type Transaction = { deal_date: string | null; buyer: string; deal_type: string; summary: string | null; source_url: string | null; investor: boolean };
 const getTransactions = (id: string) => sql<Transaction[]>`
-  select to_char(t.deal_date, 'YYYY-MM-DD') as deal_date, t.buyer, t.deal_type, t.summary, t.source_url
+  select to_char(t.deal_date, 'YYYY-MM-DD') as deal_date, t.buyer, t.deal_type, t.summary, t.source_url,
+         (t.source = 'portfolio' or exists (select 1 from investors i where lower(i.name) = lower(t.buyer))) as investor
   from transactions t join businesses b on b.biz_key = t.biz_key
   where b.id = ${id} and t.is_public order by t.deal_date desc nulls last`.catch(() => [] as Transaction[]);
 

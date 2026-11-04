@@ -5,12 +5,12 @@ import type { Business, Comparable, Headcount, LenderLink, Loan, Location, Prosp
 import { money, moneyRange } from "@/lib/format";
 import ContactCard from "./ContactCard";
 import { askSignIn } from "@/lib/saved";
+import { ownershipType } from "@/lib/ownership";
 import RadarButton from "./RadarButton";
 import PipelineBox from "./PipelineBox";
 import HeadcountChart from "./HeadcountChart";
 import ValueChart, { valueHistory } from "./ValueChart";
 import { CustomersSuppliers, WhatTheyDo } from "./Offering";
-import PeopleAdvisors from "./PeopleAdvisors";
 import PublicRecords, { type SourceRecord } from "./PublicRecords";
 import { estimateValue } from "@/lib/valuation";
 import { displayName } from "@/lib/seo";
@@ -87,6 +87,10 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   const ownerName = b.owner_name ?? ownerSearch.found?.name ?? null;
   const ownerTitle = b.owner_name ? b.owner_title : ownerSearch.found?.title;
   const ownerSource = b.owner_name ? b.owner_source : ownerSearch.found?.url;
+  // Founder-owned, PE-backed, public... (lib/ownership.ts). Under a PE firm or parent company, the person we
+  // found is shown as the previous owner.
+  const own = ownershipType({ owner_name: ownerName, owner_title: ownerTitle }, src, b.transactions ?? []);
+  const owned = own.kind === "pe" || own.kind === "corporate";
   async function findOwner() {
     setOwnerSearch({ busy: true });
     try {
@@ -204,6 +208,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
           <div className="ind-icon" aria-hidden><Icon name={industryIcon(b.naics)} size={22} /></div>
           <div className="bp-title-text">
             <h1>{displayName(b.name)}</h1>
+            <span className={`bp-own ${own.kind}`} title={own.detail}>{own.label}{own.owner ? ` · ${own.owner}` : ""}</span>
             {industryText && <div className="bp-industry">
               {industryLabel(b.naics)
                 ? <a href={`/oklahoma/${slug(industryLabel(b.naics)!)}${b.city ? `/${slug(b.city)}` : ""}`}>{industryText}</a>
@@ -292,12 +297,23 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
       {/* Ownership: who owns it and how to reach them, or a button to search the web for the owner. */}
       <div className="bp-owner">
         <div className="bp-owner-h">Ownership</div>
+        {owned && (
+          <div className="bp-owner-top">
+            <div className="bp-owner-av" aria-hidden><Icon name="briefcase" size={18} /></div>
+            <div className="bp-owner-who">
+              <div className="name">{own.owner}</div>
+              <div className="src">{own.kind === "pe" ? "Private equity owner" : "Parent company"}
+                {own.since && <> · since {new Date(own.since + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short" })}</>}</div>
+            </div>
+          </div>
+        )}
         <div className="bp-owner-top">
           <div className="bp-owner-av" aria-hidden>{ownerName ? initials(ownerName) : <Icon name="user" size={18} />}</div>
           <div className="bp-owner-who">
-            <div className="name">{ownerName ?? "Owner not found yet"}</div>
+            <div className="name">{ownerName ?? (owned ? "Previous owner not found yet" : "Owner not found yet")}</div>
             <div className="src">
-              {ownerName ? (ownerTitle || "Owner") : ownerSearch.message ?? "We haven't found the owner in public records yet"}
+              {ownerName ? (owned ? `Previous owner${ownerTitle && !/^owner$/i.test(ownerTitle) ? ` · ${ownerTitle}` : ""}` : (ownerTitle || "Owner"))
+                : ownerSearch.message ?? "We haven't found the owner in public records yet"}
               {ownerSource && <> · <a href={ownerSource} target="_blank" rel="nofollow noopener noreferrer">source</a></>}
               {ownerEntry && ownerEntry.sources.length > 1 && <> · confirmed by {ownerEntry.sources.length} sources</>}
               {ownerLinkedIn && <> · <a href={ownerLinkedIn} target="_blank" rel="nofollow noopener noreferrer">LinkedIn</a></>}
@@ -312,7 +328,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
         ) : !ownerSearch.done && (
           <div className="bp-owner-actions">
             <button type="button" className="btn" disabled={ownerSearch.busy} onClick={findOwner}>
-              {ownerSearch.busy ? <><span className="spinner" aria-hidden /> Searching the web…</> : <><Icon name="search" size={15} />Search the web for the owner</>}
+              {ownerSearch.busy ? <><span className="spinner" aria-hidden /> Searching the web…</> : <><Icon name="search" size={15} />{owned ? "Search the web for the previous owner" : "Search the web for the owner"}</>}
             </button>
           </div>
         )}
@@ -361,6 +377,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
                 ))}
               </div>
               <p className="disclaimer" style={{ marginTop: 8 }}>
+                <Link href="/methodology">How estimates work</Link>{" · "}
                 <Link href={`/correct?business=${b.id}`}>Own this business? Correct these figures</Link>
               </p>
             </div>
@@ -437,59 +454,8 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
             </table>
           </div>
         ) : null}
-        <div className="section" id="calculation">
-          <h2>Ranges &amp; sources</h2>
-          {b.est_method === "payroll" && (
-            <table><tbody>
-              <tr><td colSpan={2}>No employee count was reported, so this uses the PPP loan instead.</td></tr>
-              <tr><td>Annual payroll implied by PPP loan</td><td className="num">{money(b.est_payroll)}</td></tr>
-              <tr><td>Industry payroll ÷ revenue</td><td className="num">{pct(b.payroll_to_revenue)}</td></tr>
-              <tr><td>Revenue = payroll ÷ ratio</td><td className="num">{money(b.est_revenue_mid)}</td></tr>
-              <tr><td>EBITDA margin{irsMargin ? " (industry, adjusted for size)" : " (industry)"}</td><td className="num">{pct(margin)}</td></tr>
-            </tbody></table>
-          )}
-          {b.est_method === "owner_earnings" && (
-            <p>This looks like a one-person business with no employee count. Its PPP loan was sized on owner earnings
-              rather than payroll, so we treat the annualized amount as owner earnings (≈ EBITDA) and assume a 30% net
-              margin to estimate revenue. Treat these numbers as rough.</p>
-          )}
-          {b.est_method === "verified" && (
-            <p>These are the business&apos;s actual figures, provided to SeeBITDA, not an estimate.</p>
-          )}
-          {reported && (
-            <p>These are the business&apos;s own reported figures, from {src.sec ? "its SEC annual report (10-K)"
-              : src.fdic ? "its FDIC call report" : "its IRS Form 990 filing"}, not an estimate.
-              {!src.sec && !src.fdic && " EBITDA applies the industry margin to reported revenue."}</p>
-          )}
-          {avg && (
-            <p>This business has no PPP loan on record, so there is no business-specific data. The figures are the
-              typical estimated revenue of {b.industry} businesses in our Oklahoma data: the middle value, with the
-              range covering the middle half of those businesses. EBITDA applies the industry margin
-              ({pct(margin)}). Treat these as a rough guide.</p>
-          )}
-          <table><tbody>
-            <tr><td>Revenue range</td><td className="num">{moneyRange(b.est_revenue_low, b.est_revenue_high)}</td></tr>
-            <tr><td>EBITDA range</td><td className="num">{moneyRange(b.est_ebitda_low, b.est_ebitda_high)}</td></tr>
-            <tr><td>Industry (NAICS)</td><td className="num">{b.industry} ({b.naics ? <a href={`/?q=${b.naics}`} title="Every business with this NAICS code">{b.naics}</a> : "n/a"})</td></tr>
-          </tbody></table>
-          {value && <table><tbody><tr><td>Value range</td><td className="num">{moneyRange(value.low, value.high)}</td></tr></tbody></table>}
-          {irsMargin && (
-            <p className="disclaimer">EBITDA margin: from IRS tax returns of S corporations in this industry (2019–2022),
-              adjusted for company size: smaller companies typically run higher margins. EBITDA here is after
-              owners&apos; salaries.</p>
-          )}
-          <p className="disclaimer">Benchmarks: {b.benchmark_source ?? "sector default"}.
-            {!fromPlan && !avg && !fleet && " PPP loans were sized on 2019–2020 payroll, so figures reflect that period."} These are
-            statistical estimates, not reported financials.
-            {noLoan && (b.key_source === "DOT" ? " Listing details come from the FMCSA motor carrier census."
-              : b.key_source === "EIN" ? " Listing details come from the company's Form 5500 retirement-plan filing."
-              : " Listing details come from Overture Maps open data.")}{" "}
-            <Link href="/methodology">Full methodology</Link></p>
-        </div>
 
       {/* People */}
-          <PeopleAdvisors sources={b.sources ?? []}
-            lenders={[...b.loans.map((l) => l.lender), ...((src.sba?.loans ?? []) as { lender: string }[]).map((l) => l.lender)]} />
           {b.lenders?.length ? (
             <div className="section">
               <h2><Icon name="bank" size={16} />Banking relationships</h2>
