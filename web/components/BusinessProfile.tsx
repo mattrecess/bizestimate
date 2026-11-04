@@ -39,7 +39,6 @@ function linkedInSearch(b: Profile) {
 }
 
 const pct = (v: unknown) => (v == null ? "—" : `${(Number(v) * 100).toFixed(0)}%`);
-const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
 const initials = (name: string) => name.split(/\s+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
 // Year of the first PPP loan (headcounts were reported then): 2020 for most, 2021 for second-draw-only.
@@ -91,9 +90,12 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   const ownerName = b.owner_name ?? ownerSearch.found?.name ?? null;
   const ownerTitle = b.owner_name ? b.owner_title : ownerSearch.found?.title;
   const ownerSource = b.owner_name ? b.owner_source : ownerSearch.found?.url;
+  // Earliest of the record-based year and the founding year the company's own site states.
+  const founded = [src.founded?.year, src.fdic?.founded, src.fmcsa?.registered, src.website_profile?.founded_year]
+    .filter((y): y is number => typeof y === "number").sort((a, b) => a - b)[0] ?? null;
   // Founder-owned, PE-backed, public... (lib/ownership.ts). Under a PE firm or parent company, the person we
   // found is shown as the previous owner.
-  const own = ownershipType({ owner_name: ownerName, owner_title: ownerTitle }, src, b.transactions ?? []);
+  const own = ownershipType({ owner_name: ownerName, owner_title: ownerTitle, name: b.name, founded }, src, b.transactions ?? []);
   const owned = own.kind === "pe" || own.kind === "corporate";
   async function findExecutives() {
     setExecSearch((s) => ({ ...s, busy: true, message: undefined }));
@@ -131,9 +133,6 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
     }
   }
   const value = estimateValue({ ...b, public_company: !!src.sec || undefined, is_nonprofit: b.is_nonprofit || !!src.irs990 });
-  // Earliest of the record-based year and the founding year the company's own site states.
-  const founded = [src.founded?.year, src.fdic?.founded, src.fmcsa?.registered, src.website_profile?.founded_year]
-    .filter((y): y is number => typeof y === "number").sort((a, b) => a - b)[0] ?? null;
   const ownershipChange = src.sba?.ownership_change_year ?? null;
   const latest = b.headcounts?.length ? b.headcounts[b.headcounts.length - 1] : null;
   // What today's figures rest on, and how recent it is.
@@ -208,20 +207,22 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   }
   const industryText = industryLabel(b.naics) ?? b.industry;
   // Quick facts under the name, each with its icon.
-  const meta: [string, string, string?, string?][] = [
-    // The address opens Google Maps (the app on a phone), searched with the name so it lands on the business.
-    ["pin", [b.address, b.city].filter(Boolean).join(", ") + (b.city ? ", OK" : ""),
-      approximate ? "We couldn't map this address, so the map pin is placed in its ZIP code" : "Open in Google Maps",
-      b.address || b.city ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([b.name, b.address, b.city, "OK", b.zip].filter(Boolean).join(", "))}` : undefined],
-    ...(b.locations?.length ? [["map", `${b.locations.length + 1} locations`] as [string, string]] : []),
+  // Key facts under the name, as a small card: icon, label, value (and a link where there's somewhere to go).
+  const years = founded ? new Date().getFullYear() - founded : null;
+  const facts: { icon: string; label: string; value: string; sub?: string; href?: string; title?: string; wide?: boolean }[] = [
+    ...(b.address || b.city ? [{ icon: "pin", label: approximate ? "Address (approx.)" : "Address", value: b.address || b.city,
+      sub: b.address ? `${b.city}, OK${b.zip ? ` ${b.zip}` : ""}` : "Oklahoma",
+      title: approximate ? "We couldn't map this address, so the map pin is placed in its ZIP code" : "Open in Google Maps",
+      // Opens Google Maps (the app on a phone), searched with the name so it lands on the business.
+      href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([b.name, b.address, b.city, "OK", b.zip].filter(Boolean).join(", "))}` }] : []),
+    ...(founded ? [{ icon: "calendar", label: "Founded", value: String(founded), sub: years && years > 1 ? `${years} years in business` : undefined }] : []),
+    ...(b.locations?.length ? [{ icon: "map", label: "Locations", value: String(b.locations.length + 1), sub: "in Oklahoma" }] : []),
     // A chain or kiosk brand shown once (etl/places_only.py): how many Oklahoma locations it has.
-    ...(b.chain_locations ? [["map", `${b.chain_locations.toLocaleString()} Oklahoma locations`] as [string, string]] : []),
-    ...(founded ? [["calendar", `Since ${founded}`] as [string, string]] : []),
-    ...(src.website_profile?.family_owned ? [["user", `Family-owned${src.website_profile.generation ? `, ${ordinal(src.website_profile.generation)} generation` : ""}`] as [string, string]] : []),
+    ...(b.chain_locations ? [{ icon: "map", label: "Locations", value: b.chain_locations.toLocaleString(), sub: "in Oklahoma" }] : []),
     // The industry code, linking to every business with it (as the NAICS filter does).
-    ...(b.naics ? [["briefcase", `NAICS ${b.naics}${b.industry ? ` · ${b.industry}` : ""}${b.naics_recorded ? ` (filed as ${b.naics_recorded})` : ""}`,
-      `${b.industry ? `${b.industry} (NAICS ${b.naics})` : `NAICS ${b.naics}`}${b.naics_recorded ? `. Corrected from ${b.naics_recorded}, the code it filed (e.g. on its PPP loan), which didn't match what it does.` : ""}`,
-      `/?q=${b.naics}`] as [string, string, string, string]] : []),
+    ...(b.naics ? [{ icon: "briefcase", label: `NAICS ${b.naics}`, value: b.industry ?? "", wide: true, href: `/?q=${b.naics}`,
+      sub: b.naics_recorded ? `Corrected from ${b.naics_recorded}, the code it filed` : undefined,
+      title: "Every business with this industry code" }] : []),
   ];
 
   return (
@@ -236,21 +237,28 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
           <div className="bp-title-text">
             <h1>{displayName(b.name)}</h1>
             <span className={`bp-own ${own.kind}`} title={own.detail}>{own.label}{own.owner ? ` · ${own.owner}` : ""}</span>
-            {industryText && <div className="bp-industry">
-              {industryLabel(b.naics)
-                ? <a href={`/oklahoma/${slug(industryLabel(b.naics)!)}${b.city ? `/${slug(b.city)}` : ""}`}>{industryText}</a>
-                : industryText}
+            {/* The plain-English industry; the official NAICS description is in the facts below. */}
+            {industryLabel(b.naics) && <div className="bp-industry">
+              <a href={`/oklahoma/${slug(industryLabel(b.naics)!)}${b.city ? `/${slug(b.city)}` : ""}`}>{industryText}</a>
             </div>}
           </div>
         </div>
-        <ul className="bp-meta">
-          {meta.filter(([, text]) => text).map(([icon, text, title, href]) => href ? (
-            <li key={text} title={title}>{href.startsWith("http")
-              ? <a href={href} target="_blank" rel="noopener noreferrer"><Icon name={icon} size={14} />{text}{approximate && icon === "pin" ? " (approx.)" : ""}</a>
-              : <a href={href}><Icon name={icon} size={14} />{text}</a>}</li>
-          ) : (
-            <li key={text} title={title}><Icon name={icon} size={14} />{text}{title ? " (approx.)" : ""}</li>
-          ))}
+        <ul className="bp-facts">
+          {facts.map((f) => {
+            const body = (<>
+              <span className="bp-fact-ic" aria-hidden><Icon name={f.icon} size={15} /></span>
+              <span className="bp-fact-t">
+                <span className="bp-fact-k">{f.label}</span>
+                <span className="bp-fact-v">{f.value}</span>
+                {f.sub && <span className="bp-fact-s">{f.sub}</span>}
+              </span>
+            </>);
+            return (
+              <li key={f.label} className={f.wide ? "wide" : ""} title={f.title}>
+                {f.href ? <a href={f.href} {...(f.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{body}</a> : <div>{body}</div>}
+              </li>
+            );
+          })}
         </ul>
         {/* Where to read more about the company: its own website and its LinkedIn page. */}
         <div className="bp-links">

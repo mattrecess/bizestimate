@@ -13,7 +13,9 @@ export type Extras = { ownership: Ownership; current_owner: string | null; bank:
 export async function extrasFor(ids: number[], contacts: { phones: boolean } | null): Promise<Record<number, Extras>> {
   if (!ids.length) return {};
   const rows = await sql`
-    select b.id, b.biz_key, b.owner_name, b.owner_title,
+    select b.id, b.biz_key, b.name, b.owner_name, b.owner_title,
+      (select min((s.data ->> 'year')::int) from business_sources s where s.biz_key = b.biz_key and s.source = 'founded'
+         and (s.data ->> 'year') ~ '^[0-9]{4}$') as founded,
       exists (select 1 from business_sources s where s.biz_key = b.biz_key and s.source = 'sec') as public,
       (select s.data ->> 'family_owned' from business_sources s where s.biz_key = b.biz_key and s.source = 'website_profile') as family,
       (select jsonb_agg(jsonb_build_object('buyer', t.buyer, 'deal_type', t.deal_type, 'deal_date', to_char(t.deal_date, 'YYYY-MM-DD'),
@@ -25,7 +27,7 @@ export async function extrasFor(ids: number[], contacts: { phones: boolean } | n
   const out: Record<number, Extras> = {};
   for (const r of rows) {
     const deals = (r.deals ?? []) as Transaction[];
-    const ownership = ownershipType({ owner_name: r.owner_name, owner_title: r.owner_title },
+    const ownership = ownershipType({ owner_name: r.owner_name, owner_title: r.owner_title, name: r.name, founded: r.founded },
       { sec: r.public ? {} : undefined, website_profile: r.family === "true" ? { family_owned: true } : undefined }, deals);
     out[Number(r.id)] = { ownership, current_owner: ownership.owner ?? r.owner_name ?? null, bank: r.bank ?? null };
   }
