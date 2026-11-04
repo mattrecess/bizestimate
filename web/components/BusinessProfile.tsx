@@ -169,7 +169,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
       mathRows.push({ label: "Revenue", value: money(mid), kind: "total" });
     }
     if (b.est_ebitda_mid != null) {
-      mathRows.push({ label: margin != null && !(src.sec && src.sec.ebitda) ? `× ${pct(margin)} profit margin` : "Profit (EBITDA)", value: money(b.est_ebitda_mid) });
+      mathRows.push({ label: margin != null && !(src.sec && src.sec.ebitda) ? `× ${pct(margin)} EBITDA margin` : "EBITDA", value: money(b.est_ebitda_mid) });
     }
     if (value) mathRows.push({ label: `× ${value.multiple} sale multiple = value`, value: money(value.mid), kind: "value" });
   }
@@ -246,7 +246,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
           <Icon name="map" size={18} />
           <div>
             <b>A location of {b.parent_name}</b>
-            <div className="sub">Revenue, profit and value are for the whole company, on its page.</div>
+            <div className="sub">Revenue, EBITDA and value are for the whole company, on its page.</div>
           </div>
           {b.parent_id && (onSelect
             ? <a className="btn primary" href={`/business/${b.parent_id}`} onClick={(e) => { e.preventDefault(); onSelect(Number(b.parent_id)); }}>View company</a>
@@ -271,12 +271,12 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
                 </div>
               ) : null;
             })()}
-            {value && <div className="bp-hero-note">About {value.multiple}× its yearly profit, typical for a company this size in its industry.</div>}
+            {value && <div className="bp-hero-note">About {value.multiple}× its yearly EBITDA, typical for a company this size in its industry.</div>}
           </div>
 
           <div className="bp-facts">
             <div><div className="k">Revenue</div><div className="v">{money(b.est_revenue_mid)}</div><div className="r">a year</div></div>
-            <div><div className="k">Profit (EBITDA)</div><div className="v">{money(b.est_ebitda_mid)}</div>
+            <div><div className="k">EBITDA</div><div className="v">{money(b.est_ebitda_mid)}</div>
               <div className="r">{margin != null ? `${pct(margin)} of revenue` : "before interest & taxes"}</div></div>
             <div><div className="k">Employees</div><div className="v">{employeesNow ? Number(employeesNow).toLocaleString() : "—"}</div><div className="r">{employeesNote}</div></div>
           </div>
@@ -404,7 +404,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
           <div className="section">
             <h2>Compared with similar businesses nearby</h2>
             <table>
-              <thead><tr><th>Business</th><th className="num">Est. revenue</th><th className="num hide-sm">Est. profit</th><th className="num">Distance</th></tr></thead>
+              <thead><tr><th>Business</th><th className="num">Est. revenue</th><th className="num hide-sm">Est. EBITDA</th><th className="num">Distance</th></tr></thead>
               <tbody>
                 <tr className="bp-me"><td><b>{b.name}</b><div className="disclaimer" style={{ margin: 0 }}>this business</div></td>
                   <td className="num">{money(b.est_revenue_mid)}</td><td className="num hide-sm">{money(b.est_ebitda_mid)}</td><td className="num">—</td></tr>
@@ -587,7 +587,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
                       : <a href={`/business/${l.id}`}>View</a>}</td></tr>
                 ))}
               </tbody></table>
-              <p className="disclaimer">Revenue, profit and value are for the whole company.</p>
+              <p className="disclaimer">Revenue, EBITDA and value are for the whole company.</p>
             </div>
           ) : null}
           <PublicRecords sources={b.sources ?? []} />

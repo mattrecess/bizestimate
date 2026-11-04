@@ -77,7 +77,7 @@ export default function ValueCalculator({ industries, initial }: {
           {badRevenue && <span className="calc-err">Try a number like 4200000, $4.2M or 850k</span>}
         </label>
         <label><span>EBITDA <span className="calc-opt">(optional)</span></span>
-          <input value={ebitdaText} onChange={(e) => setEbitdaText(e.target.value)} placeholder="Profit before interest, taxes, depreciation"
+          <input value={ebitdaText} onChange={(e) => setEbitdaText(e.target.value)} placeholder="Earnings before interest, taxes, depreciation, amortization"
             inputMode="decimal" enterKeyHint="done" onKeyDown={blurOnEnter} aria-invalid={badEbitda} />
           {badEbitda ? <span className="calc-err">Try a number like 650000 or $650k</span>
             : <span className="calc-hint">Net profit plus interest, taxes, depreciation, amortization and owner pay above a market salary.</span>}

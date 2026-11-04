@@ -74,7 +74,7 @@ export default async function ValueMyBusiness({ searchParams }: { searchParams: 
     <>
       <main className="page landing">
         <h1>What&apos;s my business worth?</h1>
-        <p className="lede">A quick estimate from your revenue and profit, using what buyers typically pay for Oklahoma
+        <p className="lede">A quick estimate from your revenue and EBITDA, using what buyers typically pay for Oklahoma
           companies your size in your industry. Nothing you type is saved or sent anywhere.</p>
         <ValueCalculator industries={list} initial={{ industry: p.industry ?? "", revenue: p.revenue ?? "", ebitda: p.ebitda ?? "" }} />
         <div className="section">

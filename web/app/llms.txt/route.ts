@@ -6,7 +6,7 @@ export const dynamic = "force-static";
 export function GET() {
   const body = `# SeeBITDA
 
-> SeeBITDA shows who owns Oklahoma's private businesses and estimates each one's revenue, EBITDA (profit)
+> SeeBITDA shows who owns Oklahoma's private businesses and estimates each one's revenue, EBITDA
 > and business value, from public records. It covers about 180,000 Oklahoma companies.
 
 Each business page answers: who owns it, how much revenue it makes, its EBITDA, how many employees it has,
