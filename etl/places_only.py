@@ -351,6 +351,25 @@ def group_ppp_siblings(rows, cities):
     return folded
 
 
+def lift_branch_contacts(all_rows):
+    """A company with no website takes one from its own locations (Vantage Point ITAD's PPP listing had none,
+    while its map listing at the newer address did), and likewise a phone. Runs before the website check
+    (websites.py) and the owner scan, so both see it."""
+    by_key = {r["biz_key"]: r for r in all_rows}
+    lifted = 0
+    for r in all_rows:
+        parent = by_key.get(r.get("parent_key") or "")
+        if not parent:
+            continue
+        changed = False
+        for f in ("website", "phone"):
+            if r.get(f) and not parent.get(f):
+                parent[f] = r[f]
+                changed = True
+        lifted += changed
+    return lifted
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--state", default="OK")
@@ -466,6 +485,8 @@ def main():
     added, chains, collapsed = collapse_mass_chains(added)
     print(f"Places-only: {chains:,} chain and kiosk brands shown once each ({collapsed:,} repeat listings dropped)", flush=True)
     grouped = group_chains(added, cities, margins)
+    lifted = lift_branch_contacts(rows + added)
+    print(f"Places-only: website or phone carried up from a location to {lifted:,} companies", flush=True)
     write_rows(BIZ_CSV, fields, rows + added)
     print(f"Places-only: added {len(added):,} businesses without loan data; skipped {dict(skipped)}; "
           f"{moved:,} ZIP-placed borrowers moved to their map listing; {grouped:,} map listings folded into "
