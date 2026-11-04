@@ -252,6 +252,10 @@ def group_chains(added, cities, margins):
 
 
 MASS_CHAIN = 15        # a name on this many map-only listings is a chain or kiosk brand, not that many businesses
+# Each location is its own (usually independently owned, sellable) business, even under a big brand: franchise
+# restaurants and hotels, branded gas stations, salons, insurance and real-estate agencies, hardware stores.
+# Nov 4: grouping these hid ~8,500 real businesses (Farmers and State Farm agents, Shell stations, Sonics).
+KEEP_EACH = FRANCHISE_HEAVY + ("5242", "5312", "44413")
 BIG_CITIES = ("Oklahoma City", "Tulsa")
 
 
@@ -265,20 +269,24 @@ def collapse_mass_chains(added):
     estimate. Each such name becomes one listing that says how many Oklahoma locations it has; the other
     copies are dropped. A longer name that starts with a chain's name joins it ("Blue Rhino Propane Exchange"
     with "Blue Rhino"). Only map-only listings: a business with its own loan or filings stays as it is."""
+    def eligible(r):
+        return r["est_method"] == "industry_average" and not (r.get("naics") or "").startswith(KEEP_EACH)
     counts = defaultdict(int)
     for r in added:
-        if r["est_method"] == "industry_average":
+        if eligible(r):
             counts[chain_key(r["name"])] += 1
     # A family is a name and every longer name starting with it. A one-word name ("Subway") heads a family
     # only when it's a chain by itself, so a lone "Bank" or "Quality" can't gather unrelated businesses.
     def family(root):
         return sum(n for k, n in counts.items() if k == root or k.startswith(root + " "))
-    roots = sorted((k for k in counts if len(k) >= 3 and (counts[k] >= MASS_CHAIN or len(k.split()) >= 2)), key=len)
+    # A longer name heads a family only if it's also a listing of its own a few times: otherwise "Route 66
+    # Boathouse", "Route 66 Tire"... were all gathered under a "Route 66" that no listing is called.
+    roots = sorted((k for k in counts if len(k) >= 3 and (counts[k] >= MASS_CHAIN or (len(k.split()) >= 2 and counts[k] >= 3))), key=len)
     mass = [k for k in roots if family(k) >= MASS_CHAIN]
     group_of = {k: next((m for m in mass if k == m or k.startswith(m + " ")), None) for k in counts}
     groups = defaultdict(list)
     for r in added:
-        g = group_of.get(chain_key(r["name"])) if r["est_method"] == "industry_average" else None
+        g = group_of.get(chain_key(r["name"])) if eligible(r) else None
         if g:
             groups[g].append(r)
     drop = set()
