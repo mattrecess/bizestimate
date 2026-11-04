@@ -38,6 +38,9 @@ STATE_KEY = "owner_search_cache"
 # ITAD | LinkedIn"), never LinkedIn's page, and only with an owner-level role and the company's full name (Nov 4,
 # as the site's owner search button does). Other LinkedIn pages, and contact-data brokers (brokers.py), are skipped.
 LINKEDIN_PROFILE = re.compile(r"linkedin\.com/in/", re.I)
+# Social media pages name whoever posted, was tagged or commented, not reliably the owner (Nov 4: Lightle Sand's
+# Facebook page gave a wrong owner): skipped.
+SOCIAL = re.compile(r"facebook\.com|instagram\.com|tiktok\.com|(^|//|\.)x\.com|twitter\.com|pinterest\.com|youtube\.com", re.I)
 OWNER_ROLE = re.compile(r"\b(owner|co-owner|founder|co-founder|president|ceo|chief executive|principal|managing (member|partner))\b", re.I)
 
 SCHEMA = {
@@ -90,7 +93,7 @@ def google(key, query):
         results.append({"kind": "result", "url": p.get("link", ""), "text": f"{p.get('question', '')} {p.get('snippet', '')}"})
     for o in data.get("organic") or []:
         link = o.get("link") or ""
-        if is_broker(link) or ("linkedin.com" in link.lower() and not LINKEDIN_PROFILE.search(link)):
+        if is_broker(link) or SOCIAL.search(link) or ("linkedin.com" in link.lower() and not LINKEDIN_PROFILE.search(link)):
             continue
         if LINKEDIN_PROFILE.search(link):
             results.append({"kind": "profile", "url": link, "text": o.get("title") or ""})
