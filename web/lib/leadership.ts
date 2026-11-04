@@ -54,6 +54,8 @@ export function leadership(b: { owner_name?: string | null; owner_title?: string
   if (b.owner_name) add({ name: b.owner_name, title: b.owner_title || "Owner", source: "Owner research", url: b.owner_source ?? undefined, linkedin: ownerLinkedIn ?? undefined, owner: true });
   for (const p of by.website_profile?.team ?? []) add({ name: p.name, title: p.title, source: "Company website", url: p.url });
   for (const p of by.people_search?.people ?? []) add({ name: p.name, title: p.title, source: "Web search", url: p.url });
+  // From the "Search the web for executives" button (app/api/leadership-search).
+  for (const p of by.leadership_lookup?.people ?? []) add({ name: p.name, title: p.title, source: "Web search", url: p.url });
   for (const p of by.irs990_people?.officers ?? []) add({ name: p.name, title: p.title || "Officer", source: "Form 990" });
   const signer = by.form5500_people?.signer;
   if (signer?.name) add({ name: signer.name, title: "", source: `Form 5500 (${signer.year})` });

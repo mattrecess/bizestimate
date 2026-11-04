@@ -79,7 +79,11 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   const ownerLinkedIn = src.linkedin?.owner_url && src.linkedin.owner_name === b.owner_name ? src.linkedin.owner_url : null;
   const lead = leadership(b, b.sources ?? [], ownerLinkedIn);
   const ownerEntry = lead.people.find((p) => p.owner);
-  const team = lead.people.filter((p) => !p.owner);
+  // Executives found with the "Search the web for executives" button are added at once (and saved).
+  const [execSearch, setExecSearch] = useState<{ busy?: boolean; message?: string; found?: { name: string; title: string; url: string }[] }>({});
+  const team = [...lead.people.filter((p) => !p.owner),
+    ...(execSearch.found ?? []).filter((f) => !lead.people.some((p) => p.name.toLowerCase() === f.name.toLowerCase()))
+      .map((f) => ({ name: f.name, title: f.title, sources: ["Web search"], url: f.url, linkedin: undefined as string | undefined }))];
   const [showTeam, setShowTeam] = useState(false);
   // "Search the web for the owner" (app/api/owner-search): a found owner shows here at once and is saved.
   const [ownerSearch, setOwnerSearch] = useState<{ busy?: boolean; done?: boolean; message?: string;
@@ -91,6 +95,24 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   // found is shown as the previous owner.
   const own = ownershipType({ owner_name: ownerName, owner_title: ownerTitle }, src, b.transactions ?? []);
   const owned = own.kind === "pe" || own.kind === "corporate";
+  async function findExecutives() {
+    setExecSearch((s) => ({ ...s, busy: true, message: undefined }));
+    try {
+      const res = await fetch(`/api/leadership-search/${b.id}`, { method: "POST" });
+      if (res.status === 401) { setExecSearch((s) => ({ ...s, busy: false })); askSignIn({ ownerFor: b.name }); return; }
+      const data = await res.json();
+      if (res.status === 402) {
+        setExecSearch((s) => ({ ...s, busy: false }));
+        window.dispatchEvent(new CustomEvent("upgrade-needed", { detail: { used: data.used, limit: data.limit, price: data.price, kind: "owner-search" } }));
+        return;
+      }
+      if (!res.ok) { setExecSearch((s) => ({ ...s, busy: false, message: data.error ?? "The search didn't go through. Try again in a minute." })); return; }
+      setExecSearch((s) => ({ busy: false, found: [...(s.found ?? []), ...data.people],
+        message: data.people.length ? `Found ${data.people.length} ${data.people.length === 1 ? "person" : "people"}.` : data.message }));
+    } catch {
+      setExecSearch((s) => ({ ...s, busy: false, message: "The search didn't go through. Try again in a minute." }));
+    }
+  }
   async function findOwner() {
     setOwnerSearch({ busy: true });
     try {
@@ -342,10 +364,11 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
           </div>
         )}
       </div>
-      {/* Leadership: executives, VPs and managers besides the owner, most senior first (lib/leadership.ts). */}
-      {team.length > 0 && (
-        <div className="bp-owner">
-          <div className="bp-owner-h">Leadership</div>
+      {/* Leadership: executives, VPs and managers besides the owner, most senior first (lib/leadership.ts), and a
+          button to search the web for more. */}
+      <div className="bp-owner">
+        <div className="bp-owner-h">Leadership</div>
+        {team.length > 0 ? (
           <ul className="bp-team">
             {(showTeam ? team : team.slice(0, 5)).map((p) => (
               <li key={p.name}>
@@ -360,17 +383,25 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
               </li>
             ))}
           </ul>
-          {team.length > 5 && (
-            <button type="button" className="link-btn bp-team-more" onClick={() => setShowTeam((v) => !v)}>
-              {showTeam ? "Show fewer" : `Show all ${team.length} people`}</button>
-          )}
-          {lead.depth === "team" && (
-            <div className="bp-depth team">
-              <b>Has a management team.</b> Someone besides the owner runs part of the business, which buyers pay more for.
-            </div>
-          )}
+        ) : (
+          <div className="bp-owner-who"><div className="src">{execSearch.message ?? "No executives or managers found yet."}</div></div>
+        )}
+        {team.length > 5 && (
+          <button type="button" className="link-btn bp-team-more" onClick={() => setShowTeam((v) => !v)}>
+            {showTeam ? "Show fewer" : `Show all ${team.length} people`}</button>
+        )}
+        {team.length > 0 && execSearch.message && <div className="bp-owner-who"><div className="src">{execSearch.message}</div></div>}
+        {lead.depth === "team" && (
+          <div className="bp-depth team">
+            <b>Has a management team.</b> Someone besides the owner runs part of the business, which buyers pay more for.
+          </div>
+        )}
+        <div className="bp-owner-actions">
+          <button type="button" className="btn" disabled={execSearch.busy} onClick={findExecutives}>
+            {execSearch.busy ? <><span className="spinner" aria-hidden /> Searching the web…</> : <><Icon name="search" size={15} />Search the web for executives</>}
+          </button>
         </div>
-      )}
+      </div>
       <PipelineBox id={String(b.id)} />
 
       {/* Everything on one scrolling page: the estimate, then financials, people, and public records. */}

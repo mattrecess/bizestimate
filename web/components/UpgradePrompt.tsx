@@ -38,13 +38,13 @@ export default function UpgradePrompt() {
           : info.kind === "table" ? <>Email and phone numbers in the table are part of Pro.</>
           : info.kind === "export" ? <>Exporting to Excel is part of Pro.</>
           : info.kind === "owner-search"
-          ? <>You&apos;ve used all {info.limit} of this month&apos;s free owner searches.</>
+          ? <>You&apos;ve used all {info.limit} of this month&apos;s free web searches for owners and executives.</>
           : <>You&apos;ve seen contact info for {info.used} of {info.limit} businesses this month on the free plan.</>}</p>
         <ul className="upgrade-list">
           <li>The full table: every business, sortable</li>
           <li>Owner and business email and phone in the table</li>
           <li>Export any list to Excel</li>
-          <li>Unlimited owner searches</li>
+          <li>Unlimited owner and executive searches</li>
           <li>Contact info for up to 300 businesses a month</li>
           <li>Owners&apos; direct email, phone and mobile</li>
         </ul>
