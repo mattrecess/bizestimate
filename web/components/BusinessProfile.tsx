@@ -303,7 +303,8 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
               {ownerLinkedIn && <> · <a href={ownerLinkedIn} target="_blank" rel="nofollow noopener noreferrer">LinkedIn</a></>}
             </div>
           </div>
-          {sellLabel && <span className={`bp-sell ${Number(b.sell_score) >= 40 ? "hot" : ""}`}>{sellLabel}</span>}
+          {/* Sale likelihood is about the owner, so it's shown only once we know who that is. */}
+          {sellLabel && ownerName && <span className={`bp-sell ${Number(b.sell_score) >= 40 ? "hot" : ""}`}>{sellLabel}</span>}
         </div>
         {/* Contact details only once we know who the owner is. */}
         {ownerName ? (
