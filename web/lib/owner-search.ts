@@ -23,11 +23,18 @@ export const ownerSearchConfigured = () => !!process.env.SERPER_API_KEY && !!pro
 
 const words = (s: string) => new Set(s.toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean));
 
-async function google(name: string, city: string): Promise<Result[]> {
+// Asked two ways: as a question (Google's answer box and business directories), then as the business's exact
+// name with leadership titles (news stories, chamber and association pages, the company's own site).
+const queries = (name: string, city: string) => [
+  `who owns ${name} ${city || ""} Oklahoma`,
+  `"${name.replace(/[",]/g, "").replace(/\b(LLC|INC|CO|CORP|L\.L\.C|COMPANY)\.?$/i, "").trim()}" ${city || ""} owner OR founder OR president OR CEO`,
+];
+
+async function google(q: string): Promise<Result[]> {
   const r = await fetch(SERPER, {
     method: "POST", cache: "no-store",
     headers: { "X-API-KEY": process.env.SERPER_API_KEY!, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: `who owns ${name} ${city || ""} Oklahoma`, gl: "us", num: 10 }),
+    body: JSON.stringify({ q, gl: "us", num: 10 }),
   });
   if (!r.ok) throw new Error(`Serper ${r.status}`);
   const d = await r.json();
@@ -51,7 +58,14 @@ function validName(name: string, business: string) {
 }
 
 export async function searchOwner(name: string, city: string): Promise<FoundOwner | null> {
-  const results = await google(name, city);
+  for (const q of queries(name, city)) {
+    const found = await readResults(name, city, await google(q));
+    if (found) return found;
+  }
+  return null;
+}
+
+async function readResults(name: string, city: string, results: Result[]): Promise<FoundOwner | null> {
   if (!results.length) return null;
   const body = results.map((r, i) => `<result number="${i + 1}" kind="${r.kind}" url="${r.url}">\n${r.text}\n</result>`).join("\n\n");
   const res = await fetch("https://api.anthropic.com/v1/messages", {

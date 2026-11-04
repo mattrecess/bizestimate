@@ -28,7 +28,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (b.owner_name) return NextResponse.json({ owner: { name: b.owner_name } });
 
   await tables();
-  const [recent] = await sql`select found from owner_lookups
+  // The admin can search again at any time (e.g. after the search itself was improved).
+  const [recent] = admin ? [] : await sql`select found from owner_lookups
     where biz_key = ${b.biz_key} and searched_at > now() - make_interval(days => ${RETRY_DAYS})`;
   if (recent) return NextResponse.json({ owner: null, message: "We searched the web for this owner recently and didn't find a name. We'll try again later." });
   if (user && !admin) {
