@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,7 @@ export async function GET() {
       return NextResponse.json({ refreshed: false, reason: "already current" });
     }
     revalidatePath("/", "layout");
+    revalidateTag("profiles");   // the map panel's business copies (app/api/businesses/[id])
     await sql`insert into etl_state (key, value, updated_at) values ('pages_refreshed', to_jsonb(now()), now())
               on conflict (key) do update set value = excluded.value, updated_at = now()`;
     return NextResponse.json({ refreshed: true, load: row.loaded });

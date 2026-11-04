@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 import { ownerSearchConfigured, searchOwner } from "@/lib/owner-search";
 import { checkQuota, logSearch } from "@/lib/search-quota";
@@ -40,5 +40,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   await sql`update businesses set owner_name = ${found.name}, owner_title = ${found.title.slice(0, 60)}, owner_source = ${found.url}
     where biz_key = ${b.biz_key} and coalesce(owner_name, '') = ''`;
   revalidatePath(`/business/${id}`);
+  revalidateTag(`biz-${id}`);   // the map panel's copy (app/api/businesses/[id])
   return NextResponse.json({ owner: found });
 }

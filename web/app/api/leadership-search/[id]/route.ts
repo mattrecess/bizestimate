@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 import { ownerSearchConfigured } from "@/lib/owner-search";
 import { searchLeadership, type Executive } from "@/lib/leadership-search";
@@ -33,5 +33,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   await sql`insert into business_sources (biz_key, source, data) values (${b.biz_key}, 'leadership_lookup', ${sql.json({ people: merged })})
     on conflict (biz_key, source) do update set data = excluded.data, updated_at = now()`;
   revalidatePath(`/business/${id}`);
+  revalidateTag(`biz-${id}`);   // the map panel's copy (app/api/businesses/[id])
   return NextResponse.json({ people });
 }
