@@ -36,6 +36,9 @@ def _write(cur, updates, extra_sets):
 
 def apply(cur, state):
     """The newest 401(k) headcount, where it's recent, replaces the PPP one: the simple estimate from it."""
+    # Before the query below: Calibration reads its settings on this cursor, which would discard the query's
+    # results (until Nov 4 that left this step, and apply_fleet, updating nothing).
+    bench, cal = load_benchmarks(), Calibration(cur)
     since = date.today().year - RECENT_YEARS
     cur.execute("""
         with latest as (
@@ -50,7 +53,6 @@ def apply(cur, state):
           and coalesce(b.est_method, '') not in ('reported', 'verified', 'branch')   -- actual figures win
           and (b.jobs_reported is null or l.employees <= %(max_growth)s * b.jobs_reported)""",
                 {"since": since, "state": state, "min": MIN_PARTICIPANTS, "max_growth": MAX_GROWTH})
-    bench, cal = load_benchmarks(), Calibration(cur)
     updates, staffing = [], 0
     for key, naics, source, filed_naics, employees, year, name, cur_industry, method, cur_rev, cur_ebitda in cur.fetchall():
         naics = naics or ""
@@ -84,13 +86,13 @@ def apply_fleet(cur, state):
     """Trucking and bus companies: size from the drivers (or trucks) on their current FMCSA
     registration where that's more than the 2020 PPP headcount grown since, or where there was none (a map
     listing on an industry average). Actual and 401(k) figures win."""
+    cal = Calibration(cur)   # before the query (see apply)
     cur.execute("""
         select b.biz_key, b.naics, b.name, b.jobs_reported,
                (s.data ->> 'drivers')::numeric, (s.data ->> 'power_units')::numeric
         from businesses b join business_sources s on s.biz_key = b.biz_key and s.source = 'fmcsa'
         where b.state = %s and b.naics ~ '^(484|4854|4855|4859)'
           and coalesce(b.est_method, '') not in ('reported', 'verified', 'branch', 'retirement_plan', 'fleet')""", (state,))
-    cal = Calibration(cur)
     ppp_growth = (1 + cal.growth) ** ((date.today() - PPP_YEAR_MID).days / 365.25)
     updates = []
     for key, naics, name, jobs, drivers, units in cur.fetchall():
