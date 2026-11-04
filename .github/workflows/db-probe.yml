@@ -28,6 +28,7 @@ jobs:
       - run: python tools/${{ inputs.script || 'db_activity' }}.py 2>&1 | tee "$RUNNER_TEMP/db.log"
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PDL_API_KEY: ${{ secrets.PDL_API_KEY }}
       - if: always()
         run: |
           cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b db-logs
