@@ -22,3 +22,11 @@ with psycopg.connect(url, connect_timeout=60) as conn, conn.cursor() as cur:
     print("Earnheart:", cur.fetchone())
     cal = Calibration(cur)
     print("simple:", cal.simple("424720", 141.0, date(2024, 12, 31)))
+    # Dry run of the real step (rolled back): how many it would update.
+    import headcount_estimates  # noqa: E402
+    conn.rollback()
+    try:
+        headcount_estimates.apply(cur, "OK")
+    except Exception as e:  # noqa: BLE001
+        print("apply raised:", repr(e)[:300])
+    conn.rollback()
