@@ -102,11 +102,12 @@ def apply_owners(cur, state):
     (website_profile team) and Google search results (owner_search). Never overwrites an owner."""
     cur.execute("""
         select b.biz_key, s.source, s.data from businesses b
-        join business_sources s on s.biz_key = b.biz_key and s.source in ('owner_search', 'website_profile', 'people_search')
+        join business_sources s on s.biz_key = b.biz_key and s.source in ('owner_search', 'owner_lookup', 'website_profile', 'people_search')
         where b.state = %s and coalesce(b.owner_name, '') = ''""", (state,))
     best = {}
     for key, source, data in cur.fetchall():
-        if source == "owner_search" and data.get("name"):
+        # owner_lookup: the site's "Search the web for the owner" button (web/app/api/owner-search).
+        if source in ("owner_search", "owner_lookup") and data.get("name"):
             cands = [(-1, data["name"], data.get("title") or "Owner", data.get("url"))]   # asked for the owner directly
         else:
             people = data.get("team") or data.get("people") or []
