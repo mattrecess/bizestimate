@@ -558,11 +558,12 @@ header.top nav { align-items: center; }
 .bp-owner-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .bp-owner-actions .btn { height: 34px; font-size: 13px; padding: 0 12px; }
 .bp-math { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.bp-math > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px; font-size: 13.5px; border-top: 1px solid var(--border); }
+.bp-math > div { padding: 11px 14px; border-top: 1px solid var(--border); }
 .bp-math > div:first-child { border-top: 0; }
-.bp-math > div span { color: var(--muted); }
-.bp-math > div.total { background: var(--panel-2); }
-.bp-math > div.total span, .bp-math > div.value span { color: var(--text); font-weight: 600; }
+.bp-math-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.bp-math-row span { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); }
+.bp-math-row b { font-size: 16px; }
+.bp-math-note { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
 .bp-math > div.value { background: #eef4ff; }
 .bp-known { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: 13.5px; }
 .bp-known > div { display: flex; align-items: center; gap: 8px; }

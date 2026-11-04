@@ -89,17 +89,6 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   // What today's figures rest on, and how recent it is.
   const reportedSrc = src.sec ? `SEC filings (FY${src.sec.year})` : src.fdic ? `FDIC call report (${src.fdic.year})`
     : src.ncua ? `NCUA call report (${src.ncua.quarter})` : src.irs990 ? `IRS Form 990${src.irs990.year ? ` (${src.irs990.year})` : ""}` : "reported figures";
-  const basis = b.est_method === "verified" ? "verified financials"
-    : reported ? reportedSrc
-    : fromPlan && latest ? `${latest.employees.toLocaleString()} employees on its ${latest.year} 401(k) filing`
-    : fromPlan ? "the employee count on its latest 401(k) filing"
-    : fleet && src.fmcsa ? `${Math.round(src.fmcsa.drivers || 0).toLocaleString()} drivers and ${Math.round(src.fmcsa.power_units).toLocaleString()} trucks on its federal motor carrier registration`
-    : fleet ? "the drivers and trucks on its federal motor carrier registration"
-    : b.est_method === "employees" ? `${b.jobs_reported} employees reported for PPP in ${pppYear(b.loans)}, grown ${Math.round((Number(b.est_growth_rate) || 0.08) * 100)}% a year since`
-    : b.est_method === "blend" ? `its ${b.jobs_reported} employees and its payroll, both reported for PPP in ${pppYear(b.loans)} and brought up to date`
-    : b.est_method === "payroll" ? `PPP payroll (${pppYear(b.loans)})`
-    : b.est_method === "owner_earnings" ? `owner earnings on its PPP loan (${pppYear(b.loans)})`
-    : "typical figures for its industry (2022 Economic Census), not its own records";
   // The margin actually applied (IRS industry margin adjusted for size) when the data has it.
   const irsMargin = b.est_ebitda_margin != null && b.est_method !== "owner_earnings";
   const margin = irsMargin ? b.est_ebitda_margin : b.ebitda_margin;
@@ -132,57 +121,46 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
     ...(src.contracts ? [[true, "Federal contracts"] as [boolean, string]] : []),
   ];
   // "How we got $X": the estimate as a few lines of arithmetic anyone can follow.
-  const mathRows: { label: string; value: string; kind?: string }[] = [];
+  // "How we got $X": Revenue, EBITDA and Estimated value, each with a line or two of gray arithmetic beneath.
+  const steps: { title: string; value: string; notes: string[]; kind?: string }[] = [];
   {
     const mid = Number(b.est_revenue_mid), emp = Number(b.est_revenue_by_employees), pay = Number(b.est_revenue_by_payroll);
-    let base: number | null = null;
     // The simple estimate (employees grown since they were counted x revenue per employee), when the load stored its inputs.
     const counted = Number(b.est_employees), rpe = Number(b.est_rpe), year = Number(b.est_count_year);
     const simple = !reported && b.est_method !== "verified" && counted > 0 && rpe > 0
       && ["employees", "retirement_plan", "fleet"].includes(String(b.est_method));
+    const notes: string[] = [];
     if (reported || b.est_method === "verified") {
-      mathRows.push({ label: b.est_method === "verified" ? "Verified revenue" : `Reported revenue, ${reportedSrc}`, value: money(mid), kind: "total" });
+      notes.push(b.est_method === "verified" ? "Verified figures" : `Reported, ${reportedSrc}`);
     } else if (simple) {
       const growth = Number(b.est_growth) || 1, rate = Number(b.est_growth_rate) || 0.08;
-      const what = b.est_method === "fleet" ? "drivers/trucks (FMCSA registration)"
-        : b.est_method === "retirement_plan" ? `employees (${year} 401(k) filing)` : `employees (PPP loan, ${year})`;
-      mathRows.push({ label: `${counted.toLocaleString()} ${what}`, value: counted.toLocaleString() });
-      if (growth > 1.001) mathRows.push({ label: `× ${growth.toFixed(2)} growth (${Math.round(rate * 100)}% a year since ${year})`, value: `${Math.round(counted * growth).toLocaleString()} today` });
-      mathRows.push({ label: `× ${money(rpe)} revenue per employee (${(industryLabel(b.naics) ?? b.industry).toLowerCase()})`, value: money(mid), kind: "total" });
-    } else {
-      if ((b.est_method === "blend" || b.est_method === "employees") && b.jobs_reported && emp) {
-        mathRows.push({ label: `${b.jobs_reported} employees × ${money(emp / b.jobs_reported)} each`, value: money(emp) });
-        base = emp;
-        if (b.est_method === "blend" && pay) {
-          mathRows.push({ label: "PPP payroll ÷ payroll's usual share of revenue", value: money(pay) });
-          base = Math.sqrt(emp * pay);
-        }
-      } else if (b.est_method === "payroll" && pay) {
-        mathRows.push({ label: "PPP payroll ÷ payroll's usual share of revenue", value: money(pay) });
-        base = pay;
-      } else if (fromPlan && latest) {
-        mathRows.push({ label: `${latest.employees.toLocaleString()} employees (${latest.year} 401(k) filing) × ${money(mid / latest.employees)} each`, value: money(mid) });
-      } else if (fleet && employeesNow) {
-        mathRows.push({ label: `${Number(employeesNow).toLocaleString()} drivers × ${money(mid / Number(employeesNow))} each`, value: money(mid) });
-      } else if (avg) {
-        mathRows.push({ label: `A typical ${(industryLabel(b.naics) ?? b.industry).toLowerCase()} business in Oklahoma`, value: money(mid) });
-      } else if (b.est_method === "owner_earnings") {
-        mathRows.push({ label: "Owner earnings on its PPP loan ÷ a 30% margin", value: money(mid) });
-      }
-      // Calibration and the range tilt, shown as one step so the arithmetic adds up.
-      if (base && Math.abs(mid / base - 1) > 0.02) {
-        const why = [
-          b.est_calibration != null && Math.abs(Number(b.est_calibration) - 1) >= 0.01 ? "calibrated to real figures in its industry" : null,
-          Number(b.est_tilt) > 0 ? "shown toward the top of its range" : null,
-        ].filter(Boolean).join(", ") || "adjusted";
-        mathRows.push({ label: `${why[0].toUpperCase()}${why.slice(1)}`, value: `×${(mid / base).toFixed(2)}` });
-      }
-      mathRows.push({ label: "Revenue", value: money(mid), kind: "total" });
+      const today = Math.round(counted * growth);
+      const unit = b.est_method === "fleet" ? "drivers/trucks" : "employees";
+      const source = b.est_method === "fleet" ? "on its FMCSA registration"
+        : b.est_method === "retirement_plan" ? `on its ${year} 401(k) filing` : `on its ${year} PPP loan`;
+      notes.push(`${today.toLocaleString()} ${unit} × ${money(rpe)} revenue per employee`);
+      notes.push(growth > 1.001
+        ? `${counted.toLocaleString()} ${source}, grown ${Math.round(rate * 100)}% a year`
+        : `${counted.toLocaleString()} ${source}`);
+    } else if (b.jobs_reported && emp && (b.est_method === "blend" || b.est_method === "employees")) {
+      notes.push(`${b.jobs_reported} employees × ${money(emp / b.jobs_reported)} each`);
+    } else if (b.est_method === "payroll" && pay) {
+      notes.push("PPP payroll ÷ payroll's usual share of revenue");
+    } else if (fromPlan && latest) {
+      notes.push(`${latest.employees.toLocaleString()} employees (${latest.year} 401(k) filing) × ${money(mid / latest.employees)} each`);
+    } else if (fleet && employeesNow) {
+      notes.push(`${Number(employeesNow).toLocaleString()} drivers × ${money(mid / Number(employeesNow))} each`);
+    } else if (avg) {
+      notes.push(`A typical ${(industryLabel(b.naics) ?? b.industry).toLowerCase()} business in Oklahoma`);
+    } else if (b.est_method === "owner_earnings") {
+      notes.push("Owner earnings on its PPP loan ÷ a 30% margin");
     }
+    steps.push({ title: "Revenue", value: money(mid), notes });
     if (b.est_ebitda_mid != null) {
-      mathRows.push({ label: margin != null && !(src.sec && src.sec.ebitda) ? `× ${pct(margin)} EBITDA margin` : "EBITDA", value: money(b.est_ebitda_mid) });
+      steps.push({ title: "EBITDA", value: money(b.est_ebitda_mid),
+        notes: margin != null && !(src.sec && src.sec.ebitda) ? [`${pct(margin)} EBITDA margin`] : src.sec?.ebitda ? ["Reported"] : [] });
     }
-    if (value) mathRows.push({ label: `× ${value.multiple} sale multiple = value`, value: money(value.mid), kind: "value" });
+    if (value) steps.push({ title: "Estimated value", value: money(value.mid), notes: [`${value.multiple}× EBITDA multiple`], kind: "value" });
   }
   const industryText = industryLabel(b.naics) ?? b.industry;
   // Quick facts under the name, each with its icon.
@@ -345,10 +323,12 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
           {b.est_method !== "branch" && (
             <div className="section">
               <h2>How we got {money(value ? value.mid : b.est_revenue_mid)}</h2>
-              <p className="disclaimer">Based on {basis}.</p>
               <div className="bp-math">
-                {mathRows.map((r, i) => (
-                  <div key={i} className={r.kind ?? ""}><span>{r.label}</span><b>{r.value}</b></div>
+                {steps.map((st) => (
+                  <div key={st.title} className={st.kind ?? ""}>
+                    <div className="bp-math-row"><span>{st.title}</span><b>{st.value}</b></div>
+                    {st.notes.map((n) => <div key={n} className="bp-math-note">{n}</div>)}
+                  </div>
                 ))}
               </div>
               <p className="disclaimer" style={{ marginTop: 8 }}>
