@@ -4,11 +4,14 @@ import { sql } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { ownerSearchConfigured, searchOwner } from "@/lib/owner-search";
+import { PRO_PRICE } from "@/lib/reveals";
 
-// "Search the web for the owner": signed-in users only. A search can be run again at any
-// time; each user may start PER_USER_DAY searches a day (one costs about a fifth of a cent). A found owner is saved for everyone: on the business now, and as an
+// "Search the web for the owner": signed-in users only. Free accounts get FREE_PER_MONTH searches a calendar
+// month (then the upgrade prompt); Pro is unlimited, with a quiet PRO_PER_DAY ceiling against runaway use
+// (a search costs about a fifth of a cent). The admin is never limited. A search can be repeated any time. A found owner is saved for everyone: on the business now, and as an
 // 'owner_lookup' source so data loads keep it (etl/enrich.py apply_owners).
-const PER_USER_DAY = 25;
+const FREE_PER_MONTH = 5;
+const PRO_PER_DAY = 200;
 
 async function tables() {
   await sql`create table if not exists owner_lookups (
@@ -29,8 +32,14 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   await tables();
   if (user && !admin) {
-    const [{ n }] = await sql`select count(*)::int as n from owner_search_log where user_id = ${user.id} and searched_at > now() - interval '1 day'`;
-    if (n >= PER_USER_DAY) return NextResponse.json({ error: "You've reached today's limit for owner searches. Try again tomorrow." }, { status: 429 });
+    const pro = user.plan === "pro";
+    const [{ n }] = pro
+      ? await sql`select count(*)::int as n from owner_search_log where user_id = ${user.id} and searched_at > now() - interval '1 day'`
+      : await sql`select count(*)::int as n from owner_search_log where user_id = ${user.id} and searched_at >= date_trunc('month', now())`;
+    if (!pro && n >= FREE_PER_MONTH) {
+      return NextResponse.json({ error: "You've used this month's free owner searches.", kind: "owner-search", used: n, limit: FREE_PER_MONTH, price: PRO_PRICE }, { status: 402 });
+    }
+    if (pro && n >= PRO_PER_DAY) return NextResponse.json({ error: "That's a lot of searches for one day. Try again tomorrow." }, { status: 429 });
   }
 
   let found;

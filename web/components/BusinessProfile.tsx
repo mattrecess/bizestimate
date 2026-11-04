@@ -97,6 +97,11 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
       const res = await fetch(`/api/owner-search/${b.id}`, { method: "POST" });
       if (res.status === 401) { setOwnerSearch({}); askSignIn({ contactFor: b.name }); return; }
       const data = await res.json();
+      if (res.status === 402) {
+        setOwnerSearch({});
+        window.dispatchEvent(new CustomEvent("upgrade-needed", { detail: { used: data.used, limit: data.limit, price: data.price, kind: "owner-search" } }));
+        return;
+      }
       if (!res.ok) { setOwnerSearch({ message: data.error ?? "The search didn't go through. Try again in a minute." }); return; }
       setOwnerSearch(data.owner ? { done: true, found: data.owner } : { message: data.message });
     } catch {
