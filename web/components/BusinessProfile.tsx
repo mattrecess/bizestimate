@@ -126,22 +126,16 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   {
     const mid = Number(b.est_revenue_mid), emp = Number(b.est_revenue_by_employees), pay = Number(b.est_revenue_by_payroll);
     // The simple estimate (employees grown since they were counted x revenue per employee), when the load stored its inputs.
-    const counted = Number(b.est_employees), rpe = Number(b.est_rpe), year = Number(b.est_count_year);
+    const counted = Number(b.est_employees), rpe = Number(b.est_rpe);
     const simple = !reported && b.est_method !== "verified" && counted > 0 && rpe > 0
       && ["employees", "retirement_plan", "fleet"].includes(String(b.est_method));
     const notes: string[] = [];
     if (reported || b.est_method === "verified") {
       notes.push(b.est_method === "verified" ? "Verified figures" : `Reported, ${reportedSrc}`);
     } else if (simple) {
-      const growth = Number(b.est_growth) || 1, rate = Number(b.est_growth_rate) || 0.08;
-      const today = Math.round(counted * growth);
+      const today = Math.round(counted * (Number(b.est_growth) || 1));
       const unit = b.est_method === "fleet" ? "drivers/trucks" : "employees";
-      const source = b.est_method === "fleet" ? "on its FMCSA registration"
-        : b.est_method === "retirement_plan" ? `on its ${year} 401(k) filing` : `on its ${year} PPP loan`;
       notes.push(`${today.toLocaleString()} ${unit} × ${money(rpe)} revenue per employee`);
-      notes.push(growth > 1.001
-        ? `${counted.toLocaleString()} ${source}, grown ${Math.round(rate * 100)}% a year`
-        : `${counted.toLocaleString()} ${source}`);
     } else if (b.jobs_reported && emp && (b.est_method === "blend" || b.est_method === "employees")) {
       notes.push(`${b.jobs_reported} employees × ${money(emp / b.jobs_reported)} each`);
     } else if (b.est_method === "payroll" && pay) {
@@ -158,9 +152,9 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
     steps.push({ title: "Revenue", value: money(mid), notes });
     if (b.est_ebitda_mid != null) {
       steps.push({ title: "EBITDA", value: money(b.est_ebitda_mid),
-        notes: margin != null && !(src.sec && src.sec.ebitda) ? [`${pct(margin)} EBITDA margin`] : src.sec?.ebitda ? ["Reported"] : [] });
+        notes: margin != null && !(src.sec && src.sec.ebitda) ? [`${pct(margin)} margin`] : src.sec?.ebitda ? ["Reported"] : [] });
     }
-    if (value) steps.push({ title: "Estimated value", value: money(value.mid), notes: [`${value.multiple}× EBITDA multiple`], kind: "value" });
+    if (value) steps.push({ title: "Estimated value", value: money(value.mid), notes: [`${value.multiple}× multiple`], kind: "value" });
   }
   const industryText = industryLabel(b.naics) ?? b.industry;
   // Quick facts under the name, each with its icon.
