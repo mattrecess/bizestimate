@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Business, Comparable, Headcount, LenderLink, Loan, Location, Prospect, Transaction } from "@/lib/business";
 import { money, moneyRange } from "@/lib/format";
 import ContactCard from "./ContactCard";
+import { askSignIn } from "@/lib/saved";
 import RadarButton from "./RadarButton";
 import PipelineBox from "./PipelineBox";
 import HeadcountChart from "./HeadcountChart";
@@ -80,6 +81,24 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   const ownerEntry = lead.people.find((p) => p.owner);
   const team = lead.people.filter((p) => !p.owner);
   const [showTeam, setShowTeam] = useState(false);
+  // "Search the web for the owner" (app/api/owner-search): a found owner shows here at once and is saved.
+  const [ownerSearch, setOwnerSearch] = useState<{ busy?: boolean; done?: boolean; message?: string;
+    found?: { name: string; title: string; url: string } }>({});
+  const ownerName = b.owner_name ?? ownerSearch.found?.name ?? null;
+  const ownerTitle = b.owner_name ? b.owner_title : ownerSearch.found?.title;
+  const ownerSource = b.owner_name ? b.owner_source : ownerSearch.found?.url;
+  async function findOwner() {
+    setOwnerSearch({ busy: true });
+    try {
+      const res = await fetch(`/api/owner-search/${b.id}`, { method: "POST" });
+      if (res.status === 401) { setOwnerSearch({}); askSignIn({ contactFor: b.name }); return; }
+      const data = await res.json();
+      if (!res.ok) { setOwnerSearch({ message: data.error ?? "The search didn't go through. Try again in a minute." }); return; }
+      setOwnerSearch(data.owner ? { done: true, found: data.owner } : { done: true, message: data.message });
+    } catch {
+      setOwnerSearch({ message: "The search didn't go through. Try again in a minute." });
+    }
+  }
   const value = estimateValue({ ...b, public_company: !!src.sec || undefined, is_nonprofit: b.is_nonprofit || !!src.irs990 });
   // Earliest of the record-based year and the founding year the company's own site states.
   const founded = [src.founded?.year, src.fdic?.founded, src.fmcsa?.registered, src.website_profile?.founded_year]
@@ -270,26 +289,37 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
         </>
       )}
 
-      {/* Who runs it: the owner, the rest of the leadership team, and the ways to reach the business. */}
+      {/* Ownership: who owns it and how to reach them, or a button to search the web for the owner. */}
       <div className="bp-owner">
-        <div className="bp-owner-h">Leadership</div>
+        <div className="bp-owner-h">Ownership</div>
         <div className="bp-owner-top">
-          <div className="bp-owner-av" aria-hidden>{b.owner_name ? initials(b.owner_name) : <Icon name="user" size={18} />}</div>
+          <div className="bp-owner-av" aria-hidden>{ownerName ? initials(ownerName) : <Icon name="user" size={18} />}</div>
           <div className="bp-owner-who">
-            <div className="name">{b.owner_name ?? "Owner not found yet"}</div>
+            <div className="name">{ownerName ?? "Owner not found yet"}</div>
             <div className="src">
-              {b.owner_name ? (b.owner_title || "Owner") : "We haven't found the owner in public records"}
-              {b.owner_source && <> · <a href={b.owner_source} target="_blank" rel="nofollow noopener noreferrer">source</a></>}
+              {ownerName ? (ownerTitle || "Owner") : ownerSearch.message ?? "We haven't found the owner in public records yet"}
+              {ownerSource && <> · <a href={ownerSource} target="_blank" rel="nofollow noopener noreferrer">source</a></>}
               {ownerEntry && ownerEntry.sources.length > 1 && <> · confirmed by {ownerEntry.sources.length} sources</>}
               {ownerLinkedIn && <> · <a href={ownerLinkedIn} target="_blank" rel="nofollow noopener noreferrer">LinkedIn</a></>}
             </div>
           </div>
           {sellLabel && <span className={`bp-sell ${Number(b.sell_score) >= 40 ? "hot" : ""}`}>{sellLabel}</span>}
         </div>
-        {/* How to reach them, right under the owner: published contacts, then the owner's own (signed in). */}
-        <ContactCard id={String(b.id)} name={b.name} owner={b.owner_name} embedded />
-        {/* The rest of the leadership team, most senior first (lib/leadership.ts). */}
-        {team.length > 0 && (
+        {/* Contact details only once we know who the owner is. */}
+        {ownerName ? (
+          <ContactCard id={String(b.id)} name={b.name} owner={ownerName} embedded />
+        ) : !ownerSearch.done && (
+          <div className="bp-owner-actions">
+            <button type="button" className="btn" disabled={ownerSearch.busy} onClick={findOwner}>
+              {ownerSearch.busy ? <><span className="spinner" aria-hidden /> Searching the web…</> : <><Icon name="search" size={15} />Search the web for the owner</>}
+            </button>
+          </div>
+        )}
+      </div>
+      {/* Leadership: executives, VPs and managers besides the owner, most senior first (lib/leadership.ts). */}
+      {team.length > 0 && (
+        <div className="bp-owner">
+          <div className="bp-owner-h">Leadership</div>
           <ul className="bp-team">
             {(showTeam ? team : team.slice(0, 5)).map((p) => (
               <li key={p.name}>
@@ -304,17 +334,17 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
               </li>
             ))}
           </ul>
-        )}
-        {team.length > 5 && (
-          <button type="button" className="link-btn bp-team-more" onClick={() => setShowTeam((v) => !v)}>
-            {showTeam ? "Show fewer" : `Show all ${team.length + 1} people`}</button>
-        )}
-        {lead.depth === "team" && (
-          <div className="bp-depth team">
-            <b>Has a management team.</b> Someone besides the owner runs part of the business, which buyers pay more for.
-          </div>
-        )}
-      </div>
+          {team.length > 5 && (
+            <button type="button" className="link-btn bp-team-more" onClick={() => setShowTeam((v) => !v)}>
+              {showTeam ? "Show fewer" : `Show all ${team.length} people`}</button>
+          )}
+          {lead.depth === "team" && (
+            <div className="bp-depth team">
+              <b>Has a management team.</b> Someone besides the owner runs part of the business, which buyers pay more for.
+            </div>
+          )}
+        </div>
+      )}
       <PipelineBox id={String(b.id)} />
 
       {/* Everything on one scrolling page: the estimate, then financials, people, and public records. */}
