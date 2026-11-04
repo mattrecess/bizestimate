@@ -159,15 +159,17 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
   const industryText = industryLabel(b.naics) ?? b.industry;
   // Quick facts under the name, each with its icon.
   const meta: [string, string, string?, string?][] = [
+    // The address opens Google Maps (the app on a phone), searched with the name so it lands on the business.
     ["pin", [b.address, b.city].filter(Boolean).join(", ") + (b.city ? ", OK" : ""),
-      approximate ? "We couldn't map this address, so the map pin is placed in its ZIP code" : undefined],
+      approximate ? "We couldn't map this address, so the map pin is placed in its ZIP code" : "Open in Google Maps",
+      b.address || b.city ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([b.name, b.address, b.city, "OK", b.zip].filter(Boolean).join(", "))}` : undefined],
     ...(b.locations?.length ? [["map", `${b.locations.length + 1} locations`] as [string, string]] : []),
     // A chain or kiosk brand shown once (etl/places_only.py): how many Oklahoma locations it has.
     ...(b.chain_locations ? [["map", `${b.chain_locations.toLocaleString()} Oklahoma locations`] as [string, string]] : []),
     ...(founded ? [["calendar", `Since ${founded}`] as [string, string]] : []),
     ...(src.website_profile?.family_owned ? [["user", `Family-owned${src.website_profile.generation ? `, ${ordinal(src.website_profile.generation)} generation` : ""}`] as [string, string]] : []),
     // The industry code, linking to every business with it (as the NAICS filter does).
-    ...(b.naics ? [["briefcase", b.naics_recorded ? `NAICS ${b.naics} (filed as ${b.naics_recorded})` : `NAICS ${b.naics}`,
+    ...(b.naics ? [["briefcase", `NAICS ${b.naics}${b.industry ? ` · ${b.industry}` : ""}${b.naics_recorded ? ` (filed as ${b.naics_recorded})` : ""}`,
       `${b.industry ? `${b.industry} (NAICS ${b.naics})` : `NAICS ${b.naics}`}${b.naics_recorded ? `. Corrected from ${b.naics_recorded}, the code it filed (e.g. on its PPP loan), which didn't match what it does.` : ""}`,
       `/?q=${b.naics}`] as [string, string, string, string]] : []),
   ];
@@ -192,7 +194,9 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
         </div>
         <ul className="bp-meta">
           {meta.filter(([, text]) => text).map(([icon, text, title, href]) => href ? (
-            <li key={text} title={title}><a href={href}><Icon name={icon} size={14} />{text}</a></li>
+            <li key={text} title={title}>{href.startsWith("http")
+              ? <a href={href} target="_blank" rel="noopener noreferrer"><Icon name={icon} size={14} />{text}{approximate && icon === "pin" ? " (approx.)" : ""}</a>
+              : <a href={href}><Icon name={icon} size={14} />{text}</a>}</li>
           ) : (
             <li key={text} title={title}><Icon name={icon} size={14} />{text}{title ? " (approx.)" : ""}</li>
           ))}
