@@ -98,7 +98,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
       if (res.status === 401) { setOwnerSearch({}); askSignIn({ contactFor: b.name }); return; }
       const data = await res.json();
       if (!res.ok) { setOwnerSearch({ message: data.error ?? "The search didn't go through. Try again in a minute." }); return; }
-      setOwnerSearch(data.owner ? { done: true, found: data.owner } : { done: true, message: data.message });
+      setOwnerSearch(data.owner ? { done: true, found: data.owner } : { message: data.message });
     } catch {
       setOwnerSearch({ message: "The search didn't go through. Try again in a minute." });
     }

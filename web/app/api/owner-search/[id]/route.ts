@@ -5,16 +5,16 @@ import { currentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { ownerSearchConfigured, searchOwner } from "@/lib/owner-search";
 
-// "Search the web for the owner": signed-in users only. Each business is searched at most once a day
-// (RETRY_DAYS; a search costs about a fifth of a cent, so it shouldn't be repeatable at will), and each user
-// may start PER_USER_DAY searches a day. A found owner is saved for everyone: on the business now, and as an
+// "Search the web for the owner": signed-in users only. A search can be run again at any
+// time; each user may start PER_USER_DAY searches a day (one costs about a fifth of a cent). A found owner is saved for everyone: on the business now, and as an
 // 'owner_lookup' source so data loads keep it (etl/enrich.py apply_owners).
-const RETRY_DAYS = 1;
 const PER_USER_DAY = 25;
 
 async function tables() {
   await sql`create table if not exists owner_lookups (
     biz_key text primary key, user_id bigint, found boolean not null, searched_at timestamptz not null default now())`;
+  await sql`create table if not exists owner_search_log (
+    user_id bigint, biz_key text not null, found boolean not null, searched_at timestamptz not null default now())`;
 }
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,12 +28,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (b.owner_name) return NextResponse.json({ owner: { name: b.owner_name } });
 
   await tables();
-  // The admin can search again at any time (e.g. after the search itself was improved).
-  const [recent] = admin ? [] : await sql`select found from owner_lookups
-    where biz_key = ${b.biz_key} and searched_at > now() - make_interval(days => ${RETRY_DAYS})`;
-  if (recent) return NextResponse.json({ owner: null, message: "We searched the web for this owner in the last day and didn't find a name. Try again tomorrow." });
   if (user && !admin) {
-    const [{ n }] = await sql`select count(*)::int as n from owner_lookups where user_id = ${user.id} and searched_at > now() - interval '1 day'`;
+    const [{ n }] = await sql`select count(*)::int as n from owner_search_log where user_id = ${user.id} and searched_at > now() - interval '1 day'`;
     if (n >= PER_USER_DAY) return NextResponse.json({ error: "You've reached today's limit for owner searches. Try again tomorrow." }, { status: 429 });
   }
 
@@ -46,6 +42,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
   await sql`insert into owner_lookups (biz_key, user_id, found) values (${b.biz_key}, ${user?.id ?? null}, ${!!found})
     on conflict (biz_key) do update set user_id = excluded.user_id, found = excluded.found, searched_at = now()`;
+  await sql`insert into owner_search_log (user_id, biz_key, found) values (${user?.id ?? null}, ${b.biz_key}, ${!!found})`;
   if (!found) return NextResponse.json({ owner: null, message: "We couldn't find the owner named anywhere on the web." });
 
   await sql`insert into business_sources (biz_key, source, data) values (${b.biz_key}, 'owner_lookup', ${sql.json(found)})
