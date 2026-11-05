@@ -1,0 +1,2 @@
+steps 1-2 failed: Error: Serper 400: {"message":"Not enough credits","statusCode":400}
+steps 1-2: nothing
