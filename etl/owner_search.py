@@ -34,6 +34,9 @@ MODEL = "claude-haiku-5-5"
 PRICE = (0.10, 0.50)
 SEARCH_PRICE = 1 / 1000          # Serper, after the free allowance
 STATE_KEY = "owner_search_cache"
+# Businesses already searched a second time (OWNER_SEARCH_RETRY_MISSES=1): those that came up empty before
+# LinkedIn profile titles counted (Nov 4), searched once more and never again.
+RETRIED_KEY = "owner_search_retried"
 # A LinkedIn profile counts only by the title Google lists for it ("Steven Lampson - President/CEO Vantage Point
 # ITAD | LinkedIn"), never LinkedIn's page, and only with an owner-level role and the company's full name (Nov 4,
 # as the site's owner search button does). Other LinkedIn pages, and contact-data brokers (brokers.py), are skipped.
@@ -150,14 +153,22 @@ def main():
     deadline = time.time() + 60 * minutes if minutes > 0 else None
     with psycopg.connect(database_url()) as conn, conn.cursor() as cur:
         cache = enrich.state_get(cur, STATE_KEY, {})
+        retry = os.environ.get("OWNER_SEARCH_RETRY_MISSES") == "1"
+        retried = set(enrich.state_get(cur, RETRIED_KEY, [])) if retry else set()
         if serper and key:
             cur.execute("""select biz_key, name, city from businesses
                            where state = %s and coalesce(owner_name, '') = '' and not is_individual and not is_nonprofit
                              and coalesce(est_method, '') <> 'branch' and coalesce(est_revenue_mid, 0) >= %s
                            order by est_revenue_mid desc nulls last""", (state, min_revenue))
-            todo = [dict(zip(["biz_key", "name", "city"], r)) for r in cur.fetchall() if r[0] not in cache]
-            todo = todo[:max(max_total - len(cache), 0)]
-            print(f"owner_search: {len(todo):,} businesses to search ({len(cache):,} of {max_total:,} done)", flush=True)
+            if retry:
+                # Misses only (searched, nothing found), each once.
+                todo = [dict(zip(["biz_key", "name", "city"], r)) for r in cur.fetchall()
+                        if r[0] in cache and not cache[r[0]] and r[0] not in retried]
+                print(f"owner_search: re-checking {len(todo):,} earlier misses ({len(retried):,} already re-checked)", flush=True)
+            else:
+                todo = [dict(zip(["biz_key", "name", "city"], r)) for r in cur.fetchall() if r[0] not in cache]
+                todo = todo[:max(max_total - len(cache), 0)]
+                print(f"owner_search: {len(todo):,} businesses to search ({len(cache):,} of {max_total:,} done)", flush=True)
             client = anthropic.Anthropic(api_key=key, max_retries=6)
             tokens, searched, stop = [0, 0], 0, False
 
@@ -186,7 +197,11 @@ def main():
                         searched += 1
                         if found is not None:
                             cache[biz["biz_key"]] = found
+                        if retry:
+                            retried.add(biz["biz_key"])
                 enrich.state_set(cur, STATE_KEY, cache)   # committed, so nothing paid for is lost
+                if retry:
+                    enrich.state_set(cur, RETRIED_KEY, sorted(retried))
                 if deadline and time.time() > deadline and not stop:
                     print(f"owner_search: time budget reached after {start + 100:,}; continuing next run", flush=True)
                     stop = True
