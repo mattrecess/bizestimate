@@ -394,7 +394,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
         ) : !ownerSearch.done && (
           <div className="bp-owner-actions">
             <button type="button" className="btn" disabled={ownerSearch.busy} onClick={findOwner}>
-              {ownerSearch.busy ? <><span className="spinner" aria-hidden /> Searching the web…</> : <><Icon name="search" size={15} />{owned ? "Search the web for the previous owner" : "Search the web for the owner"}</>}
+              {ownerSearch.busy ? <><span className="spinner" aria-hidden /> Searching the web (up to a minute)…</> : <><Icon name="search" size={15} />{owned ? "Search the web for the previous owner" : "Search the web for the owner"}</>}
             </button>
           </div>
         )}

@@ -3,6 +3,10 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { sql } from "@/lib/db";
 import { ownerSearchConfigured, searchOwner } from "@/lib/owner-search";
 import { checkQuota, logSearch } from "@/lib/search-quota";
+import { researchOwner } from "@/lib/owner-research";
+
+// Step 3 (AI web research) can take up to a minute.
+export const maxDuration = 120;
 
 // "Search the web for the owner", on the shared search allowance (lib/search-quota.ts: free accounts 5 a month,
 // Pro unlimited). A search can be repeated any time. A found owner is saved for everyone: on the business now,
@@ -25,7 +29,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   await tables();
   let found;
   try {
-    found = await searchOwner(b.name, b.city);
+    // Steps 1-2: two Google searches read by Claude; step 3, only if they find nothing: Claude researches the
+    // web itself and the page it cites is checked (lib/owner-research.ts).
+    found = await searchOwner(b.name, b.city) ?? await researchOwner(b.name, b.city);
   } catch (e) {
     console.error("owner search failed", e);
     return NextResponse.json({ error: "The search didn't go through. Try again in a minute." }, { status: 502 });
