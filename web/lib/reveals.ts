@@ -1,5 +1,6 @@
 import { sql } from "./db";
 import type { User } from "./auth";
+import { isPro, isUnlimited } from "./plan";
 
 // Contact details (the business's published ones and its owner's) are shown to signed-in users only:
 // a free account sees FREE businesses' contacts a month, Pro up to PRO (a guard against bulk copying).
@@ -21,7 +22,7 @@ export async function tables() {
 /** Whether this user may see this business's contacts now, recording it when they may. */
 export async function reveal(user: User, bizKey: string): Promise<Allowance> {
   await tables();
-  const limit = user.plan === "pro" ? PRO : FREE;
+  const limit = isUnlimited(user.plan) ? Number.MAX_SAFE_INTEGER : isPro(user.plan) ? PRO : FREE;
   const [{ used, seen }] = await sql<{ used: number; seen: boolean }[]>`
     select count(*)::int as used, bool_or(biz_key = ${bizKey}) as seen from owner_contact_reveals
     where user_id = ${user.id} and revealed_at >= date_trunc('month', now())`;

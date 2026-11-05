@@ -147,7 +147,7 @@ export default function ContactCard({ id, name, owner, embedded = false }: { id:
       {contact && !contact.hidden && (
         <p className="c-foot">
           {ownerInfo?.found && <>Direct contacts from People Data Labs, for one-to-one outreach only. </>}
-          {contact.allowance && contact.allowance.plan !== "pro" && <>{Math.max(contact.allowance.limit - contact.allowance.used, 0)} of {contact.allowance.limit} free lookups left this month.</>}
+          {contact.allowance && contact.allowance.plan === "free" && <>{Math.max(contact.allowance.limit - contact.allowance.used, 0)} of {contact.allowance.limit} free lookups left this month.</>}
         </p>
       )}
     </div>

@@ -17,7 +17,7 @@ async function guard() {
 async function setPlan(form: FormData) {
   "use server";
   await guard();
-  const plan = form.get("plan") === "pro" ? "pro" : "free";
+  const plan = ["pro", "unlimited"].includes(String(form.get("plan"))) ? String(form.get("plan")) : "free";
   await sql`update users set plan = ${plan} where id = ${String(form.get("id") ?? "")}`;
   revalidatePath("/admin/users");
 }
@@ -54,10 +54,14 @@ export default async function Users() {
                 <td className="num">{u.saved}</td>
                 <td className="num">{u.lookups}</td>
                 <td>
-                  <b>{u.plan === "pro" ? "Pro" : "Free"}</b>{u.wants_pro && u.plan !== "pro" ? <span className="badge good"> wants Pro</span> : null}{u.plan === "pro" && !u.contact_terms_at ? " · terms not accepted yet" : ""}
-                  <form action={setPlan}><input type="hidden" name="id" value={u.id} />
-                    <input type="hidden" name="plan" value={u.plan === "pro" ? "free" : "pro"} />
-                    <button className="link-btn">{u.plan === "pro" ? "Set to Free" : "Make Pro"}</button></form>
+                  <b>{u.plan === "unlimited" ? "Unlimited" : u.plan === "pro" ? "Pro" : "Free"}</b>{u.wants_pro && u.plan === "free" ? <span className="badge good"> wants Pro</span> : null}{u.plan !== "free" && !u.contact_terms_at ? " · terms not accepted yet" : ""}
+                  <div style={{ display: "flex", gap: 10 }}>
+                    {(["free", "pro", "unlimited"] as const).filter((p) => p !== u.plan).map((p) => (
+                      <form key={p} action={setPlan}><input type="hidden" name="id" value={u.id} />
+                        <input type="hidden" name="plan" value={p} />
+                        <button className="link-btn">{p === "free" ? "Set to Free" : p === "pro" ? "Make Pro" : "Make Unlimited"}</button></form>
+                    ))}
+                  </div>
                 </td>
               </tr>
             ))}

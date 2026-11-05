@@ -6,6 +6,7 @@ import { sql } from "./db";
 import { currentUser } from "./auth";
 import { isAdmin } from "./admin";
 import { PRO_PRICE } from "./reveals";
+import { isPro, isUnlimited } from "./plan";
 
 export const FREE_PER_MONTH = 5;
 const PRO_PER_DAY = 200;
@@ -21,8 +22,8 @@ export async function checkQuota(what: string): Promise<{ userId: number | null 
   const [user, admin] = await Promise.all([currentUser(), isAdmin()]);
   if (!user && !admin) return NextResponse.json({ error: `Sign in to search for ${what}.` }, { status: 401 });
   await tables();
-  if (user && !admin) {
-    const pro = user.plan === "pro";
+  if (user && !admin && !isUnlimited(user.plan)) {
+    const pro = isPro(user.plan);
     const [{ n }] = pro
       ? await sql`select count(*)::int as n from owner_search_log where user_id = ${user.id} and searched_at > now() - interval '1 day'`
       : await sql`select count(*)::int as n from owner_search_log where user_id = ${user.id} and searched_at >= date_trunc('month', now())`;

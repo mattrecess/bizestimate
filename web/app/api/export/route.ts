@@ -7,6 +7,7 @@ import { listWhere, parseFilters, relevance, valueSql } from "@/lib/queries";
 import { estimateValue } from "@/lib/valuation";
 import { SITE_URL } from "@/lib/site";
 import { xlsx, type Column } from "@/lib/xlsx";
+import { isPro } from "@/lib/plan";
 
 const MAX_ROWS = 1000;
 const SORTS: Record<string, ReturnType<typeof sql>> = {
@@ -32,7 +33,7 @@ const COLUMNS: Column[] = [
 export async function GET(req: NextRequest) {
   const [user, admin] = await Promise.all([currentUser(), isAdmin()]);
   if (!user && !admin) return NextResponse.json({ error: "Sign in to export" }, { status: 401 });
-  if (!admin && user?.plan !== "pro") return NextResponse.json({ error: "Exporting is part of Pro." }, { status: 402 });
+  if (!admin && !isPro(user?.plan)) return NextResponse.json({ error: "Exporting is part of Pro." }, { status: 402 });
   const p = req.nextUrl.searchParams;
   const f = parseFilters(p);
   const sort = SORTS[p.get("sort") ?? "revenue_desc"] ?? SORTS.revenue_desc;

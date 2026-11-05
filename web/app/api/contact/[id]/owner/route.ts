@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
 import { lookupOwner, pdlConfigured, type OwnerContact } from "@/lib/pdl";
 import { revealedThisMonth } from "@/lib/reveals";
+import { isPro } from "@/lib/plan";
 
 // "Get owner contact": the owner's email and phone from People Data Labs, for signed-in users who have
 // revealed this business's contacts this month (which is what's counted, lib/reveals.ts). A lookup is saved and reused for everyone (PDL is paid per match),
@@ -53,7 +54,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   }
   // Phone numbers from PDL may be personal cell phones: shown only to Pro users who have accepted the
   // contact-use terms (no auto-dialing or texting without consent, Do Not Call checks), and to the admin.
-  const phonesBlocked = admin ? null : user?.plan !== "pro" ? "pro" : !user.contact_terms_at ? "terms" : null;
+  const phonesBlocked = admin ? null : !isPro(user?.plan) ? "pro" : !user.contact_terms_at ? "terms" : null;
   const phones = phonesBlocked ? [] : result.phones;
   return NextResponse.json({ owner: b.owner, ...result, phones, phonesHidden: phonesBlocked ? result.phones.length : 0, phonesBlocked },
     { headers: { "Cache-Control": "private, no-store" } });
