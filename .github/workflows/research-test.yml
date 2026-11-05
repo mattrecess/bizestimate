@@ -1,0 +1,25 @@
+name: Research test
+# Tries the owner search's AI research step on a few businesses with known owners (tools/research_test.ts).
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: cd web && npm ci --no-audit --no-fund
+      - run: cd web && npx -y tsx ../tools/research_test.ts 2>&1 | tee "$RUNNER_TEMP/research.log"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - if: always()
+        run: |
+          cd "$RUNNER_TEMP" && mkdir logs && cd logs && git init -q -b research-logs
+          cp "$RUNNER_TEMP/research.log" research.log 2>/dev/null || echo none > research.log
+          git add . && git -c user.name=etl-bot -c user.email=etl-bot@users.noreply.github.com commit -qm log
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" research-logs
