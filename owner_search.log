@@ -1,0 +1,21 @@
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+owner_search: re-checking 64,740 earlier misses (0 already re-checked)
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: search failed (RuntimeError('Serper 400: {"message":"Not enough credits","statusCode":400}')); stopping for this run
+owner_search: 22,187 searches ≈ $22.81 (searches free within Serper's allowance)
+owner_search: owners for 11,840 of 80,000 searched (97 from Google's answer box or panel)
+owner_search: saved records for 11,840 businesses
+Owners filled from websites and search results: 325
+Owners entered by hand applied: 0
