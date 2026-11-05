@@ -47,7 +47,7 @@ export async function google(q: string): Promise<Result[]> {
     headers: { "X-API-KEY": process.env.SERPER_API_KEY!, "Content-Type": "application/json" },
     body: JSON.stringify({ q, gl: "us", num: 10 }),
   });
-  if (!r.ok) throw new Error(`Serper ${r.status}`);
+  if (!r.ok) throw new Error(`Serper ${r.status}: ${(await r.text().catch(() => "")).slice(0, 200)}`);
   const d = await r.json();
   const out: Result[] = [];
   if (d.answerBox) out.push({ kind: "answer", url: d.answerBox.link ?? "", text: [d.answerBox.title, d.answerBox.answer, d.answerBox.snippet].filter(Boolean).join(" ") });
