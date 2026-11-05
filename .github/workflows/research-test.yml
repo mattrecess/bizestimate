@@ -1,5 +1,5 @@
 name: Research test
-# Tries the owner search's AI research step on a few businesses with known owners (tools/research_test.ts).
+# Tries the owner search's AI research step on a few businesses with known owners (tools/research_test.mts).
 on:
   workflow_dispatch:
 permissions:
@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: "22"
       - run: cd web && npm ci --no-audit --no-fund
-      - run: cd web && npx -y tsx ../tools/research_test.ts 2>&1 | tee "$RUNNER_TEMP/research.log"
+      - run: cd web && npx -y tsx ../tools/research_test.mts 2>&1 | tee "$RUNNER_TEMP/research.log"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       - if: always()

@@ -1,6 +1,6 @@
 // Try step 3 of the owner search (web/lib/owner-research.ts) on businesses whose owners we know, and print
 // what it finds and what it cost in tokens. Run via the Research test workflow.
-import { researchOwner } from "../web/lib/owner-research";
+import { researchOwner } from "../web/lib/owner-research.ts";
 
 const cases: [string, string, string][] = [
   ["VANTAGE POINT ITAD LLC", "Oklahoma City", "Steven Lampson"],
