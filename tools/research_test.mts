@@ -1,14 +1,19 @@
-// Try the AI research steps (web/lib/owner-research.ts) on known businesses and print what gets verified.
-// Run via the Research test workflow.
-import { researchLeadership } from "../web/lib/owner-research.ts";
+// Run the owner search's three steps on given businesses with debug output. Run via the Research test workflow.
+import { searchOwner } from "../web/lib/owner-search.ts";
+import { researchOwner } from "../web/lib/owner-research.ts";
 
-for (const [name, city] of [["MINICK MATERIALS COMPANY", "Oklahoma City"], ["LIGHTLE SAND & CONSTRUCTION LLC", "Hennessey"]]) {
+process.env.OWNER_SEARCH_DEBUG = "1";
+for (const [name, city] of [["RED DIRT SEPTIC AND BACKHOE, LLC", "Edmond"], ["Red Dirt Septic", "Tuttle"]]) {
   const t0 = Date.now();
   try {
-    const people = await researchLeadership(name, city);
-    console.log(`${name}: ${people.length} verified in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
-    for (const p of people) console.log(`  ${p.name} | ${p.title || "role not listed"} | ${p.url}`);
+    console.log(`=== ${name} (${city}) steps 1-2`);
+    const a = await searchOwner(name, city);
+    console.log(`steps 1-2: ${a ? JSON.stringify(a) : "nothing"} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
+    if (!a) {
+      const b = await researchOwner(name, city);
+      console.log(`step 3: ${b ? JSON.stringify(b) : "nothing"} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
+    }
   } catch (e) {
-    console.log(`${name}: ERROR ${String(e).slice(0, 300)}`);
+    console.log(`${name}: ERROR ${String(e).slice(0, 400)}`);
   }
 }

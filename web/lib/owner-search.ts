@@ -27,6 +27,9 @@ const LINKEDIN_PROFILE = /linkedin\.com\/in\//i;
 const OWNER_ROLE = /\b(owner|co-owner|founder|co-founder|president|ceo|chief executive|principal|managing (member|partner))\b/i;
 export type FoundOwner = { name: string; title: string; url: string; via: string };
 
+// OWNER_SEARCH_DEBUG=1 (tests only): say why a candidate was dropped.
+export const dbg = (...a: unknown[]) => { if (process.env.OWNER_SEARCH_DEBUG === "1") console.log("  [debug]", ...a); };
+
 export const ownerSearchConfigured = () => !!process.env.SERPER_API_KEY && !!process.env.ANTHROPIC_API_KEY;
 
 export const words = (s: string) => new Set(s.toUpperCase().replace(/[^A-Z0-9 ]/g, " ").split(/\s+/).filter(Boolean));
@@ -81,6 +84,7 @@ export async function searchOwner(name: string, city: string): Promise<FoundOwne
 
 async function readResults(name: string, city: string, all: Result[]): Promise<FoundOwner | null> {
   const results = all.filter((r) => !SOCIAL.test(r.url));
+  dbg(`results: ${results.length}`, results.map((r) => `${r.kind} ${r.url} :: ${r.text.slice(0, 160)}`).join("\n    "));
   if (!results.length) return null;
   const body = results.map((r, i) => `<result number="${i + 1}" kind="${r.kind}" url="${r.url}">\n${r.text}\n</result>`).join("\n\n");
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -103,6 +107,7 @@ async function readResults(name: string, city: string, all: Result[]): Promise<F
   const msg = await res.json();
   const input = msg.content?.find((c: { type: string }) => c.type === "tool_use")?.input;
   const found = String(input?.name ?? "").trim(), n = Number(input?.result ?? 0);
+  dbg("claude answered", JSON.stringify(input));
   if (!found || n < 1 || n > results.length || !validName(found, name)) return null;
   const r = results[n - 1];
   const text = r.text.toUpperCase(), w = words(r.text);

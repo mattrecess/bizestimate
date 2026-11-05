@@ -5,7 +5,7 @@
 // name, and Oklahoma or the company's city. LinkedIn, social media and contact-data broker sites are excluded
 // from its searches (a page we can't fetch and check is no use as a source).
 import Anthropic from "@anthropic-ai/sdk";
-import { NOISE, validName, words, type FoundOwner } from "./owner-search";
+import { dbg, NOISE, validName, words, type FoundOwner } from "./owner-search";
 
 const client = new Anthropic();   // ANTHROPIC_API_KEY
 const MODEL = "claude-opus-5-5";
@@ -88,6 +88,7 @@ export async function researchOwner(name: string, city: string): Promise<FoundOw
     if (res.stop_reason !== "pause_turn") break;
     messages.push({ role: "assistant", content: res.content });
   }
+  dbg("research answered", JSON.stringify(report), `| pages seen: ${seen.size}`);
   if (!report?.name?.trim() || !report.source_url) return null;
 
   const who = report.name.trim(), url = report.source_url.trim();
@@ -97,7 +98,7 @@ export async function researchOwner(name: string, city: string): Promise<FoundOw
   if (![...seen].some((s) => norm(s) === norm(url))) return null;
   // And the page itself must say so: the person, the company, and the place.
   const text = await pageText(url);
-  if (!text) return null;
+  if (!text) { dbg("could not fetch", url); return null; }
   const upper = text.toUpperCase(), w = words(text);
   const lead = [...words(name)].find((t) => t.length >= 3 && !NOISE.has(t));
   const local = ["OKLAHOMA", ...words(city || "")];
