@@ -3,7 +3,7 @@ import os
 
 import psycopg
 
-NAME = "%red dirt septic%"
+NAME = "%superior building serv%"
 url = os.environ["DATABASE_URL"].strip().strip('"').replace("[", "").replace("]", "")
 with psycopg.connect(url, connect_timeout=60) as conn, conn.cursor() as cur:
     cur.execute("""select id, name, city, owner_name, est_method, website from businesses where name ilike %s order by id""", (NAME,))
