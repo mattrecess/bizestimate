@@ -183,6 +183,7 @@ export async function researchLeadership(name: string, city: string): Promise<{ 
     if (res.stop_reason !== "pause_turn") break;
     messages.push({ role: "assistant", content: res.content });
   }
+  dbg("team answered", JSON.stringify(people), `| pages seen: ${seen.size}, read: ${read.size}`);
   if (!people?.length) return [];
 
   const pages = new Map<string, Promise<string | null>>();   // each page fetched once
@@ -192,10 +193,10 @@ export async function researchLeadership(name: string, city: string): Promise<{ 
   for (const p of people.slice(0, 20)) {
     const who = (p.name ?? "").trim(), url = (p.source_url ?? "").trim();
     if (!who || !/^https?:\/\//i.test(url) || BLOCKED_RE.test(url) || !validName(who, name)) continue;
-    if (!seen.has(norm(url))) continue;
+    if (!seen.has(norm(url))) { dbg("not a page it was shown", url); continue; }
     if (!pages.has(url)) pages.set(url, textOf(url, read));
     const text = await pages.get(url)!;
-    if (!text) continue;
+    if (!text) { dbg("could not read", url); continue; }
     const w = words(text);
     if (!text.toUpperCase().includes(who.toUpperCase()) || (lead && !w.has(lead)) || !local.some((x) => w.has(x))) continue;
     const title = /^[<(\[]|^(unknown|n\/?a|none)$/i.test((p.title ?? "").trim()) ? "" : (p.title ?? "").trim().slice(0, 80);
