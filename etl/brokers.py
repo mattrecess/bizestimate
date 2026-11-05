@@ -9,6 +9,7 @@ DOMAINS = (
     "adapt.io", "kendo.ai", "salesintel.io", "cognism.com", "clearbit.com", "swordfish.ai", "snov.io",
     "spokeo.com", "whitepages.com", "beenverified.com", "truepeoplesearch.com", "fastpeoplesearch.com",
     "peoplefinders.com", "radaris.com", "nuwber.com", "intelius.com", "mylife.com", "instantcheckmate.com",
+    "dnb.com",   # Dun & Bradstreet: licensed business data, like ZoomInfo (Nov 5)
 )
 PATTERN = re.compile("|".join(re.escape(d) for d in DOMAINS), re.I)
 

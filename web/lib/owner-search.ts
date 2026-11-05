@@ -6,7 +6,7 @@
 // pages (etl/brokers.py) are never used.
 const SERPER = "https://google.serper.dev/search";
 const MODEL = "claude-haiku-5-5";
-const SKIP = /rocketreach\.co|zoominfo\.com|apollo\.io|lusha\.com|signalhire\.com|contactout\.com|seamless\.ai|leadiq\.com|datanyze\.com|uplead\.com|lead411\.com|aeroleads\.com|getprospect\.com|hunter\.io|adapt\.io|kendo\.ai|salesintel\.io|cognism\.com|clearbit\.com|swordfish\.ai|snov\.io|spokeo\.com|whitepages\.com|beenverified\.com|truepeoplesearch\.com|fastpeoplesearch\.com|peoplefinders\.com|radaris\.com|nuwber\.com|intelius\.com|mylife\.com|instantcheckmate\.com/i;
+const SKIP = /rocketreach\.co|zoominfo\.com|apollo\.io|lusha\.com|signalhire\.com|contactout\.com|seamless\.ai|leadiq\.com|datanyze\.com|uplead\.com|lead411\.com|aeroleads\.com|getprospect\.com|hunter\.io|adapt\.io|kendo\.ai|salesintel\.io|cognism\.com|clearbit\.com|swordfish\.ai|snov\.io|spokeo\.com|whitepages\.com|beenverified\.com|truepeoplesearch\.com|fastpeoplesearch\.com|peoplefinders\.com|radaris\.com|nuwber\.com|intelius\.com|mylife\.com|instantcheckmate\.com|dnb\.com/i;
 export const NOISE = new Set(["LLC", "INC", "CO", "CORP", "CORPORATION", "COMPANY", "THE", "OF", "AND", "LTD", "LP", "LLP", "PLLC", "PC", "DBA"]);
 const NOT_NAMES = new Set(["Owner", "Founder", "President", "CEO", "Inc", "LLC", "Company", "Oklahoma", "City", "The"]);
 
