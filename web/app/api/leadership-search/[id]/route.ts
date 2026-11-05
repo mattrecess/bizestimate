@@ -25,7 +25,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   try {
     // Google searches first; only if they find no one, Claude researches the web and each person's cited page
     // is checked (lib/owner-research.ts).
-    people = await searchLeadership(b.name, b.city);
+    people = await searchLeadership(b.name, b.city).catch((e) => { console.error("executive search: Google steps failed", e); return []; });
     if (!people.length) people = await researchLeadership(b.name, b.city);
   } catch (e) {
     console.error("leadership search failed", e);

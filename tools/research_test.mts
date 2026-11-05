@@ -7,7 +7,7 @@ for (const [name, city] of [["RED DIRT SEPTIC AND BACKHOE, LLC", "Edmond"], ["Re
   const t0 = Date.now();
   try {
     console.log(`=== ${name} (${city}) steps 1-2`);
-    const a = await searchOwner(name, city);
+    const a = await searchOwner(name, city).catch((e) => { console.log("steps 1-2 failed:", String(e)); return null; });
     console.log(`steps 1-2: ${a ? JSON.stringify(a) : "nothing"} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
     if (!a) {
       const b = await researchOwner(name, city);

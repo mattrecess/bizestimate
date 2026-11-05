@@ -31,7 +31,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   try {
     // Steps 1-2: two Google searches read by Claude; step 3, only if they find nothing: Claude researches the
     // web itself and the page it cites is checked (lib/owner-research.ts).
-    found = await searchOwner(b.name, b.city) ?? await researchOwner(b.name, b.city);
+    // If the Google steps fail (e.g. Serper out of credits), go straight to step 3 rather than giving up.
+    found = await searchOwner(b.name, b.city).catch((e) => { console.error("owner search: Google steps failed", e); return null; })
+      ?? await researchOwner(b.name, b.city);
   } catch (e) {
     console.error("owner search failed", e);
     return NextResponse.json({ error: "The search didn't go through. Try again in a minute." }, { status: 502 });
