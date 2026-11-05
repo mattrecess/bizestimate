@@ -441,7 +441,7 @@ export default function BusinessProfile({ b, compact = false, onSelect, onWebsit
         )}
         <div className="bp-owner-actions">
           <button type="button" className="btn" disabled={execSearch.busy} onClick={findExecutives}>
-            {execSearch.busy ? <><span className="spinner" aria-hidden /> Searching the web…</> : <><Icon name="search" size={15} />Search the web for executives</>}
+            {execSearch.busy ? <><span className="spinner" aria-hidden /> Searching the web (up to a minute)…</> : <><Icon name="search" size={15} />Search the web for executives</>}
           </button>
         </div>
       </div>

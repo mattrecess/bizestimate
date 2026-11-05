@@ -4,6 +4,10 @@ import { sql } from "@/lib/db";
 import { ownerSearchConfigured } from "@/lib/owner-search";
 import { searchLeadership, type Executive } from "@/lib/leadership-search";
 import { checkQuota, logSearch } from "@/lib/search-quota";
+import { researchLeadership } from "@/lib/owner-research";
+
+// Step 3 (AI web research) can take up to a minute.
+export const maxDuration = 120;
 
 // "Search the web for executives" (lib/leadership-search.ts), on the shared search allowance (lib/search-quota.ts).
 // People found are added to what earlier searches found and saved for everyone as a 'leadership_lookup' source,
@@ -19,7 +23,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   let people: Executive[];
   try {
+    // Google searches first; only if they find no one, Claude researches the web and each person's cited page
+    // is checked (lib/owner-research.ts).
     people = await searchLeadership(b.name, b.city);
+    if (!people.length) people = await researchLeadership(b.name, b.city);
   } catch (e) {
     console.error("leadership search failed", e);
     return NextResponse.json({ error: "The search didn't go through. Try again in a minute." }, { status: 502 });
