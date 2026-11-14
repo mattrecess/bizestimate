@@ -1,0 +1,316 @@
+=== irs990
+irs990: 4,845 OK exempt organizations with revenue of $50,000+
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+  sample: Heart Hospital at Saint Francis <- SAINT FRANCIS HOSPITAL SOUTH LLC revenue $234,350,466
+  sample: SHEPHERDS OF LOVE MINISTRIES INC <- SHEPHERDS OF LOVE MINISTRIES INC revenue $158,011
+  sample: FAMILY HEALTH CENTER OF SOUTHERN OKLAHOMA INC <- FAMILY HEALTH CENTER OF SOUTHERN OKLAHOMA INC revenue $21,381,401
+  sample: EL RENO BLESSING BASKETS, INC. <- EL RENO BLESSING BASKETS INC revenue $298,132
+  sample: TEEN EMPOWER INC <- TEEN EMPOWER INC revenue $552,158
+  sample: THE CHILDREN'S CENTER, INC. <- THE CHILDRENS CENTER INC revenue $122,119,902
+  sample: OPRY HERITAGE FOUNDATION OF OKLAHOMA <- OPRY HERITAGE FOUNDATION OF OKLAHOMA revenue $612,373
+  sample: Perpetual Motion Modern Dance <- PERPETUAL MOTION MODERN DANCE OKLAHOMA INC revenue $93,259
+  sample: ETON HOME CARE, INC. <- ETON HOME CARE INC revenue $2,885,359
+  sample: NORTHEAST OKLAHOMA REGIONAL ALLIANCE, INC. <- NORTHEAST OKLAHOMA REGIONAL ALLIANCE INC revenue $67,947
+  sample: IT'S MY COMMUNITY INITIATIVE, INC. <- ITS MY COMMUNITY INITIATIVE revenue $7,338,020
+  sample: SOUTHWEST LABORERS' DISTRICT COUNCIL <- LABORERS INTERNATIONAL UNION OF NORTH AMERICA revenue $850,794
+irs990: saved records for 1,514 businesses
+Reported financials applied: 0 updated
+=== irs990_people
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+irs990_people: 1,514 matched nonprofits
+irs990_people: e-filed returns found for 1,491
+irs990_people: batch 2024_TEOS_XML_04a: 1 returns
+irs990_people: batch 2024_TEOS_XML_05a: 3 returns
+irs990_people: batch 2024_TEOS_XML_06a: 1 returns
+irs990_people: batch 2024_TEOS_XML_09A: 3 returns
+irs990_people: batch 2024_TEOS_XML_10A: 2 returns
+irs990_people: batch 2024_TEOS_XML_11A: 7 returns
+irs990_people: batch 2024_TEOS_XML_12A: 1 returns
+irs990_people: batch 2025_TEOS_XML_02A: 2 returns
+irs990_people: batch 2025_TEOS_XML_03A: 3 returns
+irs990_people: batch 2025_TEOS_XML_04A: 6 returns
+irs990_people: batch 2025_TEOS_XML_05A: 35 returns
+irs990_people: batch 2025_TEOS_XML_06A: 11 returns
+irs990_people: batch 2025_TEOS_XML_07A: 12 returns
+irs990_people: batch 2025_TEOS_XML_08A: 23 returns
+irs990_people: batch 2025_TEOS_XML_09A: 58 returns
+irs990_people: batch 2025_TEOS_XML_10A: 17 returns
+irs990_people: batch 2025_TEOS_XML_11A: 97 returns
+irs990_people: batch 2025_TEOS_XML_11B: 155 returns
+irs990_people: batch 2025_TEOS_XML_11C: 73 returns
+irs990_people: batch 2025_TEOS_XML_11D: 106 returns
+irs990_people: batch 2025_TEOS_XML_12A: 64 returns
+irs990_people: batch 2026_TEOS_XML_01A: 19 returns
+irs990_people: batch 2026_TEOS_XML_02A: 75 returns
+irs990_people: batch 2026_TEOS_XML_03A: 80 returns
+irs990_people: batch 2026_TEOS_XML_04A: 74 returns
+irs990_people: batch 2026_TEOS_XML_05A: 295 returns
+irs990_people: batch 2026_TEOS_XML_06A: 68 returns
+irs990_people: batch 2026_TEOS_XML_07A: 55 returns
+irs990_people: batch 2026_TEOS_XML_08A: 84 returns
+irs990_people: batch 2026_TEOS_XML_09A: 61 returns
+irs990_people: leadership for 1,005 nonprofits (485 unreadable)
+  sample: [('Koquise Edwards', 'PRESIDENT'), ('Christy Shutler', 'SECRETARY - TREASURER'), ('Melody Franklin', 'MAINTENANCE CRAFT DIR')] preparer=COMPUTER ACCOUNTANTS INC
+  sample: [('Bob Sharp', 'PRESIDENT'), ('Art Long', 'VICE PRESIDENT'), ('Chris Weatherford', 'SECRETARY')] preparer=GBATS INC
+  sample: [('Jill Norman', 'PRESIDENT'), ('Laurie Beare', 'SECRETARY'), ('Kay Cobb', 'TREASURER')] preparer=LIBERTY TAX SERVICE
+  sample: [('Mike Mcpherson', 'EXECUTIVE DI'), ('Richard Mcpherson', 'PRESIDENT'), ('David Miller', 'VICE PRESIDE')] preparer=BELL & RHODES PC
+  sample: [('Robert R Carter', 'PRESIDENT'), ('Jim Pasley', 'VICE PRESIDE'), ('Mark Kuiper', 'TREASURER')] preparer=TC ADVISORS LLC
+irs990_people: saved records for 1,005 businesses
+=== banks
+banks: 168 OK banks; year-end figures for 175 (20251231)
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+  match: Mabrey Bank <- Mabrey Bank revenue $114,479,000 assets $1,964,393,000
+  match: Exchange Bank <- The Exchange Bank revenue $8,433,000 assets $153,147,000
+  match: Bank of Hydro <- Bank of Hydro revenue $13,566,000 assets $167,849,000
+  match: Chickasaw Community Bank <- Chickasaw Community Bank revenue $21,809,000 assets $435,936,000
+  match: Cowboy Bank <- Cowboy Bank revenue $22,535,000 assets $368,691,000
+  match: First Bank Of Okarche <- The First Bank of Okarche revenue $6,352,000 assets $137,713,000
+  match: The Bank of Beaver City <- The Bank of Beaver City revenue $10,181,000 assets $180,231,000
+  match: Cattlemens Bank <- Cattlemens Bank revenue $37,833,000 assets $579,108,000
+  match: First Oklahoma Bank <- First Oklahoma Bank revenue $76,924,000 assets $1,257,098,000
+  match: Payne County Bank <- The Payne County Bank revenue $18,440,000 assets $295,234,000
+  match: First State Bank <- First State Bank revenue $7,487,000 assets $101,510,000
+  match: F&m Bank <- F&M Bank revenue $47,986,000 assets $809,540,000
+banks: unmatched: ['1st Bank in Hominy', 'American Exchange Bank, Lindsay, Oklahoma', 'Anchor D Bank', 'BANK360', 'BOKF, National Association', 'Bank 7', 'COMMUNITY BANK OF OKLAHOMA', 'COREBANK', 'Farmers & Merchants Bank', 'Farmers State Bank, Allen, Oklahoma', 'Farmers and Merchants Bank', 'First  Bank of Thomas', 'First Fidelity Bank', 'First National Bank & Trust Company of McAlester', 'First National Bank and Trust Company of Ardmore', 'First Security Bank and Trust Company', 'First State Bank', 'First State Bank in Temple', 'First United Bank and Trust Company', 'FirstBank', 'Grant County Bank', 'Great Plains National Bank', 'International Bank of Commerce', 'Liberty National Bank', 'Local Bank', 'Old Glory Bank', 'Patrons Bank, National Association', 'SSB Bank', 'Security First National Bank of Hugo', 'Southwest Bank of Weatherford', 'The Bank, National Association', 'The City National Bank and Trust Company of Lawton, Oklahoma', 'The First Farmers National Bank of Waurika', 'The First National Bank & Trust', 'The First National Bank of Hooker', 'The First State Bank', 'The First State Bank of Pond Creek, Oklahoma', 'The Hopeton State Bank', 'The Peoples National Bank of Checotah', 'The Security National Bank of Enid']
+fdic: saved records for 127 businesses
+Reported financials applied: 0 updated
+=== ncua
+ncua: 2026-09 unavailable (URLError(ConnectionResetError(104, 'Connection reset by peer')))
+ncua: 2026-06 unavailable (URLError(ConnectionResetError(104, 'Connection reset by peer')))
+ncua: 53 OK credit unions (2026-03)
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+  match: Muskogee Federal Credit Union <- Muskogee revenue $6,030,840 assets $111,718,480
+  match: Correctional Workers Federal Credit Union <- Correctional Workers revenue $503,584 assets $10,747,350
+  match: Red Crown Credit Union <- Red Crown revenue $16,051,480 assets $259,972,545
+  match: Communication Federal Credit Union <- Communication revenue $148,170,560 assets $2,338,290,776
+  match: Western Sun Federal Credit Union <- Western Sun revenue $13,186,744 assets $185,693,781
+  match: McAlester AAP Federal Credit Union <- Mcalester Aap revenue $636,604 assets $12,458,891
+  match: Bison Federal Credit Union <- Bison revenue $1,849,896 assets $43,257,805
+  match: Oklahoma Federal Credit Union <- Oklahoma revenue $12,629,388 assets $197,413,874
+  match: Department of Public Safety Federal Credit Union <- Department Of Public Safety revenue $1,351,596 assets $26,003,141
+  match: First Oklahoma Federal Credit Union <- First Oklahoma revenue $1,647,512 assets $27,942,332
+  match: OU Federal Credit Union <- Ou revenue $5,763,788 assets $80,491,048
+  match: Employees Federal Credit Union <- Employees revenue $3,235,768 assets $48,086,070
+ncua: unmatched: ['Allegiance', 'Credit Union One Of Oklahoma', 'Energy One', 'First Family', 'Municipal Emps Cu Of Oklahoma City', 'Ok Members First', 'Okunity', 'Saint Francis Employees', 'The Focus', 'True Sky', 'Truity', 'U. S. Employees O. C.', 'United Members', 'Velma', 'Weokie']
+ncua: saved records for 38 businesses
+Reported financials applied: 0 updated
+=== sec
+sec: 3,322 OK filers listed
+sec: 26 with recent annual revenue
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+  match: Aaon, Inc. <- AAON INC ['AAON'] FY2025 revenue $1,442,076,000
+  match: Alliance Resource Partners <- ALLIANCE RESOURCE PARTNERS LP ['ARLP'] FY2025 revenue $2,194,811,000
+  match: ClearSign Technologies Corporation <- CLEARSIGN COMBUSTION CORP ['CLIR'] FY2025 revenue $5,234,000
+  match: Continental Resources <- CONTINENTAL RESOURCES INC [] FY2025 revenue $7,693,574,000
+  match: Educational Development Corporation <- EDUCATIONAL DEVELOPMENT CORP ['EDUC'] FY2026 revenue $22,913,600
+  match: Empire Petroleum Corporation <- AMERICOMM RESOURCES CORP ['EP'] FY2025 revenue $34,203,000
+  match: FIRST TRINITY FINANCIAL CORPORATION <- First Trinity Financial CORP [] FY2025 revenue $84,318,298
+  match: Fullnet Communications, Inc. <- FULLNET COMMUNICATIONS INC ['FULO'] FY2023 revenue $4,191,084
+  match: GREYSTONE LOGISTICS, INC <- GREYSTONE LOGISTICS, INC. ['GLGI'] FY2026 revenue $27,536,343
+  match: GULFPORT ENERGY CORPORATION <- GULFPORT ENERGY CORP ['GPOR'] FY2025 revenue $1,422,583,000
+  match: LSB INDUSTRIES, INC <- LSB INDUSTRIES INC ['LXU'] FY2025 revenue $615,208,000
+  match: MACH RESOURCES LLC <- MACH NATURAL RESOURCES LP ['MNR'] FY2025 revenue $1,175,390,000
+  match: Mammoth Energy Services, Inc <- MAMMOTH ENERGY SERVICES, INC. ['TUSK'] FY2025 revenue $44,292,000
+  match: Matrix Service Company <- MATRIX SERVICE CO ['MTRX'] FY2026 revenue $873,632,000
+  match: NGL Energy Partners LP <- NGL Energy Partners LP ['NGL', 'NGL-PC', 'NGL-PB'] FY2026 revenue $3,156,159,000
+  match: OGE Energy Corp. <- OGE ENERGY CORP ['OGE'] FY2025 revenue $3,260,100,000
+  match: ONEOK, Inc. <- ONEOK INC ['OKE'] FY2025 revenue $33,629,000,000
+  match: Reserve Petroleum Co <- RESERVE PETROLEUM CO ['RSRV'] FY2025 revenue $16,699,954
+  match: RILEY EXPLORATION - PERMIAN LLC <- Riley Exploration Permian, Inc. ['REPX'] FY2025 revenue $391,980,000
+  match: Sandridge Energy <- RIATA ENERGY INC ['SD'] FY2025 revenue $156,357,000
+sec: unmatched (largest first): [(11950000000, 'WILLIAMS COMPANIES INC'), (2051700000, 'Paycom Software, Inc.'), (241430, 'PANAMERA HEALTHCARE Corp')]
+sec: saved records for 23 businesses
+Reported financials applied: 0 updated
+=== sba_loans
+sba_loans: CKAN API failed (HTTP Error 404: Not Found); reading the dataset page
+sba_loans: files ['https://data.sba.gov/sites/default/files/uploaded_resources/FOIA_504_FY2010_Present_asof_260930.csv', 'https://data.sba.gov/sites/default/files/uploaded_resources/FOIA_7a_FY2020_Present_asof_260930.csv']
+sba_loans: 504 columns ['asofdate', 'program', 'locationid', 'borrname', 'borrstreet', 'borrcity', 'borrstate', 'borrzip', 'cdc_name', 'cdc_street', 'cdc_city', 'cdc_state', 'cdc_zip', 'thirdpartylender_name', 'thirdpartylender_city', 'thirdpartylender_state', 'thirdpartydollars', 'grossapproval', 'approvaldate', 'approvalfy', 'firstdisbursementdate', 'processingmethod', 'terminmonths', 'naicscode', 'naicsdescription', 'franchisecode', 'franchisename', 'projectcounty', 'projectstate', 'sbadistrictoffice', 'congressionaldistrict', 'businesstype', 'businessage', 'loanstatus', 'paidinfulldate', 'chargeoffdate', 'grosschargeoffamount', 'jobssupported', 'collateralind']
+sba_loans: 261 OK 504 loans since FY2020 in FOIA_504_FY2010_Present_asof_260930.csv
+sba_loans: 7(a) columns ['asofdate', 'program', 'locationid', 'borrname', 'borrstreet', 'borrcity', 'borrstate', 'borrzip', 'bankname', 'bankfdicnumber', 'bankncuanumber', 'bankstreet', 'bankcity', 'bankstate', 'bankzip', 'grossapproval', 'sbaguaranteedapproval', 'approvaldate', 'approvalfy', 'firstdisbursementdate', 'processingmethod', 'initialinterestrate', 'fixedorvariableinterestind', 'terminmonths', 'naicscode', 'naicsdescription', 'franchisecode', 'franchisename', 'projectcounty', 'projectstate', 'sbadistrictoffice', 'congressionaldistrict', 'businesstype', 'businessage', 'loanstatus', 'paidinfulldate', 'chargeoffdate', 'grosschargeoffamount', 'revolverstatus', 'jobssupported', 'collateralind', 'soldsecmrktind']
+sba_loans: 3,564 OK 7(a) loans since FY2020 in FOIA_7a_FY2020_Present_asof_260930.csv
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+sba_loans: 3,244 borrowers; matched 1,392 to 1,347 businesses; 144 with a change of ownership
+  sample: RHODES CHIROPRACTIC, P.C.: 1 loan(s), latest 504 $132,000 2019-10-01 via Vision Bank (Existing or more than 2 years old)
+  sample: HTeaO: 2 loan(s), latest 504 $451,000 2021-02-26 via BancFirst (Startup, Loan Funds will Open Business)
+  sample: CHRIS ATCHLEY INSURANCE AGENCY INC: 1 loan(s), latest 504 $84,000 2019-11-07 via Legacy Bank (Existing or more than 2 years old)
+  sample: ECM CAR WASH LLC: 4 loan(s), latest 504 $986,000 2021-05-25 via Armstrong Bank (Startup, Loan Funds will Open Business)
+  sample: Taco Casa: 1 loan(s), latest 504 $899,000 2020-01-03 via Susser Bank (Startup, Loan Funds will Open Business)
+  sample: ENCORE FULFILLMENT LLC: 1 loan(s), latest 504 $1,896,000 2020-01-08 via Quail Creek Bank (Existing or more than 2 years old)
+  sample: TOP TECH HEAT & AIR INC: 1 loan(s), latest 504 $119,000 2020-01-27 via American Nation Bank (Existing or more than 2 years old)
+  sample: BP FREIGHT INC: 1 loan(s), latest 504 $819,000 2020-02-14 via Fountainhead SBF LLC (Existing or more than 2 years old)
+  sample: BILLIARDS OF TULSA, INC.: 1 loan(s), latest 504 $1,245,000 2020-03-26 via Regent Bank (Existing or more than 2 years old)
+  sample: BRAKE TRUCKING, INC.: 1 loan(s), latest 504 $161,000 2020-03-31 via Armstrong Bank (Existing or more than 2 years old)
+sba: saved records for 1,347 businesses
+Lenders: 77,182 business-bank links across 641 lenders
+=== contracts
+contracts: FY2022: 1,218 recipients
+contracts: FY2023: 1,195 recipients
+contracts: FY2024: 1,189 recipients
+contracts: FY2025: 1,118 recipients
+contracts: FY2026: 963 recipients
+contracts: FY2027: 167 recipients
+contracts: 1,435 recipients with $25,000+ over 6 fiscal years
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+  match: The Boeing Company <- THE BOEING COMPANY $6,547,242,545 ['category_business', 'corporate_entity_not_tax_exempt', 'manufacturer_of_goods', 'other_than_small_business'] customers ['Department of the Air Force', 'Defense Information Systems Agency', 'Defense Contract Management Agency']
+  match: CREATIVE IT SOLUTIONS, LLC <- CREATIVE IT SOLUTIONS LLC $766,434,532 ['8a_program_participant', 'category_business', 'corporate_entity_tax_exempt', 'government'] customers ['Department of State', 'Department of the Air Force', 'Defense Logistics Agency']
+  match: Northrop Grumman <- NORTHROP GRUMMAN SYSTEMS CORPORATION $694,833,079 ['category_business', 'corporate_entity_not_tax_exempt', 'corporate_entity_tax_exempt', 'manufacturer_of_goods'] customers ['Defense Logistics Agency', 'Department of the Air Force', 'Defense Contract Management Agency']
+  match: Robinson Aviation (rva), Inc. <- ROBINSON AVIATION (RVA), INC. $427,549,197 ['category_business', 'corporate_entity_not_tax_exempt', 'other_than_small_business', 'special_designations'] customers ['Federal Aviation Administration']
+  match: Cherokee Federal <- CHEROKEE NATION MANAGEMENT & CONSULTING, L.L.C.. $393,671,103 ['8a_program_participant', 'american_indian_owned_business', 'category_business', 'corporate_entity_not_tax_exempt'] customers ['Department of the Navy', 'Department of the Air Force', 'National Park Service']
+  match: RED RIVER SCIENCE AND TECHNOLOGY, LLC <- RED RIVER SCIENCE & TECHNOLOGY, LLC $368,954,534 ['8a_program_participant', 'black_american_owned_business', 'category_business', 'limited_liability_corporation'] customers ['Department of the Army', 'Defense Logistics Agency', 'U.S. Customs and Border Protection']
+  match: CYMSTAR LLC <- CYMSTAR LLC $293,292,394 ['category_business', 'corporate_entity_not_tax_exempt', 'historically_underutilized_business_firm', 'limited_liability_corporation'] customers ['Department of the Air Force', 'Department of the Navy', 'Department of the Army']
+  match: CNI GOVERNMENT, LLC <- CHICKASAW STRATEGIC POINTE, LLC $292,066,726 ['8a_program_participant', 'american_indian_owned_business', 'category_business', 'corporate_entity_not_tax_exempt'] customers ['Food and Drug Administration', 'Federal Aviation Administration', 'Department of the Air Force']
+  match: DELAWARE RESOURCE GROUP OF OKLAHOMA, LLC <- DELAWARE RESOURCE GROUP OF OKLAHOMA LLC $279,869,039 ['american_indian_owned_business', 'category_business', 'corporate_entity_not_tax_exempt', 'limited_liability_corporation'] customers ['Department of the Air Force', 'Department of the Navy', 'Bureau of Indian Affairs and Bureau of Indian Education']
+  match: SGS, LLC <- SGS LLC $253,569,852 ['american_indian_owned_business', 'category_business', 'historically_underutilized_business_firm', 'limited_liability_corporation'] customers ['Department of the Army']
+  match: THE ROSS GROUP <- ROSS GROUP CONSTRUCTION CORPORATION, LLC $229,483,656 ['american_indian_owned_business', 'category_business', 'corporate_entity_not_tax_exempt', 'limited_liability_corporation'] customers ['Public Buildings Service', 'Department of the Army', 'National Aeronautics and Space Administration']
+  match: R & D MAINTENANCE SERVICES, INC. <- R & D MAINTENANCE SERVICES INC $185,185,211 ['category_business', 'corporate_entity_not_tax_exempt', 'small_business', 'special_designations'] customers ['Department of the Army']
+contracts: saved records for 763 businesses
+=== fmcsa
+fmcsa: 58,505 OK carriers; fields ['add_date', 'bus_units', 'business_org_desc', 'business_org_id', 'carrier_mailing_city', 'carrier_mailing_cnty', 'carrier_mailing_country', 'carrier_mailing_state', 'carrier_mailing_street', 'carrier_mailing_und_date', 'carrier_mailing_zip', 'carrier_operation', 'carship', 'dba_name', 'docket1', 'docket1_status_code', 'docket1prefix', 'dot_number', 'driver_inter_total', 'dun_bradstreet_no', 'fleetsize', 'hm_ind', 'legal_name', 'mcs150_mileage', 'mcs150_mileage_year', 'mcs150_update_code_id', 'phy_city', 'phy_cnty', 'phy_country', 'phy_omc_region', 'phy_state', 'phy_street', 'phy_zip', 'power_units', 'safety_inv_terr', 'status_code', 'total_intrastate_drivers', 'truck_units', 'undeliv_phy']
+fmcsa: 11,833 active carriers with 2+ power units
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+  match: Melton Truck Lines Inc <- MELTON TRUCK LINES INC 1395 trucks, 1223 drivers
+  match: Gemini Motor Transport <- GEMINI MOTOR TRANSPORT L P 1364 trucks, 1769 drivers
+  match: Oklahoma Gas & Electric Co. <- OKLAHOMA GAS & ELECTRIC CO 906 trucks, 519 drivers
+  match: Cudd Pressure Control <- CUDD PRESSURE CONTROL LLC 837 trucks, 393 drivers
+  match: Western Flyer Xpress <- WESTERN FLYER EXPRESS LLC 815 trucks, 815 drivers
+  match: BRADY'S WELDING & MACHINE SHOP INC <- BRADYS WELDING AND MACHINE SHOP INC 684 trucks, 508 drivers
+  match: Thru Tubing Solutions <- THRU TUBING SOLUTIONS INC 675 trucks, 258 drivers
+  match: GORE NITROGEN PUMPING SERVICE, LLC <- GORE NITROGEN PUMPING SERVICE LLC 669 trucks, 515 drivers
+  match: GORE ENERGY LLC <- GORE ENERGY LLC 669 trucks, 515 drivers
+  match: Hurricane Express Inc. <- HURRICANE EXPRESS INC 617 trucks, 426 drivers
+  match: UNITED PETROLEUM TRANSPORTS, INC. <- UNITED PETROLEUM TRANSPORTS INC 604 trucks, 712 drivers
+  match: HOBBY LOBBY STORES INC <- HOBBY LOBBY STORES INC 544 trucks, 797 drivers
+fmcsa: saved records for 8,685 businesses
+fmcsa: 5,104 unmatched companies saved as record-only listings
+=== website_profile
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+website_profile: 0 sites to read (70,762 done, 0 in flight, cap 90,000)
+website_profile: 0 readable
+website_profile: this run 0 input + 0 output tokens ≈ $0.00
+website_profile: findings for 23,971 businesses; 4,137 family-owned, 617 with a generation, 14,422 with a team
+  sample: {'team': [{'url': 'https://www.oneok.com/about-us/our-growth-journey', 'name': 'Pierce H. Norton II', 'title': 'President and CEO'}]}
+  sample: {'team': [{'url': 'https://www.clr.com/', 'name': 'Shelly Lambertz', 'title': 'Executive Chairman'}, {'url': 'https://www.clr.com/', 'name': 'Harold Hamm', 'title': 'Founder and Chairman Emeritus'}, {'url': 'https://www.clr.com/', 'name': 'Doug Lawler', 'title': 'President and CEO'}]}
+  sample: {'founded_year': 1920}
+  sample: {'team': [{'url': 'https://www.nglenergypartners.com/', 'name': 'Kiel McCall', 'title': 'Senior Vice President – Wholesale Propane and Terminal Opera'}, {'url': 'https://www.nglenergypartners.com/', 'name': 'Ryan Collins', 'title': 'General Counsel and Corporate Secretary'}, {'url': 'https
+  sample: {'team': [{'url': 'https://www.midfirst.com/about-us', 'name': 'Todd Dobson', 'title': 'CEO'}, {'url': 'https://www.midfirst.com/about-us', 'name': 'Scott F. Smith', 'title': 'Co-CEO and Vice Chairman'}]}
+  sample: {'team': [{'url': 'https://www.arlp.com/about-us/', 'name': 'Cary P. Marshall', 'title': 'Senior Vice President and Chief Financial Officer'}, {'url': 'https://www.arlp.com/about-us/', 'name': 'Jesse M. Parrish', 'title': 'Senior Vice President - Chief Commercial Officer of Alliance'}, {'u
+  sample: {'team': [{'url': 'https://crescentenergyco.com/overview/default.aspx', 'name': 'David Rockecharlie', 'title': 'Chief Executive Officer and Member of the Board of Directors'}]}
+  sample: {'team': [{'url': 'https://www.hilti.com/content/company/about-hilti', 'name': 'Jahangir Doongaji', 'title': 'CEO, Hilti Group'}], 'founder': 'Martin Hilti', 'history_url': 'https://www.hilti.com/content/company/about-hilti', 'family_owned': True, 'founded_year': 1941, 'history_quote': 'Hi
+website_profile: saved records for 23,971 businesses
+Owners filled from websites and search results: 13
+Owners entered by hand applied: 0
+=== website_offering
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+website_offering: 0 sites to read (71,070 done, 0 in flight, cap 80,000)
+website_offering: this run 0 input + 0 output tokens ≈ $0.00
+website_offering: findings for 34,245 businesses; 34,044 with summary, 33,176 with products, 18,727 with markets, 28,758 with areas, 2,408 with customers, 6,914 with suppliers, 10,238 with certifications
+  sample: {'url': 'https://www.oneok.com/', 'areas': ['North Dakota', 'Montana', 'Wyoming', 'New Mexico', 'Texas', 'Oklahoma', 'Mid-Continent'], 'summary': 'ONEOK, Inc. is a Tulsa-based midstream energy company that gathers, processes, fractionates, transports, stores and exports natural gas, natural gas liquids, refined products and crude oil. It describes its services as serving producers and en
+  sample: {'url': 'https://www.clr.com/', 'areas': ['Lower 48', 'Argentina', 'Turkey', 'Oklahoma City', 'Permian Basin', "Venezuela's Orinoco Belt"], 'summary': 'Continental Resources is a privately held oil and natural gas company that explores for and develops energy resources in the Lower 48 and internationally, including partnerships in Argentina and Turkey.', 'products': ['oil and natural gas
+  sample: {'url': 'https://www.hpinc.com/', 'areas': ['North America', 'US Land', 'Offshore'], 'markets': ['Energy drilling'], 'summary': 'Helmerich & Payne is a global drilling contractor that provides land, offshore and geothermal drilling rigs and drilling services, described as the largest and longest operating drilling and technology company in the world.', 'products': ['FlexRig fleet', 'Land
+  sample: {'url': 'https://www.nglenergypartners.com/', 'areas': ['New Mexico', 'Southeast New Mexico', 'Fort Sumner, NM'], 'markets': ['producers and end-users', 'oil and gas'], 'summary': 'NGL Energy Partners LP is a diversified midstream MLP that provides transportation, storage, blending and marketing of crude oil, NGLs, and water solutions to producers and end-users.', 'products': ['Crude Oil
+  sample: {'url': 'https://www.midfirst.com/locations/oklahoma/oklahoma-city/7100-w-hefner-rd?utm_source=Bing&utm_medium=Yext', 'areas': ['Oklahoma City, OK', 'Arizona', 'California', 'Colorado', 'Oklahoma', 'Texas'], 'markets': ['Business and Commercial', 'Private Wealth', 'Healthcare', 'Energy', 'Aviation', 'Title Industry'], 'summary': 'MidFirst Bank offers personal banking, business and commer
+  sample: {'url': 'https://www.arlp.com/', 'areas': ['Eastern United States', 'United States'], 'markets': ['Major domestic and international electric power generation markets', 'Oil & gas producing regions'], 'summary': 'Alliance Resource Partners is a diversified energy company that generates income from coal production as the second largest producer in the eastern United States and from royalty
+website_offering: saved records for 34,245 businesses
+=== naics_check
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+naics_check: 0 to check, 0 of them retries (43,194 done, 0 in flight, cap 50,000)
+naics_check: this run 0 input + 0 output tokens ≈ $0.00
+naics_check: 17,066 agree with the filed code, 7,657 corrected (high confidence), 7,475 for review
+=== owner_search
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+owner_search: 0 businesses to search (80,000 of 80,000 done)
+owner_search: 0 searches ≈ $0.00 (searches free within Serper's allowance)
+owner_search: owners for 11,624 of 80,000 searched (97 from Google's answer box or panel)
+  sample: {'url': 'https://www.tulsapeople.com/city-desk/beyond-bottom-line/article_a17b1a3e-f709-11ec-9a19-2b5237e48e60.html', 'via': 'result', 'name': 'Nathan Pickard', 'title': 'Founder'}
+  sample: {'url': 'https://www.google.com/goto?url=CAESbgHrOzAVFUZDl_P9cNFUOc5jNEi0LPZmqEU31txt3O6ak8pybTVD5Jg7AANuTsjaG3rcPJGt4Sb6CohDyJS__s2j-iK8-4r7I4FOV711ehPXu_yaZVbqyMepQY-b2fk2IPvHK0wz1VjXDL-uwSuj', 'via': 'result', 'name': 'Shannon Kelley', '
+  sample: {'url': 'https://www.facebook.com/M5incorporated/', 'via': 'result', 'name': 'Darell Slate', 'title': 'President'}
+  sample: {'url': 'https://brokersnapshot.com/Company/a-h-inc-2', 'via': 'result', 'name': 'Angela Burdick', 'title': 'Owner'}
+  sample: {'url': 'https://brokersnapshot.com/Company/a-o-inc', 'via': 'result', 'name': 'WILLARD WHITE', 'title': 'Owner'}
+  sample: {'url': 'https://www.facebook.com/sharinarperry/posts/today-one-of-my-biggest-compliments-came-from-david-asner-owner-of-aco-an-oklaho/10222773150182897/', 'via': 'result', 'name': 'David Asner', 'title': 'Owner'}
+  sample: {'url': 'https://www.stedi.com/npi-registry/npis/1023028321', 'via': 'result', 'name': 'Karen D Allen', 'title': 'Owner'}
+  sample: {'url': 'https://www.mineralanswers.com/oklahoma/producers/bso-inc/7043', 'via': 'result', 'name': 'BILLY G SILLS', 'title': 'Contact'}
+  sample: {'url': 'https://www.dandb.com/businessdirectory/c2tincorporated-oklahomacity-ok-12096742.html', 'via': 'result', 'name': 'Gregory D Mantia', 'title': 'Owner'}
+  sample: {'url': 'https://www.buzzfile.com/business/C3s-LLC-405-476-4584', 'via': 'result', 'name': 'Curt Trindle', 'title': 'Principal'}
+  sample: {'url': 'https://sjcivil.com/wp-content/uploads/2023/07/CGC_recommendation.pdf', 'via': 'result', 'name': 'Jimmie Wright', 'title': 'President'}
+  sample: {'url': 'https://www.bizapedia.com/ok/cwy-llc.html', 'via': 'result', 'name': 'Casey Yokley', 'title': 'Sole Principal'}
+owner_search: saved records for 11,624 businesses
+Owners filled from websites and search results: 0
+Owners entered by hand applied: 0
+=== deals_news
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+deals_news: 0 businesses to search (1,000 of 1,000 done)
+deals_news: 0 searches ≈ $0.00
+deals_news: deals found for 126 of 1,000 businesses searched
+  sample: {'url': 'https://leadiq.com/c/rae-corporation/5a1d7e81240000240058cabe', 'date': None, 'buyer': 'Toledo Gearmotor Company', 'summary': 'A LeadIQ profile states that Toledo Gearmotor Company acquired Rae Corp. and expects the acquisition of RAE Corporation to strengthen its position, though
+  sample: {'url': 'https://www.prnewswire.com/news-releases/suncrete-completes-oklahoma-acquisition-302590483.html', 'date': '2025-10-21', 'buyer': 'Suncrete', 'summary': 'Suncrete acquired substantially all of the assets of SRM, Inc. DBA Schwarz Ready Mix and SRM Leasing, LLC, as reported on Octobe
+  sample: {'url': 'https://journalrecord.com/2011/03/25/drilling-reports-march-28-2011-energy/', 'date': '2011-03-25', 'buyer': 'Tanenbaum Equity Partners', 'summary': "A 2011 Journal Record drilling report mentions a recapitalization involving OEX-1, LLC of Tulsa and Tanenbaum Equity Partners, thou
+  sample: {'url': 'https://www.privsource.com/acquisitions/deal/american-pacific-group-acquires-fellers-inc-ane_9zSqn0', 'date': '2021-12-02', 'buyer': 'American Pacific Group', 'summary': 'American Pacific Group, a private equity firm, acquired Fellers, Inc., a Tulsa vehicle wrap supply company, on
+  sample: {'url': 'https://ir.apollo.com/news-events/press-releases/detail/309/zenergy-inc-and-apollo-global-management-announce', 'date': '2014-06-02', 'buyer': 'Apollo Global Management', 'summary': 'Zenergy, Inc. and Apollo Global Management announced a partnership with $755 million of committed 
+  sample: {'url': 'https://ir.constructionpartners.net/news/press-releases/detail/135/construction-partners-inc-acquires-platform-company-in-oklahoma', 'date': '2025-01-03', 'buyer': 'Construction Partners, Inc.', 'summary': 'Construction Partners, Inc. acquired Overland Corporation, an asphalt manu
+  sample: {'url': 'https://www.zoominfo.com/c/cl-supply-co/351458272', 'date': None, 'buyer': "Munch's Supply", 'summary': "Munch's Supply acquired Oklahoma-based C&L Supply HVAC and Plumbing, according to a ZoomInfo listing; the announcement date is not stated.", 'deal_type': 'acquisition'}
+  sample: {'url': 'https://journalrecord.com/2017/06/29/crum-peterson-buy-womble-co/', 'date': '2017-06-29', 'buyer': 'Crum, Peterson', 'summary': 'Journal Record reported that Crum and Peterson bought The Womble Co., a family business that started in Tulsa.', 'deal_type': 'acquisition'}
+  sample: {'url': 'https://leadiq.com/c/tulco-oils/5a1d847524000024005eed74', 'date': '2020-08-01', 'buyer': 'Acrisure, LLC', 'summary': 'Acrisure, LLC acquired Tulco Oils, Inc. on August 1, 2020, reportedly for $400M according to LeadIQ.', 'deal_type': 'acquisition'}
+  sample: {'url': 'https://cspdailynews.com/mergers-acquisitions/caseys-acquire-20-asap-convenience-stores', 'date': '2026-09-22', 'buyer': "Casey's", 'summary': "Casey's General Stores agreed to acquire select assets and stores of ASAP Energy Inc. of Weatherford, Oklahoma, after 47 years of Koch fa
+=== pe_portfolios
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+pe_portfolios: 0 investors to read
+=== linkedin
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+linkedin: 0 businesses to search (2,500 of 2,500 done)
+linkedin: 0 searches ≈ $0.00
+linkedin: 2,500 searched; company pages 818 (130 with size), owner profiles 280
+  sample: {'company_url': None, 'size_min': None, 'size_max': None, 'owner_url': 'https://www.linkedin.com/in/jason-cotton-37091013', 'owner_name': 'Jason Cotton'}
+  sample: {'company_url': 'https://se.linkedin.com/company/asc---american-staffcorp', 'size_min': None, 'size_max': None, 'owner_url': None, 'owner_name': None}
+  sample: {'company_url': 'https://www.linkedin.com/company/connectcec', 'size_min': None, 'size_max': None, 'owner_url': 'https://www.linkedin.com/in/doug-glenn-president', 'owner_name': 'Doug Glenn'}
+  sample: {'company_url': None, 'size_min': None, 'size_max': None, 'owner_url': 'https://www.linkedin.com/in/jimmie-wright-61770032', 'owner_name': 'Jimmie Wright'}
+  sample: {'company_url': 'https://www.linkedin.com/company/cmp-corporation', 'size_min': None, 'size_max': None, 'owner_url': None, 'owner_name': None}
+  sample: {'company_url': None, 'size_min': None, 'size_max': None, 'owner_url': 'https://www.linkedin.com/in/michael-vahabzadegan-143428239', 'owner_name': 'Michael Vahabzadegan'}
+  sample: {'company_url': 'https://www.linkedin.com/company/gln-inc', 'size_min': None, 'size_max': None, 'owner_url': None, 'owner_name': None}
+  sample: {'company_url': 'https://www.linkedin.com/company/hacinc', 'size_min': None, 'size_max': None, 'owner_url': 'https://www.linkedin.com/in/david-criscione-290729a6', 'owner_name': 'David Criscione'}
+  sample: {'company_url': 'https://www.linkedin.com/company/rae-corporation', 'size_min': None, 'size_max': None, 'owner_url': 'https://www.linkedin.com/in/eric-swank-a2189aa', 'owner_name': 'Eric Swank'}
+  sample: {'company_url': 'https://ch.linkedin.com/company/rkt-ag-ruppli-kmu-treuhand', 'size_min': None, 'size_max': None, 'owner_url': None, 'owner_name': None}
+  sample: {'company_url': 'https://www.linkedin.com/company/bags-inc.', 'size_min': None, 'size_max': None, 'owner_url': None, 'owner_name': None}
+  sample: {'company_url': 'https://kr.linkedin.com/company/bios-companies', 'size_min': None, 'size_max': None, 'owner_url': None, 'owner_name': None}
+linkedin: saved records for 928 businesses
+=== people_search
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+people_search: 0 businesses to search (1,000 of 1,000 done)
+people_search: 0 searches ≈ $0.00
+people_search: findings for 131 of 1,000 searched; 79 with a finance leader, 15 with legal counsel
+  sample: {'people': [{'url': 'https://www.grocerydive.com/news/homeland-close-consolidate-stores/816042/', 'name': 'Frank Archer', 'title': 'President and CEO'}, {'url': 'https://www.grocerydive.com/news/homeland-close-consolidate-stores/816042/', 'name': 'Sharon McCollam', 'title': 'President and 
+  sample: {'people': [{'url': 'https://opennpi.com/provider/1477769669', 'name': 'Lori Mouse', 'title': 'Chief Financial Officer'}]}
+  sample: {'people': [{'url': 'https://www.kansascityfed.org/authors/jon-cargill/', 'name': 'Jon Cargill', 'title': 'CFO'}]}
+  sample: {'people': [{'url': 'https://opengovus.com/sam-entity/E3WYJYC6LSX4', 'name': 'Jones W Hewling', 'title': 'CONTROLLER'}, {'url': 'https://opengovus.com/sam-entity/E3WYJYC6LSX4', 'name': 'Janice M Long', 'title': 'AR'}]}
+  sample: {'people': [{'url': 'https://www.superiormidstream.com/about/', 'name': 'Ed Alexander', 'title': 'Chief Financial Officer and Controller'}, {'url': 'https://financialpost.com/pmn/business-wire-news-releases-pmn/superior-midstream-announces-corporate-office-relocation-to-first-place-tower-i
+  sample: {'people': [{'url': 'https://contracts.justia.com/companies/paycom-software-inc-4641/contract/1311991/', 'name': 'Robert D. Foster', 'title': 'Chief Financial Officer and Treasurer'}]}
+  sample: {'people': [{'url': 'https://www.sec.gov/Archives/edgar/data/895126/000119312515253981/filename1.htm', 'name': 'Mike Johnson', 'title': 'Chief Accounting Officer'}, {'url': 'https://www.sec.gov/Archives/edgar/data/895126/000119312515253981/filename1.htm', 'name': 'J. David Hershberger', 't
+  sample: {'people': [{'url': 'https://penningtoncreek.com/team/amanda-carpenter/', 'name': 'Amanda Tsoodle', 'title': 'General Counsel'}]}
+  sample: {'people': [{'url': 'https://people.equilar.com/bio/org/avara-pharmaceutical-services-inc/6049093', 'name': 'Kunal Bahl', 'title': 'Chief Financial Officer'}, {'url': 'https://people.equilar.com/bio/org/avara-pharmaceutical-services-inc/6049093', 'name': 'Antonio Ambrosio', 'title': 'Vice 
+  sample: {'people': [{'url': 'https://usearch.com/company/td-williamson/overview', 'name': 'Robert McGrew', 'title': 'President & Chief Executive Officer'}, {'url': 'https://usearch.com/company/td-williamson/overview', 'name': 'JABOBS OLA', 'title': 'Chief Financial Officer'}]}
+people_search: saved records for 131 businesses
+=== founded
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+founded: lookup errors {'UnicodeEncodeError': 1}
+founded: looked up 1 domains in 0s; 42,346 with a registration year cached
+founded: saved records for 63,797 businesses
+=== signals
+Note: removed [ ] around the password in DATABASE_URL
+DB: user=postgres.mjibgcvxviejgxywhrcf host=aws-0-us-east-2.pooler.supabase.com port=5432 db=postgres password_length=22 issues=none
+Sell signals: 29,400 businesses scored, 2,305 at 40+ (14 changed)
