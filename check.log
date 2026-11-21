@@ -1,0 +1,16 @@
+ok    0.10s home page (/)
+ok    0.45s business list (/api/businesses?limit=5)
+ok    0.37s business count (/api/businesses/count)
+ok    0.32s map pins (/api/points)
+ok    1.23s search (/api/businesses?q=janitorial&limit=3)
+ok    0.18s business profile (panel) (/api/businesses/1391042?core=1)
+ok    0.54s business profile (related) (/api/businesses/1391042/related)
+ok    0.18s business page (/business/1391042)
+ok          contact info needs sign-in (401)
+ok    0.22s industry pages (/oklahoma)
+ok    0.76s NAICS list (/api/naics)
+ok    0.30s lenders (/api/lenders)
+ok    0.14s sitemap (/sitemap.xml)
+ok    0.14s sign-in available (/api/me)
+
+All checks passed
